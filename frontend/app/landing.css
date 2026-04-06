@@ -1,0 +1,220 @@
+/* ==========================================
+   LANDING PAGE - Guest/Logged Out Users
+   ========================================== */
+
+.landing-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e0e7ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated radiating dots - background decoration */
+.landing-container::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background-color: rgba(30, 58, 138, 0.3);
+  border-radius: 50%;
+  animation: radiateOut 4s ease-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-container::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: rgba(168, 85, 247, 0.25);
+  border-radius: 50%;
+  animation: radiateOut 4s ease-out 1.2s infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes radiateOut {
+  0% {
+    width: 12px;
+    height: 12px;
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 0px rgba(30, 58, 138, 0.2);
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(10);
+    box-shadow: 0 0 0 50px rgba(30, 58, 138, 0.05);
+  }
+}
+
+/* Landing content wrapper */
+.landing-content {
+  text-align: center;
+  max-width: 700px;
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Landing title */
+.landing-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  letter-spacing: -1px;
+  animation: fadeInUp 0.8s ease-out 0.1s backwards;
+  background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Landing subtitle */
+.landing-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.8;
+  animation: fadeInUp 0.8s ease-out 0.2s backwards;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Landing actions */
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  justify-content: center;
+  animation: fadeInUp 0.8s ease-out 0.3s backwards;
+}
+
+@media (min-width: 576px) {
+  .landing-actions {
+    flex-direction: row;
+  }
+}
+
+/* Landing button styles */
+.landing-actions .btn {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-actions .btn-primary {
+  background-color: var(--primary);
+  color: var(--bg-white);
+  border: none;
+}
+
+.landing-actions .btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(30, 58, 138, 0.3);
+}
+
+.landing-actions .btn-primary:active {
+  transform: translateY(-1px);
+}
+
+/* Shimmer effect on primary button */
+.landing-actions .btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: left 0.4s ease;
+}
+
+.landing-actions .btn-primary:hover::before {
+  left: 100%;
+}
+
+.landing-actions .btn-secondary {
+  background-color: var(--bg-white);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  font-weight: 700;
+}
+
+.landing-actions .btn-secondary:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(30, 58, 138, 0.15);
+}
+
+.landing-actions .btn-secondary:active {
+  transform: translateY(-1px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .landing-title {
+    font-size: 2.5rem;
+  }
+
+  .landing-subtitle {
+    font-size: 1rem;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .landing-actions {
+    margin-top: var(--spacing-lg);
+  }
+
+  .landing-actions .btn {
+    padding: 0.875rem 1.75rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-title {
+    font-size: 2rem;
+  }
+
+  .landing-subtitle {
+    font-size: 0.95rem;
+  }
+}

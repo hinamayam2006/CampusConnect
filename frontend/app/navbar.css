@@ -1,0 +1,148 @@
+/* ==========================================
+   NAVBAR STYLES
+   ========================================== */
+
+.navbar {
+  background-color: var(--bg-white) !important;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: var(--shadow-sm) !important;
+  transition: all 0.3s ease;
+}
+
+.navbar-brand {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary) !important;
+  transition: color 0.2s ease;
+  letter-spacing: -0.5px;
+}
+
+.navbar-brand:hover {
+  color: var(--primary-hover) !important;
+}
+
+/* Navbar Links */
+.navbar-nav .nav-link {
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem !important;
+  margin: 0 0.25rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.navbar-nav .nav-link:hover {
+  color: var(--primary) !important;
+  background-color: var(--primary-light);
+}
+
+.navbar-nav .nav-link.active {
+  color: var(--primary) !important;
+  background-color: var(--primary-light);
+  font-weight: 600;
+}
+
+/* Auth Buttons */
+.nav-auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.nav-btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+/* Login Button - Active State */
+.nav-btn.login {
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1.5px solid #e5e7eb;
+}
+
+.nav-btn.login:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+.nav-btn.login.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  font-weight: 700;
+}
+
+/* Register Button - Active State */
+.nav-btn.register {
+  background-color: var(--primary);
+  color: var(--bg-white);
+}
+
+.nav-btn.register:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+}
+
+.nav-btn.register.active {
+  background-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  transform: translateY(-2px);
+  font-weight: 700;
+}
+
+/* Profile Button */
+.nav-btn.profile {
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid #e5e7eb;
+}
+
+.nav-btn.profile:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+/* Logout Button */
+.nav-btn.logout {
+  color: #dc2626;
+  background-color: transparent;
+  border: 1.5px solid #fecaca;
+}
+
+.nav-btn.logout:hover {
+  background-color: #fee2e2;
+  border-color: #dc2626;
+}
+
+/* Mobile Responsive */
+@media (max-width: 991px) {
+  .navbar-collapse {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .navbar-nav {
+    gap: var(--spacing-sm);
+  }
+
+  .nav-auth-buttons {
+    margin-top: var(--spacing-lg);
+    justify-content: flex-start;
+  }
+}
