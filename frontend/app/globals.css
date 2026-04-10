@@ -239,3 +239,11 @@ input, textarea, select {
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
+.logo-gradient {
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}

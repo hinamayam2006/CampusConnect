@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app = express();
 
@@ -30,7 +31,7 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'CampusConnect API is running' });
 });
 app.use('/api/auth', authRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 // 404 handler — for unknown routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

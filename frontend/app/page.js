@@ -1,235 +1,190 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import useStore from '../store/useStore';
+import api from '../lib/api'; 
+import { 
+  ShoppingBag, 
+  BookOpen, 
+  Car, 
+  PlusCircle, 
+  FileUp, 
+  Bell
+} from 'lucide-react';
 
 export default function Home() {
-  const { user } = useStore();
+  const { user, accessToken } = useStore();
+  
+  const [particles, setParticles] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [stats, setStats] = useState({
+    itemsForSale: 0,
+    borrowRequests: 0,
+    upcomingRides: 0,
+    unreadNotifications: 0
+  });
+
+  // 1. Unified State for Activity (Renamed to avoid shadowing)
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      // FIX: If logged out, reset loading immediately
+      if (!user || !accessToken) {
+        setStatsLoading(false);
+        return;
+      }
+      
+      try {
+        setStatsLoading(true);
+        const [statsRes, activityRes] = await Promise.all([
+          api.get('/dashboard/summary'),
+          api.get('/dashboard/activity')
+        ]);
+
+        if (statsRes.data.success) setStats(statsRes.data.data);
+        if (activityRes.data.success) setActivities(activityRes.data.data);
+        
+      } catch (err) {
+        console.error("Dashboard error:", err);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user, accessToken]);
+
+  // 2. Particle Logic
+  const handleMouseMove = (e) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const p1 = {
+      id: Date.now() + Math.random(),
+      x: e.clientX + (Math.random() * 10 - 5),
+      y: e.clientY + (Math.random() * 10 - 5),
+      type: Math.random() > 0.5 ? 'sparkle' : 'dot',
+      size: Math.random() * 8 + 3,
+    };
+    setParticles((prev) => [...prev.slice(-60), p1]);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setParticles((prev) => prev.filter((p) => Date.now() - p.id < 800));
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   // ═══════════════════════════════════════════════════════════
-  // DASHBOARD - Logged-In Users
+  // DASHBOARD RENDER
   // ═══════════════════════════════════════════════════════════
   if (user) {
     const firstName = user.name?.split(' ')[0] || 'User';
 
-    // Module definitions with icons, descriptions, and links
-    const modules = [
-      {
-        id: 'marketplace',
-        name: 'Marketplace',
-        icon: '🏪',
-        description: 'Buy, sell, and trade items within your campus',
-        count: '3 active',
-        links: [
-          { label: 'Browse', href: '/marketplace', icon: '🔍' },
-          { label: 'Create', href: '/marketplace/create', icon: '➕' },
-          { label: 'My Items', href: '/marketplace/my', icon: '📦' },
-        ],
-      },
-      {
-        id: 'notes',
-        name: 'Notes & Papers',
-        icon: '📝',
-        description: 'Share and discover study notes and research papers',
-        count: '5 new',
-        links: [
-          { label: 'Browse', href: '/notes', icon: '🔍' },
-          { label: 'Upload', href: '/notes/upload', icon: '⬆️' },
-          { label: 'Recent', href: '/notes', icon: '⏰' },
-        ],
-      },
-      {
-        id: 'rides',
-        name: 'Rides',
-        icon: '🚗',
-        description: 'Find and offer rides to nearby locations',
-        count: '2 joined',
-        links: [
-          { label: 'Browse', href: '/rides', icon: '🔍' },
-          { label: 'Post', href: '/rides/create', icon: '➕' },
-          { label: 'My Rides', href: '/rides/my', icon: '🚙' },
-        ],
-      },
-      {
-        id: 'borrow',
-        name: 'Borrow',
-        icon: '📕',
-        description: 'Borrow and lend items with other students',
-        count: '1 pending',
-        links: [
-          { label: 'Requests', href: '/borrow', icon: '📑' },
-          { label: 'Create', href: '/borrow/create', icon: '➕' },
-          { label: 'History', href: '/borrow', icon: '📚' },
-        ],
-      },
-      {
-        id: 'needs',
-        name: 'Needs',
-        icon: '💬',
-        description: 'Post and respond to campus needs and requests',
-        count: '2 responses',
-        links: [
-          { label: 'Browse', href: '/needs', icon: '🔍' },
-          { label: 'Post', href: '/needs/create', icon: '➕' },
-          { label: 'My Needs', href: '/needs', icon: '📌' },
-        ],
-      },
-      {
-        id: 'tutoring',
-        name: 'Tutoring',
-        icon: '👨‍🏫',
-        description: 'Find tutors or offer your expertise to others',
-        count: '4 available',
-        links: [
-          { label: 'Browse', href: '/tutoring', icon: '🔍' },
-          { label: 'Sessions', href: '/tutoring/my', icon: '📅' },
-          { label: 'Profile', href: '/profile/edit', icon: '✏️' },
-        ],
-      },
-      {
-        id: 'profile',
-        name: 'Profile',
-        icon: '👤',
-        description: 'Manage your account and settings',
-        count: null,
-        links: [
-          { label: 'View', href: `/profile/${user?._id}`, icon: '👁️' },
-          { label: 'Edit', href: '/profile/edit', icon: '✏️' },
-          { label: 'Settings', href: '/profile/edit', icon: '⚙️' },
-        ],
-      },
+    const kpiData = [
+      { label: 'Items for Sale', value: statsLoading ? '...' : stats.itemsForSale, icon: <ShoppingBag size={20} />, color: 'var(--primary)' },
+      { label: 'Borrow Requests', value: statsLoading ? '...' : stats.borrowRequests, icon: <BookOpen size={20} />, color: 'var(--accent-orange)' },
+      { label: 'Upcoming Rides', value: statsLoading ? '...' : stats.upcomingRides, icon: <Car size={20} />, color: 'var(--accent-green)' },
+      { label: 'Alerts', value: statsLoading ? '...' : stats.unreadNotifications, icon: <Bell size={20} />, color: stats.unreadNotifications > 0 ? '#ef4444' : '#64748b' },
     ];
 
-    // Quick action buttons (most frequently used)
-    const quickActions = [
-      { label: 'Create Listing', href: '/marketplace/create', icon: '🏪', primary: true },
-      { label: 'Post Ride', href: '/rides/create', icon: '🚗' },
-      { label: 'Upload Note', href: '/notes/upload', icon: '📝' },
-      { label: 'Request Borrow', href: '/borrow/create', icon: '📕' },
-      { label: 'Post Need', href: '/needs/create', icon: '💬' },
-    ];
-
-    // Recent activity (mock data - would come from backend)
-    const recentActivity = [
-      {
-        id: 1,
-        title: 'You posted a new ride to F-11 Markaz',
-        time: '2 hours ago',
-        icon: '🚗',
-      },
-      {
-        id: 2,
-        title: 'Ali Hassan borrowed your notes on OOP',
-        time: '5 hours ago',
-        icon: '📕',
-      },
-      {
-        id: 3,
-        title: 'Your listing sold: Gaming Mouse',
-        time: '1 day ago',
-        icon: '🏪',
-      },
+    const topQuickActions = [
+      { label: 'Sell an Item', desc: 'Post books or gear', href: '/marketplace/create', icon: <PlusCircle size={24} />, primary: true },
+      { label: 'Offer a Ride', desc: 'Share your route', href: '/rides/create', icon: <Car size={24} />, primary: false },
+      { label: 'Share Notes', desc: 'Upload PDFs', href: '/notes/upload', icon: <FileUp size={24} />, primary: false },
     ];
 
     return (
       <div className="dashboard-container">
-        {/* Welcome Section */}
         <section className="welcome-section">
           <div className="welcome-header">
             <div>
-              <h1>Welcome back, {firstName}! 👋</h1>
-              <p>Let&apos;s make the most of your campus community</p>
+              <h1>Welcome back, {firstName}!</h1>
+              <p>Here is what&apos;s happening on campus today.</p>
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="quick-actions">
-            {quickActions.map((action) => (
-              <Link
-                key={action.label}
-                href={action.href}
-                className={`quick-action-btn ${action.primary ? 'primary' : ''}`}
-              >
-                <span className="quick-action-icon">{action.icon}</span>
-                <span>{action.label}</span>
+          <div className="kpi-grid">
+            {kpiData.map((kpi, i) => (
+              <div key={i} className="kpi-card" style={{ borderLeft: `4px solid ${kpi.color}` }}>
+                <div className="kpi-icon">{kpi.icon}</div>
+                <div className="kpi-info">
+                  <span className="kpi-value">{kpi.value}</span>
+                  <span className="kpi-label">{kpi.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="section-header"><h2>Quick Actions</h2></div>
+          <div className="quick-actions-grid">
+            {topQuickActions.map((action) => (
+              <Link key={action.label} href={action.href} className="action-card">
+                <div className={`action-icon-circle ${action.primary ? 'primary' : ''}`}>
+                  {action.icon}
+                </div>
+                <div className="action-text">
+                  <span className="action-label">{action.label}</span>
+                  <span className="action-desc">{action.desc}</span>
+                </div>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* Modules Grid */}
-        <section>
-          <div className="modules-grid">
-            {modules.map((module) => (
-              <div key={module.id} className={`module-card ${module.id}`}>
-                {/* Header */}
-                <div className="module-card-header">
-                  <div className="module-icon">{module.icon}</div>
-                  <div className="module-title">
-                    <h3>{module.name}</h3>
+        <section className="activity-section">
+          <div className="activity-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bell size={20} color="var(--text-secondary)" />
+              <h2>Recent Activity</h2>
+            </div>
+            {activities.length > 0 && (
+              <Link href="/notifications" className="view-all-link">View All</Link>
+            )}
+          </div>
+
+          <div className="activity-list">
+            {activities.length > 0 ? (
+              activities.map((notif) => (
+                <div key={notif._id} className="activity-item">
+                  <div className="activity-icon"><Bell size={18} /></div>
+                  <div className="activity-content">
+                    <div className="activity-title">{notif.message}</div>
+                    <div className="activity-meta">Recent</div>
                   </div>
-                  {module.count && <span className="module-count">{module.count}</span>}
                 </div>
-
-                {/* Description */}
-                <p className="module-description">{module.description}</p>
-
-                {/* Links */}
-                <div className="module-links">
-                  {module.links.map((link) => (
-                    <Link key={link.label} href={link.href} className="module-link">
-                      <span className="module-link-icon">{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
-                </div>
+              ))
+            ) : (
+              <div className="empty-activity">
+                <p>No new activity. You&apos;re all caught up!</p>
               </div>
-            ))}
+            )}
           </div>
         </section>
-
-        {/* Activity Section */}
-        {recentActivity.length > 0 && (
-          <section className="activity-section">
-            <div className="activity-header">
-              <h2>📊 Recent Activity</h2>
-            </div>
-            <div className="activity-list">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="activity-item">
-                  <div className="activity-icon">{activity.icon}</div>
-                  <div className="activity-content">
-                    <div className="activity-title">{activity.title}</div>
-                    <div className="activity-meta">{activity.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     );
   }
 
   // ═══════════════════════════════════════════════════════════
-  // LANDING PAGE - Guests/Logged Out Users
+  // LANDING PAGE RENDER
   // ═══════════════════════════════════════════════════════════
   return (
-    <div className="landing-container">
+    <div className="landing-container" onMouseMove={handleMouseMove}>
+      <div className="star-field">
+        <div className="stars-sm"></div>
+        <div className="stars-md"></div>
+        <div className="stars-lg"></div>
+      </div>
+      {particles.map((p) => (
+        <div key={p.id} className={`particle ${p.type}`} style={{ left: p.x, top: p.y, width: p.size, height: p.size }} />
+      ))}
       <div className="landing-content">
         <h1 className="landing-title">CampusConnect</h1>
-        <p className="landing-subtitle">
-          Buy, sell, borrow, carpool, and share notes — all in one place for students.
-        </p>
-
+        <p className="landing-subtitle">Buy, sell, borrow, carpool, and share notes — all in one place for students.</p>
         <div className="landing-actions">
-          <Link href="/register" className="btn btn-primary">
-            Get Started
-          </Link>
-
-          <Link href="/marketplace" className="btn btn-secondary">
-            Browse Listings
-          </Link>
+          <Link href="/register" className="btn btn-primary">Get Started</Link>
+          <Link href="/marketplace" className="btn btn-secondary">Browse Listings</Link>
         </div>
       </div>
     </div>
