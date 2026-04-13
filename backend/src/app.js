@@ -3,6 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import marketplaceRoutes from './routes/marketplace.routes.js';
+import ridesRoutes from './routes/rides.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
+import userRoutes from './routes/user.routes.js';
+import requestRoutes from './routes/request.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 
 const app = express();
 
@@ -30,7 +38,14 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'CampusConnect API is running' });
 });
 app.use('/api/auth', authRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/rides', ridesRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/chat', chatRoutes);
 // 404 handler — for unknown routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

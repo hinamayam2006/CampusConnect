@@ -91,3 +91,79 @@ export const updateProfileSchema = z.object({
     .optional()
     .default([]),
 });
+
+const deptEnum = z.enum(
+  ['CS', 'EE', 'ME', 'CE', 'BBA', 'Economics', 'Law', 'Medicine', 'Other'],
+  { errorMap: () => ({ message: 'Invalid department' }) }
+);
+
+export const createListingSchema = z
+  .object({
+    category: z.enum(['general', 'textbook']),
+    title: z.string().min(3).max(120),
+    description: z.string().min(10).max(4000),
+    courseCode: z.string().max(32).optional().default(''),
+    semester: z.coerce.number().min(1).max(8).optional().nullable(),
+    department: deptEnum,
+    listingType: z.enum(['sale', 'rent', 'exchange']),
+    price: z.coerce.number().min(0).optional().nullable(),
+    condition: z.string().max(80).optional().default(''),
+    images: z.array(z.string().url()).max(8).optional().default([]),
+  })
+  .refine(
+    (d) => d.listingType === 'exchange' || (d.price != null && !Number.isNaN(d.price)),
+    { message: 'Price is required unless type is exchange', path: ['price'] }
+  );
+
+export const updateListingSchema = z
+  .object({
+    category: z.enum(['general', 'textbook']).optional(),
+    title: z.string().min(3).max(120).optional(),
+    description: z.string().min(10).max(4000).optional(),
+    courseCode: z.string().max(32).optional(),
+    semester: z.coerce.number().min(1).max(8).optional().nullable(),
+    department: deptEnum.optional(),
+    listingType: z.enum(['sale', 'rent', 'exchange']).optional(),
+    price: z.coerce.number().min(0).optional().nullable(),
+    condition: z.string().max(80).optional(),
+    images: z.array(z.string().url()).max(8).optional(),
+    status: z.enum(['active', 'reserved', 'sold']).optional(),
+  })
+  .strict();
+
+export const createRideSchema = z.object({
+  originName: z.string().min(2).max(120),
+  destName: z.string().min(2).max(120),
+  originLat: z.coerce.number().optional().nullable(),
+  originLng: z.coerce.number().optional().nullable(),
+  destLat: z.coerce.number().optional().nullable(),
+  destLng: z.coerce.number().optional().nullable(),
+  departureTime: z.coerce.date(),
+  seatsTotal: z.coerce.number().min(1).max(8),
+  vehicleInfo: z.string().max(120).optional().default(''),
+  notes: z.string().max(1000).optional().default(''),
+  recurring: z
+    .object({
+      enabled: z.boolean(),
+      daysOfWeek: z.array(z.number().min(0).max(6)).optional().default([]),
+    })
+    .optional(),
+});
+
+export const rateUserSchema = z.object({
+  score: z.number().min(1).max(5),
+  comment: z.string().max(500).optional().default(''),
+  context: z.enum(['marketplace', 'ride', 'borrow', 'tutoring']),
+});
+
+export const marketplaceSearchLogSchema = z.object({
+  search: z.string().max(200).optional().default(''),
+  category: z.enum(['general', 'textbook']).optional(),
+  department: deptEnum.optional(),
+  semester: z.coerce.number().min(1).max(8).optional().nullable(),
+});
+
+export const rideSearchLogSchema = z.object({
+  originName: z.string().max(120).optional().default(''),
+  destName: z.string().max(120).optional().default(''),
+});

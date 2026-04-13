@@ -1,0 +1,710 @@
+import mongoose from 'mongoose';
+import Request from '../models/Request.model.js';
+import Listing from '../models/Listing.model.js';
+import Ride from '../models/Ride.model.js';
+import User from '../models/User.model.js';
+import { logActivity } from '../services/activity.service.js';
+import { pushNotification } from '../services/notification.service.js';
+
+/**
+ * Create a new request (for both marketplace listings and ride offers)
+ * Status starts as PENDING
+ * Owner receives a notification
+ */
+export const createRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { refModel, refId, seatsRequested = 1, message = '' } = req.body;
+    const requester = req.user._id;
+
+    // Validate refModel
+    if (!['Listing', 'Ride'].includes(refModel)) {
+      return res.status(400).json({ success: false, message: 'Invalid refModel' });
+    }
+
+    // Fetch the referenced resource to get the owner
+    let resource;
+    if (refModel === 'Listing') {
+      resource = await Listing.findById(refId).session(session);
+    } else {
+      resource = await Ride.findById(refId).session(session);
+    }
+
+    if (!resource) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: `${refModel} not found` });
+    }
+
+    // Determine owner field (seller for Listing, driver for Ride)
+    const owner = refModel === 'Listing' ? resource.seller : resource.driver;
+
+    // Prevent user from requesting their own resource
+    if (owner.equals(requester)) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json({ success: false, message: 'Cannot request your own resource' });
+    }
+
+    // Determine context
+    const context = refModel === 'Listing' ? 'marketplace' : 'ride';
+
+    // Create the request
+    const request = await Request.create(
+      [
+        {
+          requester,
+          owner,
+          refModel,
+          refId,
+          status: 'pending',
+          context,
+          seatsRequested,
+          message,
+        },
+      ],
+      { session }
+    );
+
+    // Log activity
+    await logActivity(
+      {
+        userId: requester,
+        type: context === 'marketplace' ? 'marketplace_request_create' : 'ride_request_create',
+        refModel: 'Request',
+        refId: request[0]._id,
+        meta: { refModel, refId, context },
+      },
+      { session }
+    );
+
+    // Notify owner
+    await pushNotification(
+      owner,
+      {
+        type: `${context}_request_received`,
+        message: `Someone is interested in your ${context === 'marketplace' ? 'listing' : 'ride offer'}!`,
+        link:
+          context === 'marketplace'
+            ? `/marketplace/${refId}`
+            : `/rides/${refId}`,
+        requestId: request[0]._id,
+        meta: { refModel, refId, context, requester },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.status(201).json({
+      success: true,
+      data: request[0],
+      message: 'Request created successfully',
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Get all requests for the current user (both as requester and owner)
+ */
+export const getMyRequests = async (req, res) => {
+  try {
+    const { role, status, context } = req.query;
+    const userId = req.user._id;
+
+    let query = {};
+
+    // role: 'requester', 'owner', or both (default)
+    if (role === 'requester') {
+      query.requester = userId;
+    } else if (role === 'owner') {
+      query.owner = userId;
+    } else {
+      query = { $or: [{ requester: userId }, { owner: userId }] };
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (context) {
+      query.context = context;
+    }
+
+    const requests = await Request.find(query)
+      .populate('requester', 'name avatar department trustScore')
+      .populate('owner', 'name avatar department trustScore')
+      .populate('refId')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: requests,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Get a specific request by ID
+ */
+export const getRequestById = async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id)
+      .populate('requester', 'name avatar department trustScore location')
+      .populate('owner', 'name avatar department trustScore location')
+      .populate('refId');
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Check if user has permission to view
+    if (!request.requester._id.equals(req.user._id) && !request.owner._id.equals(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not allowed' });
+    }
+
+    res.status(200).json({ success: true, data: request });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Approve a request (owner only)
+ * Status: PENDING -> APPROVED
+ */
+export const approveRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const request = await Request.findById(req.params.id).session(session);
+
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Only owner can approve
+    if (!request.owner.equals(req.user._id)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Only owner can approve' });
+    }
+
+    // Status must be pending
+    if (request.status !== 'pending') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot approve a ${request.status} request`,
+      });
+    }
+
+    if (request.context === 'ride') {
+      const ride = await Ride.findById(request.refId).session(session);
+      if (!ride || ride.status !== 'scheduled') {
+        await session.abortTransaction();
+        return res.status(400).json({ success: false, message: 'Ride is no longer available' });
+      }
+      if (ride.driver.equals(request.requester) || ride.passengers.some((p) => p.user.equals(request.requester))) {
+        await session.abortTransaction();
+        return res.status(400).json({ success: false, message: 'Requester is already on this ride' });
+      }
+
+      const confirmed = ride.passengers.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + (p.seatsRequested || 1), 0);
+      const seatsRequested = Math.max(1, request.seatsRequested || 1);
+      if (confirmed + seatsRequested > ride.seatsTotal) {
+        await session.abortTransaction();
+        return res.status(400).json({ success: false, message: 'Not enough seats remaining to approve this request' });
+      }
+
+      ride.passengers.push({ user: request.requester, status: 'confirmed', seatsRequested });
+      ride.seatsAvailable = Math.max(0, ride.seatsTotal - confirmed - seatsRequested);
+      if (ride.seatsAvailable <= 0) ride.status = 'full';
+      await ride.save({ session });
+    }
+
+    request.status = 'approved';
+    request.chatInitialized = true;
+    await request.save({ session });
+
+    // Log activity
+    await logActivity(
+      {
+        userId: req.user._id,
+        type: 'request_approved',
+        refModel: 'Request',
+        refId: request._id,
+        meta: { context: request.context },
+      },
+      { session }
+    );
+
+    // Notify requester
+    await pushNotification(
+      request.requester,
+      {
+        type: 'request_approved',
+        message: `Your request was approved! You can now chat with the owner.`,
+        link: `/dashboard`,
+        requestId: request._id,
+        meta: { refModel: request.refModel, refId: request.refId, context: request.context, owner: request.owner },
+      },
+      { session }
+    );
+
+    // Update owner's notification to show approved status
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          'notifications.$[elem].message': 'Request approved by you',
+          'notifications.$[elem].type': 'request_approved_by_owner',
+          'notifications.$[elem].meta.chatInitialized': true,
+        },
+      },
+      {
+        arrayFilters: [{ 'elem.requestId': request._id }],
+        session,
+      }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({
+      success: true,
+      data: request,
+      message: 'Request approved',
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Decline a request (owner only)
+ * Status: PENDING -> DECLINED
+ */
+export const declineRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { declineReason = '' } = req.body;
+    const request = await Request.findById(req.params.id).session(session);
+
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Only owner can decline
+    if (!request.owner.equals(req.user._id)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Only owner can decline' });
+    }
+
+    // Status must be pending
+    if (request.status !== 'pending') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot decline a ${request.status} request`,
+      });
+    }
+
+    request.status = 'declined';
+    request.declineReason = declineReason;
+    await request.save({ session });
+
+    // Log activity
+    await logActivity(
+      {
+        userId: req.user._id,
+        type: 'request_declined',
+        refModel: 'Request',
+        refId: request._id,
+        meta: { context: request.context, reason: declineReason },
+      },
+      { session }
+    );
+
+    // Notify requester
+    await pushNotification(
+      request.requester,
+      {
+        type: 'request_declined',
+        message: `Your request was declined.${declineReason ? ` Reason: ${declineReason}` : ''}`,
+        link: `/requests/${request._id}`,
+        requestId: request._id,
+        meta: { refModel: request.refModel, refId: request.refId, context: request.context, declinedBy: req.user._id, reason: declineReason },
+      },
+      { session }
+    );
+
+    // Update owner's notification to show declined status
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          'notifications.$[elem].message': `Request declined by you${declineReason ? ` (${declineReason})` : ''}`,
+          'notifications.$[elem].type': 'request_declined_by_owner',
+        },
+      },
+      {
+        arrayFilters: [{ 'elem.requestId': request._id }],
+        session,
+      }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({
+      success: true,
+      data: request,
+      message: 'Request declined',
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Withdraw a request (requester only, only if PENDING)
+ * Status: PENDING -> WITHDRAWN
+ */
+export const withdrawRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const request = await Request.findById(req.params.id).session(session);
+
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Only requester can withdraw
+    if (!request.requester.equals(req.user._id)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Only requester can withdraw' });
+    }
+
+    // Status must be pending
+    if (request.status !== 'pending') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot withdraw a ${request.status} request`,
+      });
+    }
+
+    request.status = 'withdrawn';
+    await request.save({ session });
+
+    // Log activity
+    await logActivity(
+      {
+        userId: req.user._id,
+        type: 'request_withdrawn',
+        refModel: 'Request',
+        refId: request._id,
+        meta: { context: request.context },
+      },
+      { session }
+    );
+
+    // Notify owner
+    await pushNotification(
+      request.owner,
+      {
+        type: 'request_withdrawn',
+        message: `${req.user.name} withdrew their request.`,
+        link: `/requests/${request._id}`,
+        requestId: request._id,
+        meta: { refModel: request.refModel, refId: request.refId, context: request.context, withdrawnBy: req.user._id },
+      },
+      { session }
+    );
+
+    // Update requester's notification to show withdrawn status
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          'notifications.$[elem].message': 'You withdrew that request',
+          'notifications.$[elem].type': 'request_withdrawn_by_requester',
+        },
+      },
+      {
+        arrayFilters: [{ 'elem.requestId': request._id }],
+        session,
+      }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({
+      success: true,
+      data: request,
+      message: 'Request withdrawn',
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Close a declined or withdrawn request so the requester can hide it from their picks
+ */
+export const closeRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const request = await Request.findById(req.params.id).session(session);
+
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (!request.requester.equals(req.user._id)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Only requester can close this request' });
+    }
+
+    if (request.status === 'pending') {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Withdraw pending requests instead of closing them' });
+    }
+
+    if (request.status === 'cancelled') {
+      await session.commitTransaction();
+      return res.status(200).json({ success: true, data: request, message: 'Request already closed' });
+    }
+
+    request.status = 'cancelled';
+    await request.save({ session });
+
+    await logActivity(
+      {
+        userId: req.user._id,
+        type: 'request_closed',
+        refModel: 'Request',
+        refId: request._id,
+        meta: { context: request.context },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({ success: true, data: request, message: 'Request closed' });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Accept chat request (either party can accept, but until then no messages can be sent)
+ */
+export const acceptChatRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const request = await Request.findById(req.params.id).session(session);
+
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    // Request must be approved
+    if (request.status !== 'approved') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: 'Chat can only be initialized for approved requests',
+      });
+    }
+
+    if (request.chatClosed) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: 'Chat for this request has already been closed',
+      });
+    }
+
+    // Must be either requester or owner
+    const userId = req.user._id;
+    if (!request.requester.equals(userId) && !request.owner.equals(userId)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Not allowed' });
+    }
+
+    // Accept chat
+    if (!request.chatAcceptedBy) {
+      request.chatAcceptedBy = userId;
+      request.chatAcceptedAt = new Date();
+    } else if (!request.chatAcceptedBy.equals(userId) && request.status === 'approved') {
+      // Both parties have accepted — chat is fully enabled
+    }
+
+    await request.save({ session });
+
+    // Notify the other party
+    const otherPartyId = request.requester.equals(userId)
+      ? request.owner
+      : request.requester;
+    await pushNotification(
+      otherPartyId,
+      {
+        type: 'chat_initialized',
+        message: `Chat is now available! You can start messaging.`,
+        link: `/dashboard`,
+        requestId: request._id,
+        meta: { refModel: request.refModel, refId: request.refId, context: request.context, userAccepted: userId },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.status(200).json({
+      success: true,
+      data: request,
+      message: 'Chat accepted',
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Close an approved chat permanently
+ */
+export const closeChat = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const request = await Request.findById(req.params.id).session(session);
+    if (!request) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'approved') {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Only approved chats can be closed' });
+    }
+
+    const userId = req.user._id;
+    if (!request.requester.equals(userId) && !request.owner.equals(userId)) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: 'Not allowed' });
+    }
+
+    if (request.chatClosed) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Chat is already closed' });
+    }
+
+    request.chatClosed = true;
+    request.chatClosedBy = userId;
+    request.chatClosedAt = new Date();
+    await request.save({ session });
+
+    const otherPartyId = request.requester.equals(userId) ? request.owner : request.requester;
+
+    await pushNotification(
+      otherPartyId,
+      {
+        type: 'chat_closed',
+        message: `${req.user.name} closed this chat for privacy.`,
+        link: `/requests/${request._id}`,
+        requestId: request._id,
+        meta: { refModel: request.refModel, refId: request.refId, context: request.context, closedBy: userId },
+      },
+      { session }
+    );
+
+    if (req.app?.io) {
+      const room = `request_${request._id}`;
+      req.app.io.to(room).emit('chat_closed', {
+        requestId: request._id,
+        closedBy: userId,
+        message: 'This chat has been closed by the other participant.',
+      });
+    }
+
+    await session.commitTransaction();
+    res.status(200).json({ success: true, data: request, message: 'Chat closed' });
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Get requests related to a specific listing or ride
+ */
+export const getRequestsForResource = async (req, res) => {
+  try {
+    const { refModel, refId } = req.params;
+
+    // Only owner can view requests for their resource
+    let resource;
+    if (refModel === 'Listing') {
+      resource = await Listing.findById(refId);
+    } else if (refModel === 'Ride') {
+      resource = await Ride.findById(refId);
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid refModel' });
+    }
+
+    if (!resource) {
+      return res.status(404).json({ success: false, message: `${refModel} not found` });
+    }
+
+    const owner = refModel === 'Listing' ? resource.seller : resource.driver;
+    if (!owner.equals(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only resource owner can view requests',
+      });
+    }
+
+    const requests = await Request.find({
+      refModel,
+      refId,
+      status: { $in: ['pending', 'approved'] },
+    })
+      .populate('requester', 'name avatar department trustScore')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: requests,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

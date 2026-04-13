@@ -140,6 +140,7 @@ export default function RegisterPage() {
             <input
               type="password"
               name="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
               onFocus={() => setIsPasswordFocused(true)}

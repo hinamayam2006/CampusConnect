@@ -1,0 +1,268 @@
+.container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #333;
+}
+
+.filterControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filterGroup label {
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.buttonGroup button {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border-radius: 4px;
+}
+
+.loading,
+.emptyState {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 1rem;
+}
+
+.requestsList {
+  display: grid;
+  gap: 16px;
+}
+
+.requestCard {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.requestCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.userAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.userDetails h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.userDetails p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.message {
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  border-radius: 4px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.message strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.details {
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #e8f4f8;
+  border-radius: 4px;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.details p {
+  margin: 0;
+}
+
+.declineReason {
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #f8d7da;
+  border-left: 3px solid #dc3545;
+  border-radius: 4px;
+  color: #721c24;
+  font-size: 0.95rem;
+}
+
+.declineReason strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.cardActions button {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+  }
+
+  .filterControls {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filterGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .buttonGroup {
+    width: 100%;
+  }
+
+  .buttonGroup button {
+    flex: 1;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .cardActions {
+    justify-content: flex-start;
+  }
+
+  .userAvatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .userDetails h4 {
+    font-size: 0.95rem;
+  }
+
+  .userDetails p {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .filterControls {
+    padding: 12px;
+  }
+
+  .requestCard {
+    padding: 12px;
+  }
+
+  .cardHeader {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .message,
+  .details,
+  .declineReason {
+    padding: 8px;
+    margin: 8px 0;
+    font-size: 0.9rem;
+  }
+
+  .cardActions {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .cardActions button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    flex: 1;
+  }
+}

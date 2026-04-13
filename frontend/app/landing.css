@@ -12,77 +12,54 @@
   position: relative;
   overflow: hidden;
 }
-
-/* Animated radiating dots - background decoration */
-.landing-container::before {
-  content: '';
+/* Star Field Layers */
+.star-field {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background-color: rgba(30, 58, 138, 0.3);
-  border-radius: 50%;
-  animation: radiateOut 4s ease-out infinite;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 0;
 }
 
-.landing-container::after {
-  content: '';
+/* Creating stars using box-shadow for performance */
+.stars-sm, .stars-md, .stars-lg {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 10px;
-  height: 10px;
-  background-color: rgba(168, 85, 247, 0.25);
+  background: #6366f1;
   border-radius: 50%;
-  animation: radiateOut 4s ease-out 1.2s infinite;
-  pointer-events: none;
-  z-index: 0;
+  opacity: 0.4;
+  animation: twinkle var(--duration) infinite ease-in-out;
 }
 
-@keyframes radiateOut {
-  0% {
-    width: 12px;
-    height: 12px;
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 0px rgba(30, 58, 138, 0.2);
-  }
-  50% {
-    opacity: 0.4;
-  }
-  100% {
-    width: 12px;
-    height: 12px;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(10);
-    box-shadow: 0 0 0 50px rgba(30, 58, 138, 0.05);
-  }
+/* Replace your .stars-sm, .stars-md, and .stars-lg with this */
+
+.stars-sm { 
+  width: 1px; height: 1px; --duration: 3s; 
+  box-shadow: 10vw 20vh #6366f1, 50vw 40vh #6366f1, 80vw 10vh #6366f1, 20vw 80vh #6366f1, 90vw 90vh #6366f1,
+              15vw 10vh #6366f1, 35vw 60vh #6366f1, 65vw 20vh #6366f1, 75vw 80vh #6366f1, 5vw 40vh #6366f1,
+              95vw 30vh #6366f1, 45vw 90vh #6366f1, 25vw 50vh #6366f1, 85vw 70vh #6366f1, 55vw 5vh #6366f1; 
 }
 
-/* Landing content wrapper */
-.landing-content {
-  text-align: center;
-  max-width: 700px;
-  position: relative;
-  z-index: 1;
-  animation: fadeInUp 0.8s ease-out;
+.stars-md { 
+  width: 2px; height: 2px; --duration: 4s; 
+  box-shadow: 15vw 25vh #4f46e5, 55vw 45vh #4f46e5, 85vw 15vh #4f46e5, 25vw 85vh #4f46e5,
+              5vw 75vh #4f46e5, 35vw 15vh #4f46e5, 65vw 85vh #4f46e5, 95vw 55vh #4f46e5,
+              45vw 35vh #4f46e5, 75vw 65vh #4f46e5, 12vw 92vh #4f46e5, 88vw 8vh #4f46e5;
+  opacity: 0.6; 
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.stars-lg { 
+  width: 3px; height: 3px; --duration: 5s; 
+  box-shadow: 30vw 50vh #3b82f6, 70vw 20vh #3b82f6, 40vw 70vh #3b82f6, 10vw 10vh #3b82f6,
+              90vw 90vh #3b82f6, 20vw 30vh #3b82f6, 80vw 60vh #3b82f6, 50vw 10vh #3b82f6; 
+  opacity: 0.3; 
 }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
 
 /* Landing title */
 .landing-title {
@@ -108,6 +85,26 @@
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* Landing content wrapper */
+.landing-content {
+  text-align: center;
+  max-width: 700px;
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Landing actions */
@@ -218,3 +215,50 @@
     font-size: 0.95rem;
   }
 }
+
+
+/* ==========================================
+    PARTICLE EFFECTS
+   ========================================== */
+
+   .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10;
+    transform: translate(-50%, -50%);
+    animation: particleFade 0.8s ease-out forwards;
+    will-change: transform, opacity;
+  }
+  
+  /* The Blue Dots */
+  .particle.dot {
+    background: radial-gradient(circle, #6366f1 0%, rgba(99, 102, 241, 0) 70%);
+    border-radius: 50%;
+    filter: blur(1px);
+  }
+  
+  /* The Sparkles */
+  .particle.sparkle {
+    background-color: #fbbf24;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    /* Alternatively, use a simple star shape: */
+    /* transform: translate(-50%, -50%) rotate(45deg); */
+  }
+  
+  @keyframes particleFade {
+    0% {
+      opacity: 0.8;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.2);
+    }
+  }
+  
+  /* Performance optimization for users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .particle {
+      display: none;
+    }
+  }

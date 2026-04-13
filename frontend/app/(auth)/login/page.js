@@ -95,6 +95,7 @@ export default function LoginPage() {
             <input
               type="email"
               name="email"
+              autoComplete="username"
               value={formData.email}
               onChange={handleChange}
               placeholder="you@university.edu"
@@ -109,6 +110,9 @@ export default function LoginPage() {
             <input
               type="password"
               name="password"
+              readOnly 
+              onFocus={(e) => e.target.removeAttribute('readonly')}
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Your password"

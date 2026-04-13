@@ -1,16 +1,25 @@
 import axios from 'axios';
 import useStore from '../store/useStore';
 
+/** Default when NEXT_PUBLIC_API_URL is unset — must match backend (see frontend/.env.local). */
+function resolveBaseURL() {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL;
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return fromEnv.trim().replace(/\/+$/, '');
+  }
+  return 'http://localhost:5000/api';
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 10000,
+  baseURL: resolveBaseURL(),
+  timeout: 30000,
 });
 
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
@@ -22,60 +31,73 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Attach JWT token to every request automatically
 api.interceptors.request.use((config) => {
-  // Get token directly from store
   const store = useStore.getState();
 
   if (store.accessToken) {
     config.headers.Authorization = `Bearer ${store.accessToken}`;
   }
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
-// Handle expired/invalid tokens globally
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    const url = originalRequest.url || '';
+    const status = error.response?.status;
+
+    // Wrong password / registration errors — do not attempt token refresh
+    const isAuthCall =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/refresh');
+
+    if (status === 401 && isAuthCall) {
+      return Promise.reject(error);
+    }
+
     const store = useStore.getState();
 
-    // If already trying to refresh, queue the request
-    if (error.response?.status === 401 && !originalRequest._retry) {
-
+    if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        // Try to refresh token
-        const response = await api.post('/api/auth/refresh', {
-          refreshToken: store.refreshToken
-        });
+        const response = await api.post(
+          '/auth/refresh',
+          { refreshToken: store.refreshToken },
+          { timeout: 15000 }
+        );
 
         const { accessToken } = response.data.data;
 
-        // Update store with new access token
-        // Token expiry is 15 minutes from now
-        const tokenExpiry = Date.now() + (15 * 60 * 1000);
+        const tokenExpiry = Date.now() + 15 * 60 * 1000;
         store.setAccessToken(accessToken, tokenExpiry);
 
-        // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
         return api(originalRequest);
-
       } catch (err) {
-        // Refresh failed, logout and redirect
         store.logout();
         processQueue(err);
 
@@ -87,11 +109,9 @@ api.interceptors.response.use(
       }
     }
 
-    // Only redirect on 401 if it's NOT a login/register request
-    // and refresh already attempted
     if (error.response?.status === 401 && originalRequest._retry) {
-      const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
-                            originalRequest.url?.includes('/auth/register');
+      const isAuthEndpoint =
+        originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
 
       if (!isAuthEndpoint) {
         store.logout();
