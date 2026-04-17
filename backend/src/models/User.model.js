@@ -43,6 +43,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Application-level access control (analogous to DB roles in SQL systems)
+    role: {
+      type: String,
+      enum: ['student', 'moderator'],
+      default: 'student',
+    },
     // Trust & Rating System — stored directly on user
     // so we never need a separate query to show trust score
     trustScore: {
@@ -77,25 +83,29 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    // for notifications — simple array
+    // for notifications — simple array, including action metadata and linked requests
     notifications: [
       {
         type: {
           type: String,
-          enum: [
-            'borrow_request',
-            'borrow_approved',
-            'borrow_returned',
-            'ride_request',
-            'ride_confirmed',
-            'listing_interest',
-            'rating_received',
-            'overdue',
-          ],
+          default: 'info',
         },
         message: String,
         link: String,
+        requestId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Request',
+          default: null,
+        },
+        meta: {
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
+        },
         read: {
+          type: Boolean,
+          default: false,
+        },
+        hidden: {
           type: Boolean,
           default: false,
         },
@@ -108,6 +118,9 @@ const userSchema = new mongoose.Schema(
     // tutoring fields
     canTeach: [String],
     needsTutoring: [String],
+    // notes marketplace
+    savedNotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
+    downloadedNotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
     // JWT Refresh Token Management
     // Stored hashed for security; used to issue new short-lived access tokens
     // Allows users to stay logged in across browser sessions/tab reloads
@@ -129,6 +142,7 @@ const userSchema = new mongoose.Schema(
 // Index on email for fast login lookups
 userSchema.index({ email: 1 });
 userSchema.index({ department: 1, year: 1 });
+userSchema.index({ role: 1 });
 
 // Remove password from any JSON response automatically
 userSchema.methods.toJSON = function () {

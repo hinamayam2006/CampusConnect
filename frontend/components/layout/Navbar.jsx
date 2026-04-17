@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import useStore from '../../store/useStore';
@@ -19,13 +18,9 @@ import {
 
 export default function Navbar() {
   const { user, logout } = useStore();
+  const unreadCount = useStore((s) => s.unreadCount);
   const router = useRouter();
   const pathname = usePathname();
-
-  // NOTE: If you haven't added unreadCount to your Zustand store yet, 
-  // this will be undefined. For now, we'll check user.notifications length 
-  // or a fallback.
-  const unreadCount = user?.unreadNotifications || 0; 
 
   const handleLogout = () => {
     logout();

@@ -4,17 +4,37 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import marketplaceRoutes from './routes/marketplace.routes.js';
+import ridesRoutes from './routes/rides.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
+import userRoutes from './routes/user.routes.js';
+import requestRoutes from './routes/request.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import notesRoutes from './routes/notes.routes.js';
+import tutorsRoutes from './routes/tutors.routes.js';
+import bookingsRoutes from './routes/bookings.routes.js';
 
 const app = express();
 
 // Security headers
 app.use(helmet());
 
-// CORS — allow only your frontend
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true
-}));
+// CORS — allow configured frontend and localhost fallback ports used in dev
+const allowedOrigins = new Set(
+  [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001'].filter(Boolean)
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 
 // Parse JSON body
 app.use(express.json({ limit: '10mb' }));
@@ -32,6 +52,16 @@ app.get('/api/health', (req, res) => {
 });
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/rides', ridesRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/notes', notesRoutes);
+app.use('/api/tutors', tutorsRoutes);
+app.use('/api/bookings', bookingsRoutes);
 // 404 handler — for unknown routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

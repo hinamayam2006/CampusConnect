@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import useStore from '../store/useStore';
 import api from '../lib/api'; 
 import { 
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, accessToken } = useStore();
+  const { user, accessToken, setUnreadCount } = useStore();
   
   const [particles, setParticles] = useState([]);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -24,6 +25,8 @@ export default function Home() {
     upcomingRides: 0,
     unreadNotifications: 0
   });
+  const fetchingDashboardRef = useRef(false);
+  const lastDashboardFetchRef = useRef(0);
 
   // 1. Unified State for Activity (Renamed to avoid shadowing)
   const [activities, setActivities] = useState([]);
@@ -35,7 +38,15 @@ export default function Home() {
         setStatsLoading(false);
         return;
       }
-      
+
+      const now = Date.now();
+      if (fetchingDashboardRef.current || now - lastDashboardFetchRef.current < 5000) {
+        return;
+      }
+
+      fetchingDashboardRef.current = true;
+      lastDashboardFetchRef.current = now;
+
       try {
         setStatsLoading(true);
         const [statsRes, activityRes] = await Promise.all([
@@ -43,18 +54,27 @@ export default function Home() {
           api.get('/dashboard/activity')
         ]);
 
-        if (statsRes.data.success) setStats(statsRes.data.data);
+        if (statsRes.data.success) {
+          setStats(statsRes.data.data);
+          setUnreadCount(statsRes.data.data.unreadNotifications ?? 0);
+        }
         if (activityRes.data.success) setActivities(activityRes.data.data);
-        
       } catch (err) {
-        console.error("Dashboard error:", err);
+        const status = err.response?.status || err.status;
+        if (status === 429) {
+          toast.error('Too many requests. Please wait a few seconds and try again.');
+        } else {
+          toast.error('Unable to load dashboard right now.');
+        }
+        console.error('Dashboard error:', err);
       } finally {
         setStatsLoading(false);
+        fetchingDashboardRef.current = false;
       }
     };
 
     fetchDashboardData();
-  }, [user, accessToken]);
+  }, [user, accessToken, setUnreadCount]);
 
   // 2. Particle Logic
   const handleMouseMove = (e) => {
@@ -150,8 +170,17 @@ export default function Home() {
                 <div key={notif._id} className="activity-item">
                   <div className="activity-icon"><Bell size={18} /></div>
                   <div className="activity-content">
-                    <div className="activity-title">{notif.message}</div>
-                    <div className="activity-meta">Recent</div>
+                    <div className="activity-title">
+                      {notif.link ? (
+                        <Link href={notif.link}>{notif.message}</Link>
+                      ) : (
+                        notif.message
+                      )}
+                    </div>
+                    <div className="activity-meta">
+                      {notif.kind === 'activity' ? 'Activity' : 'Alert'}
+                      {notif.createdAt ? ` · ${new Date(notif.createdAt).toLocaleString()}` : ''}
+                    </div>
                   </div>
                 </div>
               ))

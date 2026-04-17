@@ -1,0 +1,241 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 20px;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  color: #000;
+}
+
+.modalBody {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.requesterInfo {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.requesterAvatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.requesterDetails h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.requesterDetails p {
+  margin: 4px 0;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.department {
+  font-weight: 500;
+}
+
+.trustScore {
+  color: #ffa500;
+  font-weight: 500;
+}
+
+.messageSection {
+  margin: 15px 0;
+}
+
+.messageSection h5 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.messageSection p {
+  margin: 0;
+  padding: 12px;
+  background-color: #f0f0f0;
+  border-left: 3px solid #007bff;
+  border-radius: 4px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.requestDetails {
+  padding: 12px;
+  background-color: #e8f4f8;
+  border-radius: 4px;
+  margin: 15px 0;
+}
+
+.requestDetails p {
+  margin: 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.modalFooter button {
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modalFooter button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmText {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.formGroup textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .modalOverlay {
+    padding: 10px;
+  }
+
+  .modalContent {
+    max-width: 100%;
+  }
+
+  .modalHeader {
+    padding: 12px 16px;
+  }
+
+  .modalHeader h2 {
+    font-size: 1.25rem;
+  }
+
+  .modalBody {
+    padding: 16px;
+  }
+
+  .modalFooter {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modalFooter button {
+    width: 100%;
+    padding: 10px 12px;
+  }
+
+  .requesterInfo {
+    gap: 12px;
+  }
+
+  .requesterAvatar {
+    width: 50px;
+    height: 50px;
+  }
+
+  .requesterDetails h4 {
+    font-size: 0.95rem;
+  }
+
+  .requesterDetails p {
+    font-size: 0.85rem;
+  }
+}

@@ -17,7 +17,7 @@
  * For production with multiple servers, use Redis Store.
  */
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Strict rate limiter for login attempts
@@ -33,10 +33,8 @@ export const loginLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  keyGenerator: (req, res) => {
-    // Rate limit by IP address
-    return req.ip;
-  },
+  // express-rate-limit v8: must normalize IPv6 via ipKeyGenerator (ERR_ERL_KEY_GEN_IPV6)
+  keyGenerator: (req, res) => ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? 'unknown'),
   handler: (req, res) => {
     // Custom handler to return our standard error format
     res.status(429).json({
@@ -65,9 +63,7 @@ export const registerLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
-    return req.ip;
-  },
+  keyGenerator: (req, res) => ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? 'unknown'),
   handler: (req, res) => {
     res.status(429).json({
       success: false,

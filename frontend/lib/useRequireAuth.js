@@ -1,20 +1,47 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useStore from '../store/useStore';
 
-// Use this hook at the top of any page that requires login
-// It will redirect to /login if user is not authenticated
+/**
+ * Redirects to /login if not authenticated after Zustand persist has rehydrated.
+ * Always wait for `isReady` before firing protected API calls (avoids 401 + stuck refresh).
+ */
 export default function useRequireAuth() {
-  const { user, token } = useStore();
+  const { user, accessToken, refreshToken } = useStore();
   const router = useRouter();
+  const [hydrated, setHydrated] = useState(() => {
+    try {
+      return useStore.persist.hasHydrated();
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
-    if (!user || !token) {
-      router.push('/login');
+    try {
+      if (useStore.persist.hasHydrated()) {
+        setHydrated(true);
+        return;
+      }
+      const unsub = useStore.persist.onFinishHydration(() => setHydrated(true));
+      return unsub;
+    } catch {
+      setHydrated(true);
     }
-  }, [user, token, router]);
+  }, []);
 
-  return { user, token };
+  const hasSession = !!user && (!!accessToken || !!refreshToken);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!hasSession) {
+      router.replace('/login');
+    }
+  }, [hydrated, hasSession, router]);
+
+  const isReady = hydrated && hasSession;
+
+  return { user, accessToken, isReady, hydrated };
 }
