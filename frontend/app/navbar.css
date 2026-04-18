@@ -129,6 +129,41 @@
   border-color: #dc2626;
 }
 
+.header-notification-bell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.header-notification-bell:hover {
+  color: var(--primary);
+}
+
+.bell-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.5rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background-color: #dc2626;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-white);
+}
+
 /* Mobile Responsive */
 @media (max-width: 991px) {
   .navbar-collapse {

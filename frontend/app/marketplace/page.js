@@ -1,7 +1,8 @@
+// marketplace/page.js
 'use client';
 
 import Link from 'next/link';
-import { ShoppingBag, BookMarked, PlusCircle, List } from 'lucide-react';
+import { ShoppingBag, BookMarked, PlusCircle, List, ClipboardList } from 'lucide-react';
 import useStore from '../../store/useStore';
 
 export default function MarketplaceHubPage() {
@@ -48,7 +49,7 @@ export default function MarketplaceHubPage() {
       </div>
 
       <div className="row g-3">
-        <div className="col-md-6">
+        <div className="col-md-4">
           <Link href="/marketplace/my-listings" className="mc-tile h-100">
             <h3 className="d-flex align-items-center gap-2">
               <List size={22} /> My listings
@@ -56,7 +57,15 @@ export default function MarketplaceHubPage() {
             <p className="text-secondary small mb-0">Track what you have posted and keep buyers informed.</p>
           </Link>
         </div>
-        <div className="col-md-6">
+        <div className="col-md-4">
+          <Link href="/marketplace/my-requests" className="mc-tile h-100">
+            <h3 className="d-flex align-items-center gap-2">
+              <ClipboardList size={22} /> My requests
+            </h3>
+            <p className="text-secondary small mb-0">Review the listings you requested and seller responses.</p>
+          </Link>
+        </div>
+        <div className="col-md-4">
           <Link href="/marketplace/recommendations" className="mc-tile h-100">
             <h3>For you</h3>
             <p className="text-secondary small mb-0">

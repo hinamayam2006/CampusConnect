@@ -1,0 +1,167 @@
+.pageHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.08), rgba(99, 102, 241, 0.06));
+  border: 1px solid rgba(30, 58, 138, 0.12);
+}
+
+.pageTitle {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.35rem;
+  color: var(--text-primary);
+}
+
+.pageSubtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  max-width: 680px;
+}
+
+.heroActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.emptyPanel {
+  border: 1px dashed rgba(30, 58, 138, 0.16);
+  border-radius: 1rem;
+  padding: 2.6rem 1.4rem;
+  text-align: center;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.requestGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.requestCard {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(30, 58, 138, 0.1);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.requestCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.requestRoute {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.requestMeta {
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.statusPill {
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.statusPending {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.statusApproved {
+  background: rgba(34, 197, 94, 0.16);
+  color: #15803d;
+}
+
+.statusDeclined {
+  background: rgba(220, 38, 38, 0.14);
+  color: #b91c1c;
+}
+
+.statusMuted {
+  background: rgba(107, 114, 128, 0.14);
+  color: #4b5563;
+}
+
+.requestDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.requestDetailCard {
+  background: linear-gradient(180deg, rgba(224, 231, 255, 0.55), rgba(248, 250, 252, 0.95));
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+}
+
+.detailLabel {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.detailValue {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.messageBox,
+.declineBox {
+  border-radius: 0.9rem;
+  padding: 0.95rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.messageBox {
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--text-secondary);
+}
+
+.declineBox {
+  background: rgba(254, 226, 226, 0.85);
+  color: #991b1b;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .requestCardTop {
+    flex-direction: column;
+  }
+
+  .cardActions {
+    flex-direction: column;
+  }
+
+  .cardActions :global(.btn) {
+    width: 100%;
+  }
+}

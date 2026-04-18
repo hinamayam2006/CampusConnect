@@ -1,3 +1,4 @@
+//marketplace/[id]/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -137,27 +138,35 @@ export default function ListingDetailPage() {
 
           {!isOwner && listing.status === 'active' && (
             <>
-              <div className="mb-3">
-                <label htmlFor="listingMessage" className="form-label small text-secondary">
-                  Add a quick note for the seller (optional)
-                </label>
-                <textarea
-                  id="listingMessage"
-                  className="form-control"
-                  rows={3}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Hi, I am interested in buying this item."
-                />
-              </div>
-              <button
-                type="button"
-                className="btn btn-primary mc-btn-interest"
-                onClick={interest}
-                disabled={requesting}
-              >
-                {requesting ? 'Sending request…' : 'Request this listing'}
-              </button>
+              {listing.hasRequested ? (
+                <div className="alert alert-info py-2 px-3 mb-0 small">
+                  Your request was processed.
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <label htmlFor="listingMessage" className="form-label small text-secondary">
+                      Add a quick note for the seller (optional)
+                    </label>
+                    <textarea
+                      id="listingMessage"
+                      className="form-control"
+                      rows={3}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Hi, I am interested in buying this item."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary mc-btn-interest"
+                    onClick={interest}
+                    disabled={requesting}
+                  >
+                    {requesting ? 'Sending request…' : 'Request this listing'}
+                  </button>
+                </>
+              )}
             </>
           )}
           {isOwner && (

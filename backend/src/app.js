@@ -16,21 +16,37 @@ import tutorsRoutes from './routes/tutors.routes.js';
 import bookingsRoutes from './routes/bookings.routes.js';
 
 const app = express();
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Parse allowed origins from environment variable and include local dev ports
+const allowedOrigins = new Set([
+  ...(process.env.CLIENT_URL || '').split(',').map(o => o.trim()),
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDevelopment ? 3000 : 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health',
+  message: { success: false, message: 'Too many requests, slow down.' },
+});
 
 // Security headers
 app.use(helmet());
 
-// CORS — allow configured frontend and localhost fallback ports used in dev
-const allowedOrigins = new Set(
-  [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001'].filter(Boolean)
-);
+// CORS — allow configured frontend and localhost fallback ports
 app.use(
   cors({
     origin(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl) 
+      // or check against the allowedOrigins Set
       if (!origin || allowedOrigins.has(origin)) {
         return callback(null, true);
       }
-      return callback(new Error('Not allowed by CORS'));
+      return callback(new Error('Origin not allowed by CORS'));
     },
     credentials: true,
   })
@@ -39,17 +55,15 @@ app.use(
 // Parse JSON body
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting — 100 requests per 15 minutes per IP
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { success: false, message: 'Too many requests, slow down.' }
-}));
+// General API rate limiting
+app.use(apiLimiter);
 
-// Health check route — to verify server is running
+// Health check route - to verify server is running
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'CampusConnect API is running' });
 });
+
+// Route definitions
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
@@ -62,19 +76,20 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tutors', tutorsRoutes);
 app.use('/api/bookings', bookingsRoutes);
+
 // 404 handler — for unknown routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// Global error handler — must be last
+// Global error handler - must be last
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal server error',
     errors: err.errors || [],
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   });
 });
 

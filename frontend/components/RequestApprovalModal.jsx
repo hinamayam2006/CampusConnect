@@ -3,11 +3,6 @@
 import { useState } from 'react';
 import styles from '../request-approval.module.css';
 
-/**
- * RequestApprovalModal
- * Modal for owner to approve or decline a request
- * Displays confirmation for decline action
- */
 export default function RequestApprovalModal({
   request,
   isOpen,
@@ -21,9 +16,7 @@ export default function RequestApprovalModal({
 
   if (!isOpen || !request) return null;
 
-  const handleDeclineClick = () => {
-    setShowDeclineConfirm(true);
-  };
+  const handleDeclineClick = () => setShowDeclineConfirm(true);
 
   const handleConfirmDecline = async () => {
     await onDecline(request._id, declineReason);
@@ -36,126 +29,110 @@ export default function RequestApprovalModal({
     setDeclineReason('');
   };
 
+  const trustScore = request.requester?.trustScore;
+  const trustStars = trustScore ? Math.round(Math.min(5, Math.max(0, trustScore / 20))) : null;
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div
-        className={styles.modalContent}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         {!showDeclineConfirm ? (
           <>
             <div className={styles.modalHeader}>
-              <h2>New Request</h2>
-              <button
-                className={styles.closeBtn}
-                onClick={onClose}
-                aria-label="Close"
-              >
-                ✕
-              </button>
+              <div>
+                <h2>Incoming Request</h2>
+                <p className={styles.modalSubtitle}>Review and respond to this request</p>
+              </div>
+              <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
             </div>
 
             <div className={styles.modalBody}>
               {/* Requester Info */}
-              <div className={styles.requesterInfo}>
-                <img
-                  src={request.requester?.avatar || '/default-avatar.png'}
-                  alt={request.requester?.name}
-                  className={styles.requesterAvatar}
-                />
+              <div className={styles.requesterCard}>
+                <div className={styles.requesterAvatar}>
+                  {(request.requester?.name || '?')[0].toUpperCase()}
+                </div>
                 <div className={styles.requesterDetails}>
-                  <h4>{request.requester?.name}</h4>
-                  <p className={styles.department}>
-                    {request.requester?.department}
-                  </p>
-                  <p className={styles.trustScore}>
-                    ⭐ Trust Score: {request.requester?.trustScore || 'N/A'}
-                  </p>
+                  <h4 className={styles.requesterName}>{request.requester?.name}</h4>
+                  <p className={styles.requesterDept}>{request.requester?.department}</p>
+                  <div className={styles.trustRow}>
+                    <span className={styles.trustLabel}>Trust Score</span>
+                    <span className={styles.trustValue}>
+                      {trustScore != null ? (
+                        <>
+                          <span style={{ color: '#f59e0b' }}>
+                            {'★'.repeat(trustStars || 0)}{'☆'.repeat(5 - (trustStars || 0))}
+                          </span>
+                          {' '}{trustScore}
+                        </>
+                      ) : 'N/A'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Request Message */}
               {request.message && (
                 <div className={styles.messageSection}>
-                  <h5>Message</h5>
-                  <p>{request.message}</p>
+                  <p className={styles.messageSectionLabel}>Message from requester</p>
+                  <div className={styles.messageBox}>
+                    <span className={styles.messageQuote}>{'"'}</span>
+                    {request.message}
+                  </div>
                 </div>
               )}
 
-              {/* Request Details */}
+              {/* Ride-specific */}
               {request.context === 'ride' && request.seatsRequested > 1 && (
-                <div className={styles.requestDetails}>
-                  <p>
-                    <strong>Seats Requested:</strong> {request.seatsRequested}
-                  </p>
+                <div className={styles.detailPill}>
+                  💺 Requesting <strong>{request.seatsRequested}</strong> seats
                 </div>
               )}
             </div>
 
             <div className={styles.modalFooter}>
-              <button
-                className="btn btn-outline-secondary"
-                onClick={onClose}
-                disabled={isLoading}
-              >
+              <button className={styles.btnGhost} onClick={onClose} disabled={isLoading}>
                 Later
               </button>
-              <button
-                className="btn btn-danger"
-                onClick={handleDeclineClick}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Decline'}
+              <button className={styles.btnDecline} onClick={handleDeclineClick} disabled={isLoading}>
+                {isLoading ? <><span className={styles.btnSpinner}></span> Processing…</> : '✕ Decline'}
               </button>
-              <button
-                className="btn btn-success"
-                onClick={() => onApprove(request._id)}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Approve'}
+              <button className={styles.btnApprove} onClick={() => onApprove(request._id)} disabled={isLoading}>
+                {isLoading ? <><span className={styles.btnSpinner}></span> Processing…</> : '✓ Approve'}
               </button>
             </div>
           </>
         ) : (
           <>
             <div className={styles.modalHeader}>
-              <h2>Confirm Decline</h2>
+              <div>
+                <h2>Confirm Decline</h2>
+                <p className={styles.modalSubtitle}>This action will notify the requester</p>
+              </div>
             </div>
-
             <div className={styles.modalBody}>
-              <p className={styles.confirmText}>
-                Are you sure you want to decline this request?
-              </p>
-
+              <div className={styles.declineWarning}>
+                ⚠️ Are you sure you want to decline this request?
+              </div>
               <div className={styles.formGroup}>
                 <label htmlFor="declineReason">
-                  Optional Reason (will be shown to requester)
+                  Optional reason <span style={{ color: '#9ca3af', fontWeight: 400 }}>(shown to requester)</span>
                 </label>
                 <textarea
                   id="declineReason"
-                  className="form-control"
+                  className={styles.formControl}
                   rows="3"
-                  placeholder="E.g., Item already sold, No longer available..."
+                  placeholder="E.g., Item already sold, No longer available…"
                   value={declineReason}
                   onChange={(e) => setDeclineReason(e.target.value)}
                 />
               </div>
             </div>
-
             <div className={styles.modalFooter}>
-              <button
-                className="btn btn-outline-secondary"
-                onClick={handleCancelDecline}
-                disabled={isLoading}
-              >
-                Cancel
+              <button className={styles.btnGhost} onClick={handleCancelDecline} disabled={isLoading}>
+                Go back
               </button>
-              <button
-                className="btn btn-danger"
-                onClick={handleConfirmDecline}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Confirm Decline'}
+              <button className={styles.btnDecline} onClick={handleConfirmDecline} disabled={isLoading}>
+                {isLoading ? <><span className={styles.btnSpinner}></span> Processing…</> : 'Confirm Decline'}
               </button>
             </div>
           </>

@@ -4,7 +4,7 @@ import Listing from '../models/Listing.model.js';
 import Ride from '../models/Ride.model.js';
 import User from '../models/User.model.js';
 import { logActivity } from '../services/activity.service.js';
-import { pushNotification } from '../services/notification.service.js';
+import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 
 /**
  * Create a new request (for both marketplace listings and ride offers)
@@ -14,6 +14,7 @@ import { pushNotification } from '../services/notification.service.js';
 export const createRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const { refModel, refId, seatsRequested = 1, message = '' } = req.body;
     const requester = req.user._id;
@@ -84,18 +85,19 @@ export const createRequest = async (req, res) => {
       owner,
       {
         type: `${context}_request_received`,
-        message: `Someone is interested in your ${context === 'marketplace' ? 'listing' : 'ride offer'}!`,
+        message: `${req.user.name} is interested in your ${context === 'marketplace' ? 'listing' : 'ride offer'}!`,
         link:
           context === 'marketplace'
             ? `/marketplace/${refId}`
             : `/rides/${refId}`,
         requestId: request[0]._id,
-        meta: { refModel, refId, context, requester },
+        meta: { refModel, refId, context, requester, message }, // Added message here
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(201).json({
       success: true,
       data: request[0],
@@ -183,6 +185,7 @@ export const getRequestById = async (req, res) => {
 export const approveRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const request = await Request.findById(req.params.id).session(session);
 
@@ -256,7 +259,7 @@ export const approveRequest = async (req, res) => {
         requestId: request._id,
         meta: { refModel: request.refModel, refId: request.refId, context: request.context, owner: request.owner },
       },
-      { session }
+      { session, emailQueue }
     );
 
     // Update owner's notification to show approved status
@@ -276,6 +279,7 @@ export const approveRequest = async (req, res) => {
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({
       success: true,
       data: request,
@@ -296,6 +300,7 @@ export const approveRequest = async (req, res) => {
 export const declineRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const { declineReason = '' } = req.body;
     const request = await Request.findById(req.params.id).session(session);
@@ -346,7 +351,7 @@ export const declineRequest = async (req, res) => {
         requestId: request._id,
         meta: { refModel: request.refModel, refId: request.refId, context: request.context, declinedBy: req.user._id, reason: declineReason },
       },
-      { session }
+      { session, emailQueue }
     );
 
     // Update owner's notification to show declined status
@@ -365,6 +370,7 @@ export const declineRequest = async (req, res) => {
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({
       success: true,
       data: request,
@@ -385,6 +391,7 @@ export const declineRequest = async (req, res) => {
 export const withdrawRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const request = await Request.findById(req.params.id).session(session);
 
@@ -433,7 +440,7 @@ export const withdrawRequest = async (req, res) => {
         requestId: request._id,
         meta: { refModel: request.refModel, refId: request.refId, context: request.context, withdrawnBy: req.user._id },
       },
-      { session }
+      { session, emailQueue }
     );
 
     // Update requester's notification to show withdrawn status
@@ -452,6 +459,7 @@ export const withdrawRequest = async (req, res) => {
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({
       success: true,
       data: request,
@@ -524,6 +532,7 @@ export const closeRequest = async (req, res) => {
 export const acceptChatRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const request = await Request.findById(req.params.id).session(session);
 
@@ -579,10 +588,11 @@ export const acceptChatRequest = async (req, res) => {
         requestId: request._id,
         meta: { refModel: request.refModel, refId: request.refId, context: request.context, userAccepted: userId },
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({
       success: true,
       data: request,
@@ -602,6 +612,7 @@ export const acceptChatRequest = async (req, res) => {
 export const closeChat = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const request = await Request.findById(req.params.id).session(session);
     if (!request) {
@@ -641,7 +652,7 @@ export const closeChat = async (req, res) => {
         requestId: request._id,
         meta: { refModel: request.refModel, refId: request.refId, context: request.context, closedBy: userId },
       },
-      { session }
+      { session, emailQueue }
     );
 
     if (req.app?.io) {
@@ -654,6 +665,7 @@ export const closeChat = async (req, res) => {
     }
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({ success: true, data: request, message: 'Chat closed' });
   } catch (err) {
     await session.abortTransaction();

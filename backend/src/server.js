@@ -24,7 +24,10 @@ if (!mongoUri) {
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: (process.env.CLIENT_URL || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
     credentials: true,
   },
 });

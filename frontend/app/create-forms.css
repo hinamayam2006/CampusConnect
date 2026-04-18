@@ -1,0 +1,16 @@
+.form-page-shell {
+  max-width: 720px;
+}
+
+.form-required-asterisk {
+  color: #dc2626;
+  margin-right: 0.2rem;
+  font-weight: 700;
+}
+
+.form-image-preview {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+}

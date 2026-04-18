@@ -88,7 +88,7 @@ export default function Navbar() {
               <div className="d-flex align-items-center gap-3">
                 {/* NOTIFICATION BELL */}
                 <Link href="/notifications" className="header-notification-bell">
-                  <div className="bell-wrapper" style={{ position: 'relative' }}>
+                  <div className="bell-wrapper">
                     <Bell size={22} />
                     {unreadCount > 0 && (
                       <span className="bell-badge">{unreadCount}</span>

@@ -21,16 +21,13 @@ export default function useRequireAuth() {
 
   useEffect(() => {
     try {
-      if (useStore.persist.hasHydrated()) {
-        setHydrated(true);
-        return;
-      }
+      if (hydrated || useStore.persist.hasHydrated()) return;
       const unsub = useStore.persist.onFinishHydration(() => setHydrated(true));
       return unsub;
     } catch {
-      setHydrated(true);
+      return undefined;
     }
-  }, []);
+  }, [hydrated]);
 
   const hasSession = !!user && (!!accessToken || !!refreshToken);
 

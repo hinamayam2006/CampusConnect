@@ -199,6 +199,15 @@ export const hideNotification = async (notificationId) => {
   }
 };
 
+export const resolveNotificationTarget = async (notificationId) => {
+  try {
+    const response = await api.get(`/notifications/${notificationId}/target`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
 // ============================================
 // MARKETPLACE API CALLS
 // ============================================

@@ -3,7 +3,7 @@ import Listing from '../models/Listing.model.js';
 import ActivityEvent from '../models/ActivityEvent.model.js';
 import Request from '../models/Request.model.js';
 import { logActivity } from '../services/activity.service.js';
-import { pushNotification } from '../services/notification.service.js';
+import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -73,7 +73,18 @@ export const getListingById = async (req, res) => {
       });
     }
 
-    res.status(200).json({ success: true, data: listing });
+    let hasRequested = false;
+    if (req.user) {
+      const existingRequest = await Request.findOne({
+        requester: req.user._id,
+        refModel: 'Listing',
+        refId: listing._id,
+        status: { $in: ['pending', 'approved'] },
+      });
+      hasRequested = !!existingRequest;
+    }
+
+    res.status(200).json({ success: true, data: { ...listing.toObject(), hasRequested } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -82,6 +93,7 @@ export const getListingById = async (req, res) => {
 export const createListing = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const [created] = await Listing.create(
       [{ ...req.body, seller: req.user._id }],
@@ -106,10 +118,11 @@ export const createListing = async (req, res) => {
         message: `Your listing "${created.title}" is now live.`,
         link: `/marketplace/${created._id}`,
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(201).json({ success: true, data: created });
   } catch (err) {
     await session.abortTransaction();
@@ -157,6 +170,7 @@ export const deleteListing = async (req, res) => {
 export const expressInterest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const listing = await Listing.findById(req.params.id).populate('seller');
     if (!listing || listing.status !== 'active') {
@@ -199,15 +213,16 @@ export const expressInterest = async (req, res) => {
       listing.seller._id,
       {
         type: 'marketplace_request_received',
-        message: `${req.user.name} requested your listing "${listing.title}".`,
+        message: `${req.user.name} is interested in your listing "${listing.title}"!`,
         link: `/marketplace/${listing._id}`,
         requestId: request._id,
-        meta: { refModel: 'Listing', refId: listing._id, context: 'marketplace' },
+        meta: { refModel: 'Listing', refId: listing._id, context: 'marketplace', message: req.body.message || '' },
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(201).json({ success: true, data: request, message: 'Request sent to seller' });
   } catch (err) {
     await session.abortTransaction();

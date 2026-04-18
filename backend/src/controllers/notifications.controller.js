@@ -1,4 +1,80 @@
 import User from '../models/User.model.js';
+import Request from '../models/Request.model.js';
+import Listing from '../models/Listing.model.js';
+import Ride from '../models/Ride.model.js';
+
+function extractPathId(link = '', prefix) {
+  const match = String(link).match(new RegExp(`^/${prefix}/([^/?#]+)`));
+  return match?.[1] || null;
+}
+
+async function resolveNotificationTarget(notification) {
+  let refModel = notification.meta?.refModel || null;
+  let refId = notification.meta?.refId || null;
+
+  if ((!refModel || !refId) && notification.requestId) {
+    const request = await Request.findById(notification.requestId).select('refModel refId');
+    if (request) {
+      refModel = request.refModel;
+      refId = request.refId;
+    }
+  }
+
+  if (!refModel || !refId) {
+    const listingId = extractPathId(notification.link, 'marketplace');
+    const rideId = extractPathId(notification.link, 'rides');
+
+    if (listingId) {
+      refModel = 'Listing';
+      refId = listingId;
+    } else if (rideId) {
+      refModel = 'Ride';
+      refId = rideId;
+    }
+  }
+
+  if (refModel === 'Listing' && refId) {
+    const listing = await Listing.findById(refId).select('_id');
+    if (!listing) {
+      return {
+        exists: false,
+        message: 'This listing was deleted and is no longer available.',
+      };
+    }
+
+    return {
+      exists: true,
+      path: `/marketplace/${listing._id}`,
+    };
+  }
+
+  if (refModel === 'Ride' && refId) {
+    const ride = await Ride.findById(refId).select('_id');
+    if (!ride) {
+      return {
+        exists: false,
+        message: 'This ride was deleted and is no longer available.',
+      };
+    }
+
+    return {
+      exists: true,
+      path: `/rides/${ride._id}`,
+    };
+  }
+
+  if (notification.link) {
+    return {
+      exists: true,
+      path: notification.link,
+    };
+  }
+
+  return {
+    exists: false,
+    message: 'This notification does not have an available destination.',
+  };
+}
 
 export const listNotifications = async (req, res) => {
   try {
@@ -59,6 +135,29 @@ export const markAllNotificationsRead = async (req, res) => {
     });
     await user.save();
     res.status(200).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const resolveNotificationLink = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('notifications');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const notification = user.notifications.id(req.params.id);
+    if (!notification || notification.hidden) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    const target = await resolveNotificationTarget(notification);
+    if (!target.exists) {
+      return res.status(404).json({ success: false, message: target.message });
+    }
+
+    res.status(200).json({ success: true, data: target });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

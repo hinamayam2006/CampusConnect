@@ -1,3 +1,4 @@
+//marketplace/general/page.js
 'use client';
 
 import { useEffect, useState } from 'react';

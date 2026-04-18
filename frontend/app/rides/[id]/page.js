@@ -1,3 +1,4 @@
+// rides/[id]/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -114,36 +115,44 @@ export default function RideDetailPage() {
 
           {!isDriver && ride.status === 'scheduled' && !already && ride.seatsAvailable > 0 && (
             <>
-              <div className="mb-3">
-                <label htmlFor="seatCount" className="form-label small text-secondary">
-                  Seats requested
-                </label>
-                <input
-                  id="seatCount"
-                  type="number"
-                  min={1}
-                  max={ride.seatsAvailable}
-                  value={seatsRequested}
-                  onChange={(e) => setSeatsRequested(Math.max(1, Math.min(ride.seatsAvailable, Number(e.target.value || 1))))}
-                  className="form-control form-control-sm"
-                />
-              </div>
-              <div className="mb-3">
-                <label htmlFor="rideMessage" className="form-label small text-secondary">
-                  Message for the driver (optional)
-                </label>
-                <textarea
-                  id="rideMessage"
-                  rows={3}
-                  className="form-control"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Hi, I would love to join your trip."
-                />
-              </div>
-              <button type="button" className="btn btn-primary" onClick={join} disabled={requesting}>
-                {requesting ? 'Requesting…' : 'Request ride approval'}
-              </button>
+              {ride.hasRequested ? (
+                <div className="alert alert-info py-2 px-3 mb-0 small">
+                  Your request was forwarded.
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <label htmlFor="seatCount" className="form-label small text-secondary">
+                      Seats requested
+                    </label>
+                    <input
+                      id="seatCount"
+                      type="number"
+                      min={1}
+                      max={ride.seatsAvailable}
+                      value={seatsRequested}
+                      onChange={(e) => setSeatsRequested(Math.max(1, Math.min(ride.seatsAvailable, Number(e.target.value || 1))))}
+                      className="form-control form-control-sm"
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="rideMessage" className="form-label small text-secondary">
+                      Message for the driver (optional)
+                    </label>
+                    <textarea
+                      id="rideMessage"
+                      rows={3}
+                      className="form-control"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Hi, I would love to join your trip."
+                    />
+                  </div>
+                  <button type="button" className="btn btn-primary" onClick={join} disabled={requesting}>
+                    {requesting ? 'Requesting…' : 'Request ride approval'}
+                  </button>
+                </>
+              )}
             </>
           )}
           {already && <p className="text-success small mb-0">You are confirmed on this ride.</p>}

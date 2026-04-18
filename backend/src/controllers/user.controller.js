@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import User from '../models/User.model.js';
 import Request from '../models/Request.model.js';
-import { pushNotification } from '../services/notification.service.js';
+import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 import { recalcTrustScore } from '../services/trust.service.js';
 
 export const getPublicProfile = async (req, res) => {
@@ -23,6 +23,7 @@ export const getPublicProfile = async (req, res) => {
 export const rateUser = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const { id } = req.params;
     if (String(id) === String(req.user._id)) {
@@ -81,10 +82,11 @@ export const rateUser = async (req, res) => {
         message: `${req.user.name} rated you ${req.body.score}/5 (${req.body.context}).`,
         link: `/profile/${req.user._id}`,
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({ success: true, message: 'Rating recorded' });
   } catch (err) {
     await session.abortTransaction();

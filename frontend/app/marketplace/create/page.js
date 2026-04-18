@@ -8,6 +8,15 @@ import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useRequireAuth from '../../../lib/useRequireAuth';
 
+function RequiredLabel({ children }) {
+  return (
+    <span>
+      <span className="form-required-asterisk" aria-hidden="true">*</span>
+      {children}
+    </span>
+  );
+}
+
 export default function CreateListingPage() {
   const { isReady } = useRequireAuth();
   const router = useRouter();
@@ -27,20 +36,22 @@ export default function CreateListingPage() {
   const onFiles = async (e) => {
     const files = Array.from(e.target.files || []).slice(0, 6);
     if (!files.length) return;
+
     setUploading(true);
     const urls = [];
+
     try {
       for (const file of files) {
         const fd = new FormData();
         fd.append('image', file);
-        // Let the browser set multipart boundary — never set Content-Type: multipart/form-data alone
         const res = await api.post('/upload/image', fd, { timeout: 120000 });
         if (res.data.success) urls.push(res.data.data.url);
       }
+
       setImages((prev) => [...prev, ...urls].slice(0, 6));
       toast.success('Images uploaded');
     } catch {
-      toast.error('Image upload failed — check Cloudinary env on the server');
+      toast.error('Image upload failed - check Cloudinary env on the server');
     } finally {
       setUploading(false);
     }
@@ -49,6 +60,7 @@ export default function CreateListingPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+
     try {
       const body = {
         category,
@@ -59,13 +71,10 @@ export default function CreateListingPage() {
         condition,
         images,
         courseCode: category === 'textbook' ? courseCode.toUpperCase() : '',
-        semester:
-          category === 'textbook' && semester !== '' ? Number(semester) : null,
-        price:
-          listingType === 'exchange' || price === ''
-            ? null
-            : Number(price),
+        semester: category === 'textbook' && semester !== '' ? Number(semester) : null,
+        price: listingType === 'exchange' || price === '' ? null : Number(price),
       };
+
       const res = await api.post('/marketplace/listings', body);
       if (res.data?.success && res.data?.data?._id) {
         toast.success('Listing created');
@@ -76,7 +85,7 @@ export default function CreateListingPage() {
     } catch (err) {
       const msg =
         err.code === 'ECONNABORTED'
-          ? 'Request timed out — is the API running (port 5000) and NEXT_PUBLIC_API_URL set?'
+          ? 'Request timed out - is the API running (port 5000) and NEXT_PUBLIC_API_URL set?'
           : err.response?.data?.message ||
             err.response?.data?.errors?.[0]?.message ||
             err.message ||
@@ -88,15 +97,11 @@ export default function CreateListingPage() {
   };
 
   if (!isReady) {
-    return (
-      <div className="container py-5 text-secondary">
-        Loading session…
-      </div>
-    );
+    return <div className="container py-5 text-secondary">Loading session...</div>;
   }
 
   return (
-    <div className="container py-4 py-md-5" style={{ maxWidth: 720 }}>
+    <div className="container py-4 py-md-5 form-page-shell">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">New listing</h1>
         <Link href="/marketplace" className="btn btn-outline-secondary btn-sm">
@@ -106,8 +111,10 @@ export default function CreateListingPage() {
 
       <form onSubmit={onSubmit} className="bg-white p-3 p-md-4 rounded-3 shadow-sm border">
         <div className="mb-3">
-          <label className="form-label">Lane</label>
-          <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <label className="form-label">
+            <RequiredLabel>Lane</RequiredLabel>
+          </label>
+          <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} required>
             <option value="general">General items</option>
             <option value="textbook">Textbooks &amp; study material</option>
           </select>
@@ -116,7 +123,9 @@ export default function CreateListingPage() {
         {category === 'textbook' && (
           <div className="row g-2 mb-3">
             <div className="col-md-6">
-              <label className="form-label">Course code</label>
+              <label className="form-label">
+                <RequiredLabel>Course code</RequiredLabel>
+              </label>
               <input
                 className="form-control"
                 value={courseCode}
@@ -125,12 +134,19 @@ export default function CreateListingPage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Semester (1–8)</label>
-              <select className="form-select" value={semester} onChange={(e) => setSemester(e.target.value)} required>
+              <label className="form-label">
+                <RequiredLabel>Semester (1-8)</RequiredLabel>
+              </label>
+              <select
+                className="form-select"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                required
+              >
                 <option value="">Select</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
                   </option>
                 ))}
               </select>
@@ -139,12 +155,22 @@ export default function CreateListingPage() {
         )}
 
         <div className="mb-3">
-          <label className="form-label">Title</label>
-          <input className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={3} />
+          <label className="form-label">
+            <RequiredLabel>Title</RequiredLabel>
+          </label>
+          <input
+            className="form-control"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            minLength={3}
+          />
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Description</label>
+          <label className="form-label">
+            <RequiredLabel>Description</RequiredLabel>
+          </label>
           <textarea
             className="form-control"
             rows={4}
@@ -157,18 +183,22 @@ export default function CreateListingPage() {
 
         <div className="row g-2 mb-3">
           <div className="col-md-6">
-            <label className="form-label">Department</label>
-            <select className="form-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
+            <label className="form-label">
+              <RequiredLabel>Department</RequiredLabel>
+            </label>
+            <select className="form-select" value={department} onChange={(e) => setDepartment(e.target.value)} required>
+              {DEPARTMENTS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
                 </option>
               ))}
             </select>
           </div>
           <div className="col-md-6">
-            <label className="form-label">Listing type</label>
-            <select className="form-select" value={listingType} onChange={(e) => setListingType(e.target.value)}>
+            <label className="form-label">
+              <RequiredLabel>Listing type</RequiredLabel>
+            </label>
+            <select className="form-select" value={listingType} onChange={(e) => setListingType(e.target.value)} required>
               <option value="sale">Sale</option>
               <option value="rent">Rent</option>
               <option value="exchange">Exchange</option>
@@ -178,7 +208,9 @@ export default function CreateListingPage() {
 
         {listingType !== 'exchange' && (
           <div className="mb-3">
-            <label className="form-label">Price (PKR)</label>
+            <label className="form-label">
+              <RequiredLabel>Price (PKR)</RequiredLabel>
+            </label>
             <input
               type="number"
               min={0}
@@ -192,24 +224,36 @@ export default function CreateListingPage() {
 
         <div className="mb-3">
           <label className="form-label">Condition</label>
-          <input className="form-control" value={condition} onChange={(e) => setCondition(e.target.value)} placeholder="e.g. Like new" />
+          <input
+            className="form-control"
+            value={condition}
+            onChange={(e) => setCondition(e.target.value)}
+            placeholder="e.g. Like new"
+          />
         </div>
 
         <div className="mb-4">
           <label className="form-label">Photos (max 6)</label>
-          <input type="file" accept="image/*" multiple className="form-control" onChange={onFiles} disabled={uploading} />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="form-control"
+            onChange={onFiles}
+            disabled={uploading}
+          />
           {images.length > 0 && (
             <div className="d-flex flex-wrap gap-2 mt-2">
               {images.map((url) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={url} src={url} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} />
+                <img key={url} src={url} alt="" className="form-image-preview" />
               ))}
             </div>
           )}
         </div>
 
         <button type="submit" className="btn btn-primary" disabled={submitting || uploading}>
-          {submitting ? 'Publishing…' : 'Publish listing'}
+          {submitting ? 'Publishing...' : 'Publish listing'}
         </button>
       </form>
     </div>

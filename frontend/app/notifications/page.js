@@ -1,16 +1,34 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
 import api from '../../lib/api';
 import useStore from '../../store/useStore';
 import useRequireAuth from '../../lib/useRequireAuth';
-import { getRequestById, approveRequest, declineRequest, acceptChatRequest, hideNotification, withdrawRequest } from '../../lib/apiRequests';
+import {
+  acceptChatRequest,
+  approveRequest,
+  declineRequest,
+  getRequestById,
+  hideNotification,
+  resolveNotificationTarget,
+  withdrawRequest,
+} from '../../lib/apiRequests';
 import ChatWindow from '../../components/ChatWindow';
 import styles from '../tutoring/tutoring.module.css';
 
+const SECTION_META = {
+  Marketplace: { icon: '🛍️' },
+  Rides: { icon: '🚗' },
+  General: { icon: '🔔' },
+};
+
 export default function NotificationsPage() {
+  const router = useRouter();
   const { isReady } = useRequireAuth();
   const { setUnreadCount } = useStore();
   const [items, setItems] = useState([]);
@@ -18,16 +36,23 @@ export default function NotificationsPage() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // From Upstream: Filtering & Search
   const [sectionFilter, setSectionFilter] = useState('all');
   const [search, setSearch] = useState('');
+
+  // From Stashed: Missing target handling
+  const [openingNotificationId, setOpeningNotificationId] = useState(null);
+  const [missingTargetMessage, setMissingTargetMessage] = useState('');
+  const [showMissingTargetModal, setShowMissingTargetModal] = useState(false);
 
   const load = async () => {
     try {
       const res = await api.get('/notifications');
       if (res.data.success) {
-        setItems(res.data.data || []);
-        const unread = (res.data.data || []).filter((n) => !n.read).length;
-        setUnreadCount(unread);
+        const nextItems = res.data.data || [];
+        setItems(nextItems);
+        setUnreadCount(nextItems.filter((n) => !n.read).length);
       }
     } catch {
       setItems([]);
@@ -38,25 +63,23 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    setLoading(true);
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady]);
 
-  const getRequestId = (notification) => notification.requestId || notification.meta?.requestId;
+  const getRequestId = (n) => n.requestId || n.meta?.requestId;
 
-  const markOne = async (nid) => {
+  const markOne = async (notificationId) => {
     try {
-      await api.patch(`/notifications/${nid}/read`);
+      await api.patch(`/notifications/${notificationId}/read`);
       await load();
     } catch {
       toast.error('Could not update notification');
     }
   };
 
-  const hideOne = async (nid) => {
+  const hideOne = async (notificationId) => {
     try {
-      await hideNotification(nid);
+      await hideNotification(notificationId);
       await load();
     } catch {
       toast.error('Could not hide notification');
@@ -73,10 +96,28 @@ export default function NotificationsPage() {
     }
   };
 
+  const showMissingTarget = (message) => {
+    setMissingTargetMessage(message || 'This item is no longer available.');
+    setShowMissingTargetModal(true);
+  };
+
+  const handleOpenNotification = async (notification) => {
+    setOpeningNotificationId(notification._id);
+    try {
+      const response = await resolveNotificationTarget(notification._id);
+      const path = response?.data?.path;
+      if (!path) return showMissingTarget();
+      router.push(path);
+    } catch (err) {
+      showMissingTarget(err?.message);
+    } finally {
+      setOpeningNotificationId(null);
+    }
+  };
+
   const handleApprove = async (notification) => {
     const requestId = getRequestId(notification);
     if (!requestId) return toast.error('No request link available');
-
     setActionLoading(true);
     try {
       await approveRequest(requestId);
@@ -93,7 +134,6 @@ export default function NotificationsPage() {
   const handleDecline = async (notification) => {
     const requestId = getRequestId(notification);
     if (!requestId) return toast.error('No request link available');
-
     const reason = window.prompt('Reason for declining (optional):');
     setActionLoading(true);
     try {
@@ -111,20 +151,13 @@ export default function NotificationsPage() {
   const handleChat = async (notification) => {
     const requestId = getRequestId(notification);
     if (!requestId) return toast.error('No request link available');
-
     setActionLoading(true);
     try {
       const response = await getRequestById(requestId);
       const request = response.data;
-      if (!request) {
-        throw new Error('Request not found');
-      }
-      if (request.status !== 'approved') {
-        throw new Error('Request is not approved yet');
-      }
-      if (!request.chatAcceptedBy) {
-        await acceptChatRequest(requestId);
-      }
+      if (!request) throw new Error('Request not found');
+      if (request.status !== 'approved') throw new Error('Request not approved yet');
+      if (!request.chatAcceptedBy) await acceptChatRequest(requestId);
       setSelectedRequest(request);
       setShowChatWindow(true);
       await markOne(notification._id);
@@ -137,10 +170,7 @@ export default function NotificationsPage() {
 
   const handleWithdraw = async (notification) => {
     const requestId = getRequestId(notification);
-    if (!requestId) return toast.error('No request link available');
-
-    if (!window.confirm('Are you sure you want to withdraw this request?')) return;
-
+    if (!requestId || !window.confirm('Withdraw this request?')) return;
     setActionLoading(true);
     try {
       await withdrawRequest(requestId);
@@ -153,80 +183,53 @@ export default function NotificationsPage() {
     }
   };
 
-  const isPendingRequestNotification = (notification) =>
-    ['marketplace_request_received', 'ride_request_received'].includes(notification.type);
+  const isPendingRequestNotification = (n) => ['marketplace_request_received', 'ride_request_received'].includes(n.type);
+  const isChatReadyNotification = (n) => ['request_approved', 'chat_initialized'].includes(n.type);
+  const isPendingRequestSentNotification = (n) => ['marketplace_request_sent', 'ride_request_sent'].includes(n.type);
 
-  const isChatReadyNotification = (notification) =>
-    ['request_approved', 'chat_initialized'].includes(notification.type);
-
-  const isPendingRequestSentNotification = (notification) =>
-    ['marketplace_request_sent', 'ride_request_sent'].includes(notification.type);
-
-
-  const getNotificationSection = (notification) => {
-    const context = notification.meta?.context || '';
-    if (context === 'marketplace' || notification.type.startsWith('marketplace')) {
-      return 'Marketplace';
-    }
-    if (context === 'ride' || notification.type.startsWith('ride')) {
-      return 'Rides';
-    }
-    if (['chat_initialized', 'chat_closed', 'request_withdrawn', 'request_declined', 'request_approved', 'request_approved_by_owner', 'request_declined_by_owner', 'request_withdrawn_by_requester'].includes(notification.type)) {
-      return notification.meta?.context === 'ride' ? 'Rides' : 'Marketplace';
-    }
+  const getNotificationSection = (n) => {
+    const context = n.meta?.context || '';
+    if (context === 'marketplace' || n.type.startsWith('marketplace')) return 'Marketplace';
+    if (context === 'ride' || n.type.startsWith('ride')) return 'Rides';
     return 'General';
   };
 
+  // Memoized Logic for Filtering and Grouping
   const filteredItems = useMemo(() => {
     const trimmed = search.trim().toLowerCase();
-    return items.filter((notification) => {
-      const section = getNotificationSection(notification).toLowerCase();
+    return items.filter((n) => {
+      const section = getNotificationSection(n).toLowerCase();
       if (sectionFilter !== 'all' && section !== sectionFilter) return false;
       if (!trimmed) return true;
-      return String(notification.message || '').toLowerCase().includes(trimmed);
+      return String(n.message || '').toLowerCase().includes(trimmed);
     });
   }, [items, search, sectionFilter]);
 
   const filteredGroups = useMemo(() => {
-    return (filteredItems || []).reduce((acc, notification) => {
-      const section = getNotificationSection(notification);
+    return filteredItems.reduce((acc, n) => {
+      const section = getNotificationSection(n);
       acc[section] = acc[section] || [];
-      acc[section].push(notification);
+      acc[section].push(n);
       return acc;
     }, {});
   }, [filteredItems]);
 
-  const unreadCount = useMemo(
-    () => (items || []).filter((n) => !n.read).length,
-    [items]
-  );
-
-  const actionCount = useMemo(
-    () => (items || []).filter((n) =>
-      isPendingRequestNotification(n) ||
-      isChatReadyNotification(n) ||
-      isPendingRequestSentNotification(n)
-    ).length,
-    [items]
-  );
-
-  const sections = ['Marketplace', 'Rides', 'General'];
+  const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
   return (
     <div className={styles.page}>
       <div className={`container ${styles.container}`}>
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.pageTitle}>Notifications</h1>
-            <p className={styles.pageSubtitle}>Marketplace requests, ride approvals, and chat invites live here.</p>
+            <h1 className={styles.pageTitle}>🔔 Notifications</h1>
+            <p className={styles.pageSubtitle}>Manage your requests, approvals, and chats.</p>
           </div>
-          <div className={styles.actionRow}>
-            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={markAll}>
-              Mark all read
-            </button>
-          </div>
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={markAll}>
+            ✓ Mark all read
+          </button>
         </div>
 
+        {/* Stats Grid */}
         {!loading && (
           <div className={`${styles.statGrid} mb-3`}>
             <div className={styles.statCard}>
@@ -237,151 +240,105 @@ export default function NotificationsPage() {
               <div className={styles.statLabel}>Unread</div>
               <div className={styles.statValue}>{unreadCount}</div>
             </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Needs action</div>
-              <div className={styles.statValue}>{actionCount}</div>
-            </div>
           </div>
         )}
 
+        {/* Filter Bar */}
         <div className={`${styles.surfaceCard} mb-3`}>
           <div className={styles.filterBar}>
             <input
               className="form-control form-control-sm"
-              placeholder="Search notifications…"
+              placeholder="Search notifications..."
               value={search}
-              style={{ maxWidth: 260 }}
               onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: 260 }}
             />
             <div className={styles.filterGroup}>
-              {[{ label: 'All', value: 'all' }, { label: 'Marketplace', value: 'marketplace' }, { label: 'Rides', value: 'rides' }, { label: 'General', value: 'general' }].map((item) => (
+              {['all', 'marketplace', 'rides', 'general'].map((val) => (
                 <button
-                  key={item.value}
-                  type="button"
-                  className={`btn btn-sm ${sectionFilter === item.value ? 'btn-primary' : 'btn-outline-secondary'}`}
-                  onClick={() => setSectionFilter(item.value)}
+                  key={val}
+                  className={`btn btn-sm ${sectionFilter === val ? 'btn-primary' : 'btn-outline-secondary'}`}
+                  onClick={() => setSectionFilter(val)}
                 >
-                  {item.label}
+                  {val.charAt(0).toUpperCase() + val.slice(1)}
                 </button>
               ))}
             </div>
-            <span className="text-secondary small" style={{ whiteSpace: 'nowrap' }}>
-              {loading ? 'Loading…' : `${filteredItems.length} shown`}
-            </span>
           </div>
         </div>
 
-        {!isReady || loading ? (
-          <p className="text-secondary">Loading…</p>
+        {loading ? (
+          <div className="text-center p-5"><div className="spinner-border text-primary"></div></div>
         ) : filteredItems.length === 0 ? (
-          <div className={`${styles.surfaceCard} text-center p-4`}>
-            <p className="text-secondary mb-0">No notifications yet.</p>
-          </div>
+          <div className={`${styles.surfaceCard} text-center p-4`}>No notifications found.</div>
         ) : (
-          <>
-            {sections.map((section) => {
-              const sectionItems = filteredGroups[section] || [];
-              if (!sectionItems.length && sectionFilter !== 'all') return null;
-              if (!sectionItems.length && sectionFilter === 'all') return null;
-              return (
-                <div key={section} className="mb-4">
-                  <h2 className="h5 mb-2">{section}</h2>
-                  <div className="d-grid gap-2">
-                    {sectionItems.map((n) => (
-                      <div key={n._id} className={styles.listCard}>
-                        <div className={styles.listCardHeader}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="d-flex gap-2 align-items-center mb-1 flex-wrap">
-                              {!n.read && <span className={styles.tag}>Unread</span>}
-                              {n.meta?.requestId && <span className={`${styles.tag} ${styles.tagSoft}`}>Request</span>}
+          ['Marketplace', 'Rides', 'General'].map((section) => {
+            const sectionItems = filteredGroups[section] || [];
+            if (!sectionItems.length) return null;
+            return (
+              <div key={section} className="mb-4">
+                <h2 className="h5 mb-3">{SECTION_META[section].icon} {section}</h2>
+                <div className="d-grid gap-2">
+                  {sectionItems.map((n) => (
+                    <div key={n._id} className={`${styles.listCard} ${!n.read ? styles.unread : ''}`}>
+                      <div className={styles.listCardHeader}>
+                        <div style={{ flex: 1 }}>
+                          <p className="mb-1">{n.message}</p>
+                          {n.meta?.message && (
+                           <div
+  className="alert alert-light py-1 px-2 mb-1 small border-start"
+  style={{ borderLeft: "2px solid navy" }}
+>
+                              <span>Message:</span> {n.meta.message}
                             </div>
-                            <div className={n.type === 'request_declined_by_owner' ? 'text-danger' : ''}>{n.message}</div>
-                            <div className="small text-secondary">{new Date(n.createdAt).toLocaleString()}</div>
-                            {n.link && (
-                              <Link href={n.link} className="small d-inline-block mt-1 me-2">
-                                Open
-                              </Link>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-secondary"
-                            onClick={() => hideOne(n._id)}
-                            disabled={actionLoading}
-                          >
-                            Hide
-                          </button>
+                          )}
+                          <small className="text-secondary">{new Date(n.createdAt).toLocaleString()}</small>
                         </div>
-
-                        <div className={styles.cardActions}>
-                          {isPendingRequestNotification(n) && (
-                            <>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-success"
-                                onClick={() => handleApprove(n)}
-                                disabled={actionLoading}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDecline(n)}
-                                disabled={actionLoading}
-                              >
-                                Decline
-                              </button>
-                            </>
-                          )}
-                          {isPendingRequestSentNotification(n) && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-warning"
-                              onClick={() => handleWithdraw(n)}
-                              disabled={actionLoading}
-                            >
-                              Withdraw
-                            </button>
-                          )}
-                          {(isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized)) && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-primary"
-                              onClick={() => handleChat(n)}
-                              disabled={actionLoading}
-                            >
-                              Chat
-                            </button>
-                          )}
-                          {!n.read && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-primary"
-                              onClick={() => markOne(n._id)}
-                              disabled={actionLoading}
-                            >
-                              Mark read
-                            </button>
-                          )}
-                        </div>
+                        <button className="btn btn-sm text-secondary" onClick={() => hideOne(n._id)}>✕</button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
 
-        {showChatWindow && selectedRequest && (
-          <ChatWindow
-            request={selectedRequest}
-            isOpen={showChatWindow}
-            onClose={() => setShowChatWindow(false)}
-          />
+                      <div className={styles.cardActions}>
+                        {isPendingRequestNotification(n) && (
+                          <>
+                            <Button size="sm" variant="success" onClick={() => handleApprove(n)} disabled={actionLoading}>Approve</Button>
+                            <Button size="sm" variant="danger" onClick={() => handleDecline(n)} disabled={actionLoading}>Decline</Button>
+                          </>
+                        )}
+                        {isPendingRequestSentNotification(n) && (
+                          <Button size="sm" variant="outline-danger" onClick={() => handleWithdraw(n)} disabled={actionLoading}>Withdraw</Button>
+                        )}
+                        {(isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized)) && (
+                          <Button size="sm" variant="primary" onClick={() => handleChat(n)} disabled={actionLoading}>💬 Chat</Button>
+                        )}
+                        {n.link && (
+                          <Button size="sm" variant="link" onClick={() => handleOpenNotification(n)} disabled={openingNotificationId === n._id}>
+                             {openingNotificationId === n._id ? 'Opening...' : 'View ↗'}
+                          </Button>
+                        )}
+                        {!n.read && <Button size="sm" variant="light" onClick={() => markOne(n._id)}>Mark read</Button>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
+
+      {showChatWindow && selectedRequest && (
+        <ChatWindow
+          request={selectedRequest}
+          isOpen={showChatWindow}
+          onClose={() => setShowChatWindow(false)}
+        />
+      )}
+
+      <Modal show={showMissingTargetModal} onHide={() => setShowMissingTargetModal(false)} centered>
+        <Modal.Header closeButton><Modal.Title>Item unavailable</Modal.Title></Modal.Header>
+        <Modal.Body>{missingTargetMessage}</Modal.Body>
+        <Modal.Footer><Button variant="primary" onClick={() => setShowMissingTargetModal(false)}>OK</Button></Modal.Footer>
+      </Modal>
     </div>
   );
 }

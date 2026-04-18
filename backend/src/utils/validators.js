@@ -150,6 +150,24 @@ export const createRideSchema = z.object({
     .optional(),
 });
 
+export const updateRideSchema = z
+  .object({
+    originName: z.string().min(2).max(120).optional(),
+    destName: z.string().min(2).max(120).optional(),
+    departureTime: z.coerce.date().optional(),
+    seatsTotal: z.coerce.number().min(1).max(8).optional(),
+    vehicleInfo: z.string().max(120).optional(),
+    notes: z.string().max(1000).optional(),
+    recurring: z
+      .object({
+        enabled: z.boolean(),
+        daysOfWeek: z.array(z.number().min(0).max(6)).optional().default([]),
+      })
+      .optional(),
+    status: z.enum(['scheduled', 'full', 'completed', 'cancelled']).optional(),
+  })
+  .strict();
+
 export const rateUserSchema = z.object({
   score: z.number().min(1).max(5),
   comment: z.string().max(500).optional().default(''),

@@ -141,7 +141,7 @@ export default function ListingManagement({ showHeader = true }) {
         </div>
       ) : listings.length === 0 ? (
         <div className={styles.emptyState}>
-          <p>You don't have any listings yet</p>
+          <p>{"You don't have any listings yet"}</p>
         </div>
       ) : (
         <div className={styles.listingGrid}>

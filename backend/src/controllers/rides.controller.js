@@ -4,7 +4,7 @@ import Request from '../models/Request.model.js';
 import ActivityEvent from '../models/ActivityEvent.model.js';
 import User from '../models/User.model.js';
 import { logActivity } from '../services/activity.service.js';
-import { pushNotification } from '../services/notification.service.js';
+import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -15,7 +15,7 @@ export const listRides = async (req, res) => {
     const { originName, destName, after } = req.query;
     const from =
       after && !Number.isNaN(new Date(after).getTime()) ? new Date(after) : new Date();
-    const q = { status: 'scheduled', departureTime: { $gte: from } };
+    const q = { status: { $in: ['scheduled', 'full'] }, departureTime: { $gte: from } };
     if (originName) q.originName = new RegExp(escapeRegex(String(originName)), 'i');
     if (destName) q.destName = new RegExp(escapeRegex(String(destName)), 'i');
 
@@ -50,7 +50,18 @@ export const getRideById = async (req, res) => {
       });
     }
 
-    res.status(200).json({ success: true, data: ride });
+    let hasRequested = false;
+    if (req.user) {
+      const existingRequest = await Request.findOne({
+        requester: req.user._id,
+        refModel: 'Ride',
+        refId: ride._id,
+        status: { $in: ['pending', 'approved'] },
+      });
+      hasRequested = !!existingRequest;
+    }
+
+    res.status(200).json({ success: true, data: { ...ride.toObject(), hasRequested } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -59,6 +70,7 @@ export const getRideById = async (req, res) => {
 export const createRide = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const body = { ...req.body };
     body.seatsAvailable = body.seatsTotal;
@@ -86,10 +98,11 @@ export const createRide = async (req, res) => {
         message: `Your ride from ${ride.originName} to ${ride.destName} is live.`,
         link: `/rides/${ride._id}`,
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(201).json({ success: true, data: ride });
   } catch (err) {
     await session.abortTransaction();
@@ -108,11 +121,52 @@ export const updateRide = async (req, res) => {
     if (!ride.driver.equals(req.user._id)) {
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
+
     Object.assign(ride, req.body);
-    const confirmed = ride.passengers.filter((p) => p.status === 'confirmed').length;
-    ride.seatsAvailable = Math.max(0, ride.seatsTotal - confirmed);
+
+    const confirmedSeats = ride.passengers
+      .filter((p) => p.status === 'confirmed')
+      .reduce((sum, passenger) => sum + (passenger.seatsRequested || 1), 0);
+
+    ride.seatsAvailable = Math.max(0, ride.seatsTotal - confirmedSeats);
+    if (ride.status !== 'completed' && ride.status !== 'cancelled') {
+      ride.status = ride.seatsAvailable > 0 ? 'scheduled' : 'full';
+    }
+
     await ride.save();
     res.status(200).json({ success: true, data: ride });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const deleteRide = async (req, res) => {
+  try {
+    const ride = await Ride.findById(req.params.id);
+    if (!ride) {
+      return res.status(404).json({ success: false, message: 'Ride not found' });
+    }
+
+    if (!ride.driver.equals(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Only the driver can delete this ride' });
+    }
+
+    await Request.updateMany(
+      {
+        refModel: 'Ride',
+        refId: ride._id,
+        status: { $in: ['pending', 'approved'] },
+      },
+      {
+        $set: {
+          status: 'cancelled',
+        },
+      }
+    );
+
+    await ride.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Ride deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -121,6 +175,7 @@ export const updateRide = async (req, res) => {
 export const joinRide = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const ride = await Ride.findById(req.params.id).session(session);
     if (!ride || ride.status !== 'scheduled') {
@@ -180,15 +235,16 @@ export const joinRide = async (req, res) => {
       ride.driver,
       {
         type: 'ride_request_received',
-        message: `${req.user.name} requested ${seatsRequested} seat${seatsRequested > 1 ? 's' : ''} on your ride to ${ride.destName}.`,
+        message: `${req.user.name} is interested in your ride offer to ${ride.destName}!`,
         link: `/rides/${ride._id}`,
         requestId: request._id,
-        meta: { refModel: 'Ride', refId: ride._id, context: 'ride', seatsRequested },
+        meta: { refModel: 'Ride', refId: ride._id, context: 'ride', seatsRequested, message: req.body.message || '' },
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(201).json({ success: true, data: request, message: 'Ride request submitted for driver approval' });
   } catch (err) {
     await session.abortTransaction();
@@ -204,6 +260,7 @@ export const joinRide = async (req, res) => {
 export const leaveRide = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const ride = await Ride.findById(req.params.id).session(session);
     if (!ride) {
@@ -253,10 +310,11 @@ export const leaveRide = async (req, res) => {
         message: `${req.user.name} left your ride to ${ride.destName}.`,
         link: `/rides/${ride._id}`,
       },
-      { session }
+      { session, emailQueue }
     );
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({ success: true, data: ride, message: 'You have left the ride' });
   } catch (err) {
     await session.abortTransaction();
@@ -382,12 +440,16 @@ export const getMyRides = async (req, res) => {
       .limit(50)
       .populate('passengers.user', 'name department');
     const asPassenger = await Ride.find({
-      'passengers.user': req.user._id,
-      'passengers.hidden': { $ne: true },
+      passengers: {
+        $elemMatch: {
+          user: req.user._id,
+          hidden: { $ne: true },
+        },
+      },
     })
       .sort({ departureTime: -1 })
       .limit(50)
-      .populate('driver', 'name department trustScore');
+      .populate('driver', 'name department');
     res.status(200).json({ success: true, data: { asDriver, asPassenger } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -423,6 +485,7 @@ export const sendRideReminders = async () => {
 export const markRideCompleted = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const emailQueue = [];
   try {
     const ride = await Ride.findById(req.params.id).session(session);
 
@@ -461,11 +524,12 @@ export const markRideCompleted = async (req, res) => {
           message: `Your ride from ${ride.originName} to ${ride.destName} is now marked as completed.`,
           link: `/dashboard`,
         },
-        { session }
+        { session, emailQueue }
       );
     }
 
     await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({
       success: true,
       data: ride,

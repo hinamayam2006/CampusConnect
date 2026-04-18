@@ -1,241 +1,292 @@
+:root {
+  --cc-navy: #1e3a8a;
+  --cc-navy-light: #2d4fa0;
+  --cc-white: #ffffff;
+  --cc-border: #e5e7eb;
+  --cc-text: #1a1a2e;
+  --cc-text-muted: #6b7280;
+  --cc-success: #16a34a;
+  --cc-danger: #dc2626;
+  --cc-radius: 12px;
+}
+
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1050;
-  padding: 20px;
+  animation: fadeIn 0.2s ease;
+  padding: 1rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .modalContent {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--cc-white);
+  border-radius: var(--cc-radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.22);
   width: 100%;
-  max-width: 500px;
+  max-width: 440px;
   max-height: 90vh;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  animation: slideUp 0.25s ease;
 }
 
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Header ── */
 .modalHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--cc-border);
 }
 
 .modalHeader h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--cc-text);
+  margin: 0 0 0.2rem;
+}
+
+.modalSubtitle {
+  font-size: 0.8rem;
+  color: var(--cc-text-muted);
   margin: 0;
-  font-size: 1.5rem;
-  color: #333;
 }
 
 .closeBtn {
-  background: none;
+  background: #f3f4f6;
   border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
-  padding: 0;
   width: 32px;
   height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  margin-left: 1rem;
 }
+.closeBtn:hover { background: #e5e7eb; color: var(--cc-text); }
 
-.closeBtn:hover {
-  color: #000;
-}
-
+/* ── Body ── */
 .modalBody {
-  padding: 20px;
-  flex: 1;
-  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.requesterInfo {
+/* ── Requester Card ── */
+.requesterCard {
   display: flex;
-  gap: 15px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  gap: 0.875rem;
+  background: #f9fafb;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  padding: 1rem;
 }
 
 .requesterAvatar {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--cc-navy), var(--cc-navy-light));
+  color: #fff;
   border-radius: 50%;
-  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
-.requesterDetails h4 {
-  margin: 0 0 4px 0;
+.requesterDetails { flex: 1; min-width: 0; }
+
+.requesterName {
   font-size: 1rem;
-  color: #333;
+  font-weight: 700;
+  color: var(--cc-text);
+  margin: 0 0 0.2rem;
 }
 
-.requesterDetails p {
-  margin: 4px 0;
-  font-size: 0.875rem;
-  color: #666;
+.requesterDept {
+  font-size: 0.8rem;
+  color: var(--cc-text-muted);
+  margin: 0 0 0.5rem;
 }
 
-.department {
-  font-weight: 500;
-}
-
-.trustScore {
-  color: #ffa500;
-  font-weight: 500;
-}
-
-.messageSection {
-  margin: 15px 0;
-}
-
-.messageSection h5 {
-  margin: 0 0 8px 0;
-  font-size: 0.95rem;
-  color: #333;
-}
-
-.messageSection p {
-  margin: 0;
-  padding: 12px;
-  background-color: #f0f0f0;
-  border-left: 3px solid #007bff;
-  border-radius: 4px;
-  color: #555;
-  font-size: 0.95rem;
-}
-
-.requestDetails {
-  padding: 12px;
-  background-color: #e8f4f8;
-  border-radius: 4px;
-  margin: 15px 0;
-}
-
-.requestDetails p {
-  margin: 0;
-  color: #333;
-  font-size: 0.95rem;
-}
-
-.modalFooter {
+.trustRow {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 20px;
-  border-top: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.modalFooter button {
-  padding: 8px 16px;
-  font-size: 0.95rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.trustLabel {
+  font-size: 0.75rem;
+  color: var(--cc-text-muted);
+  font-weight: 500;
 }
 
-.modalFooter button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.trustValue {
+  font-size: 0.8rem;
+  color: var(--cc-text);
+  font-weight: 600;
 }
 
-.confirmText {
-  color: #666;
-  font-size: 1rem;
-  margin-bottom: 20px;
-  text-align: center;
+/* ── Message Section ── */
+.messageSectionLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
+.messageBox {
+  font-size: 0.9rem;
+  color: var(--cc-text-muted);
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 0.75rem 0.875rem;
+  line-height: 1.5;
+}
+
+.messageQuote {
+  font-size: 1.5rem;
+  line-height: 0;
+  color: var(--cc-navy);
+  opacity: 0.3;
+  margin-right: 0.2rem;
+  vertical-align: -0.4rem;
+}
+
+/* ── Detail Pill ── */
+.detailPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--cc-navy);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 99px;
+  padding: 0.3rem 0.75rem;
+  width: fit-content;
+}
+
+/* ── Decline Warning ── */
+.declineWarning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ── Form ── */
 .formGroup {
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
 }
 
-.formGroup textarea {
+.formControl {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid var(--cc-border);
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-family: inherit;
-  font-size: 0.95rem;
+  color: var(--cc-text);
+  background: var(--cc-white);
   resize: vertical;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
-.formGroup textarea:focus {
+.formControl:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  border-color: var(--cc-navy);
+  box-shadow: 0 0 0 3px rgba(30,58,138,0.1);
 }
 
-/* Responsive Design */
-@media (max-width: 640px) {
-  .modalOverlay {
-    padding: 10px;
-  }
+/* ── Footer ── */
+.modalFooter {
+  display: flex;
+  gap: 0.625rem;
+  padding: 1.125rem 1.5rem;
+  border-top: 1px solid var(--cc-border);
+  justify-content: flex-end;
+}
 
-  .modalContent {
-    max-width: 100%;
-  }
+/* ── Buttons ── */
+.btnGhost,
+.btnDecline,
+.btnApprove {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
 
-  .modalHeader {
-    padding: 12px 16px;
-  }
+.btnGhost { background: #f3f4f6; border-color: #e5e7eb; color: #374151; }
+.btnGhost:hover:not(:disabled) { background: #e5e7eb; }
 
-  .modalHeader h2 {
-    font-size: 1.25rem;
-  }
+.btnDecline { background: #fff; border-color: var(--cc-danger); color: var(--cc-danger); }
+.btnDecline:hover:not(:disabled) { background: var(--cc-danger); color: #fff; }
 
-  .modalBody {
-    padding: 16px;
-  }
+.btnApprove { background: #16a34a; border-color: #16a34a; color: #fff; }
+.btnApprove:hover:not(:disabled) { background: #15803d; }
 
-  .modalFooter {
-    flex-direction: column;
-    gap: 8px;
-  }
+.btnGhost:disabled,
+.btnDecline:disabled,
+.btnApprove:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .modalFooter button {
-    width: 100%;
-    padding: 10px 12px;
-  }
+.btnSpinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
 
-  .requesterInfo {
-    gap: 12px;
-  }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .requesterAvatar {
-    width: 50px;
-    height: 50px;
-  }
-
-  .requesterDetails h4 {
-    font-size: 0.95rem;
-  }
-
-  .requesterDetails p {
-    font-size: 0.85rem;
-  }
+@media (max-width: 480px) {
+  .modalFooter { flex-direction: column; }
+  .modalFooter button { width: 100%; justify-content: center; }
 }

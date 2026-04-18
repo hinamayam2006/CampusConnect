@@ -1,7 +1,9 @@
+// rides/browse/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import api from '../../../lib/api';
 import useStore from '../../../store/useStore';
 
@@ -20,8 +22,11 @@ export default function RidesBrowsePage() {
       if (destName) params.set('destName', destName);
       const res = await api.get(`/rides?${params}`);
       if (res.data.success) setRides(res.data.data || []);
-    } catch {
+    } catch (err) {
       setRides([]);
+      if (err.response?.status === 429) {
+        toast.error('Too many requests right now. Please wait a moment and try again.');
+      }
     } finally {
       setLoading(false);
     }

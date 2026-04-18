@@ -5,6 +5,8 @@ import './auth.css';
 import './landing.css';
 import './dashboard.css';
 import './marketplace-rides.css';
+import './notifications.css';
+import './create-forms.css';
 import Navbar from '../components/layout/Navbar';
 import { Toaster } from 'react-hot-toast';
 import BootstrapClient from '../components/BootstrapClient';

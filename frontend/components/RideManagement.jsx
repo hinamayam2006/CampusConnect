@@ -1,18 +1,40 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
 import styles from './ride-management.module.css';
 import { hidePassengerRide, markRideCompleted } from '../lib/apiRequests';
 import api from '../lib/api';
-import useStore from '../store/useStore';
 
-/**
- * RideManagement
- * Component for managing user's rides
- * Allows edit, delete, and mark as completed
- */
+function toLocalDateTimeInput(value) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (part) => String(part).padStart(2, '0');
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('-') + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function formatRideTime(value) {
+  return new Date(value).toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export default function RideManagement({ showHeader = true }) {
-  const store = useStore();
   const [ridesAsDriver, setRidesAsDriver] = useState([]);
   const [ridesAsPassenger, setRidesAsPassenger] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,10 +46,6 @@ export default function RideManagement({ showHeader = true }) {
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('driver');
 
-  useEffect(() => {
-    loadRides();
-  }, []);
-
   const loadRides = async () => {
     try {
       setIsLoading(true);
@@ -36,44 +54,64 @@ export default function RideManagement({ showHeader = true }) {
       setRidesAsDriver(response.data.data?.asDriver || []);
       setRidesAsPassenger(response.data.data?.asPassenger || []);
     } catch (err) {
-      console.error('Error loading rides:', err);
-      setError(err.message || 'Failed to load rides');
+      setError(err.response?.data?.message || err.message || 'Failed to load rides');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleEditClick = (ride) => {
+  useEffect(() => {
+    loadRides();
+  }, []);
+
+  const openEditModal = (ride) => {
     setSelectedRide(ride);
     setEditFormData({
-      originName: ride.originName,
-      destName: ride.destName,
+      originName: ride.originName || '',
+      destName: ride.destName || '',
+      departureTime: toLocalDateTimeInput(ride.departureTime),
       vehicleInfo: ride.vehicleInfo || '',
       notes: ride.notes || '',
-      seatsTotal: ride.seatsTotal,
+      seatsTotal: ride.seatsTotal || 1,
     });
     setShowEditModal(true);
   };
 
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedRide(null);
+    setEditFormData({});
+  };
+
   const handleSaveEdit = async () => {
     if (!selectedRide) return;
+    if (!editFormData.departureTime) {
+      setError('Departure time is required');
+      return;
+    }
 
     try {
       setActionLoading(true);
       setError(null);
-      await api.patch(`/rides/${selectedRide._id}`, editFormData);
+
+      await api.patch(`/rides/${selectedRide._id}`, {
+        ...editFormData,
+        departureTime: new Date(editFormData.departureTime).toISOString(),
+        seatsTotal: Number(editFormData.seatsTotal),
+      });
+
       setSuccess('Ride updated successfully');
-      setShowEditModal(false);
+      closeEditModal();
       await loadRides();
     } catch (err) {
-      setError(err.message || 'Failed to update ride');
+      setError(err.response?.data?.message || err.message || 'Failed to update ride');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleDelete = async (rideId) => {
-    if (!confirm('Are you sure you want to delete this ride?')) return;
+    if (!window.confirm('Delete this ride? This will remove it from carpooling.')) return;
 
     try {
       setActionLoading(true);
@@ -82,14 +120,14 @@ export default function RideManagement({ showHeader = true }) {
       setSuccess('Ride deleted successfully');
       await loadRides();
     } catch (err) {
-      setError(err.message || 'Failed to delete ride');
+      setError(err.response?.data?.message || err.message || 'Failed to delete ride');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleMarkCompleted = async (rideId) => {
-    if (!confirm('Mark this ride as completed? This will close it from the listing.')) return;
+    if (!window.confirm('Mark this ride as completed?')) return;
 
     try {
       setActionLoading(true);
@@ -98,334 +136,263 @@ export default function RideManagement({ showHeader = true }) {
       setSuccess('Ride marked as completed');
       await loadRides();
     } catch (err) {
-      setError(err.message || 'Failed to mark ride as completed');
+      setError(err.response?.data?.message || err.message || 'Failed to mark ride as completed');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleHidePassengerRide = async (rideId) => {
-    if (!confirm('Hide this ride from your passenger list?')) return;
+    if (!window.confirm('Hide this ride from your joined rides list?')) return;
 
     try {
       setActionLoading(true);
       setError(null);
       await hidePassengerRide(rideId);
-      setSuccess('Ride hidden from your passenger list');
+      setSuccess('Ride hidden from your list');
       await loadRides();
     } catch (err) {
-      setError(err.message || 'Failed to hide ride');
+      setError(err.response?.data?.message || err.message || 'Failed to hide ride');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const getStatusBadge = (status, departureTime) => {
-    const now = new Date();
-    const departure = new Date(departureTime);
+  const renderDriverRideCard = (ride) => {
+    const seatsTaken = Math.max(0, (ride.seatsTotal || 0) - (ride.seatsAvailable || 0));
 
-    const classes = {
-      scheduled: 'badge bg-info',
-      full: 'badge bg-warning',
-      completed: 'badge bg-danger',
-      cancelled: 'badge bg-secondary',
-    };
-
-    const badge = classes[status] || 'badge bg-secondary';
-
-    if (departure < now && status === 'scheduled') {
-      return `${badge} (Past)`;
-    }
-
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString([], {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const renderRideCard = (ride, isDriver) => (
-    <div key={ride._id} className={styles.rideCard}>
-      <div className={styles.cardHeader}>
-        <div className={styles.routeInfo}>
-          <h4>
-            {ride.originName} → {ride.destName}
-          </h4>
-          <p className={styles.time}>{formatTime(ride.departureTime)}</p>
+    return (
+      <div key={ride._id} className={styles.rideCard}>
+        <div className={styles.cardTop}>
+          <div>
+            <div className={styles.routeTitle}>{ride.originName} to {ride.destName}</div>
+            <div className={styles.routeMeta}>{formatRideTime(ride.departureTime)}</div>
+          </div>
+          <span className={`${styles.statusPill} ${styles[`status${ride.status}`] || styles.statusDefault}`}>
+            {ride.status}
+          </span>
         </div>
-        <span className={`badge ${ride.status === 'completed' ? 'bg-danger' : 'bg-info'}`}>
+
+        <div className={styles.statGrid}>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Seats filled</span>
+            <span className={styles.statValue}>{seatsTaken}/{ride.seatsTotal}</span>
+          </div>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Seats left</span>
+            <span className={styles.statValue}>{ride.seatsAvailable}</span>
+          </div>
+        </div>
+
+        {(ride.vehicleInfo || ride.notes) && (
+          <div className={styles.infoBlock}>
+            {ride.vehicleInfo && <p className={styles.infoText}><strong>Vehicle:</strong> {ride.vehicleInfo}</p>}
+            {ride.notes && <p className={styles.infoText}><strong>Notes:</strong> {ride.notes}</p>}
+          </div>
+        )}
+
+        {ride.passengers?.length > 0 && (
+          <div className={styles.passengerBlock}>
+            <div className={styles.sectionLabel}>Passengers</div>
+            <div className={styles.passengerList}>
+              {ride.passengers.map((passenger, index) => (
+                <div key={`${ride._id}-${index}`} className={styles.passengerItem}>
+                  <span>{passenger.user?.name || 'Passenger'}</span>
+                  <span className={styles.passengerMeta}>
+                    {passenger.seatsRequested || 1} seat{passenger.seatsRequested > 1 ? 's' : ''} • {passenger.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.cardActions}>
+          <Link href={`/rides/${ride._id}`} className="btn btn-outline-primary btn-sm">
+            View ride
+          </Link>
+          {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+            <>
+              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => openEditModal(ride)} disabled={actionLoading}>
+                Edit
+              </button>
+              <button type="button" className="btn btn-outline-warning btn-sm" onClick={() => handleMarkCompleted(ride._id)} disabled={actionLoading}>
+                Mark complete
+              </button>
+            </>
+          )}
+          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(ride._id)} disabled={actionLoading}>
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPassengerRideCard = (ride) => (
+    <div key={ride._id} className={styles.rideCard}>
+      <div className={styles.cardTop}>
+        <div>
+          <div className={styles.routeTitle}>{ride.originName} to {ride.destName}</div>
+          <div className={styles.routeMeta}>{formatRideTime(ride.departureTime)}</div>
+        </div>
+        <span className={`${styles.statusPill} ${styles[`status${ride.status}`] || styles.statusDefault}`}>
           {ride.status}
         </span>
       </div>
 
-      {isDriver && (
-        <div className={styles.driverInfo}>
-          <p>Seats: {ride.seatsTotal - ride.seatsAvailable}/{ride.seatsTotal}</p>
-          {ride.passengers && ride.passengers.length > 0 && (
-            <div className={styles.passengers}>
-              <strong>Passengers:</strong>
-              <ul>
-                {ride.passengers.map((p) => (
-                  <li key={p._id || p.user._id}>
-                    {p.user?.name || p.user} - {p.status}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!isDriver && (
-        <div className={styles.driverInfo}>
-          <div className="d-flex justify-content-between align-items-start gap-2">
-            <div>
-              <p>
-                <strong>Driver:</strong> {ride.driver?.name}
-              </p>
-              <p className={styles.trust}>
-                ⭐ Trust: {ride.driver?.trustScore || 'N/A'}
-              </p>
-            </div>
-            <button
-              className="btn btn-sm text-white"
-              style={{ backgroundColor: '#6c1a1a', borderColor: '#6c1a1a' }}
-              disabled={actionLoading}
-              onClick={() => handleHidePassengerRide(ride._id)}
-              title="Hide this ride"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {ride.vehicleInfo && (
-        <p className={styles.vehicle}>🚗 {ride.vehicleInfo}</p>
-      )}
-
-      {ride.notes && (
-        <p className={styles.notes}>{ride.notes}</p>
-      )}
+      <div className={styles.infoBlock}>
+        <p className={styles.infoText}><strong>Driver:</strong> {ride.driver?.name || 'Driver'}</p>
+        <p className={styles.infoText}><strong>Department:</strong> {ride.driver?.department || 'N/A'}</p>
+        {ride.vehicleInfo && <p className={styles.infoText}><strong>Vehicle:</strong> {ride.vehicleInfo}</p>}
+        {ride.notes && <p className={styles.infoText}><strong>Notes:</strong> {ride.notes}</p>}
+      </div>
 
       <div className={styles.cardActions}>
-        {isDriver && ride.status === 'scheduled' && (
-          <>
-            <button
-              className="btn btn-sm btn-outline-primary"
-              onClick={() => handleEditClick(ride)}
-              disabled={actionLoading}
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-sm btn-outline-warning"
-              onClick={() => handleMarkCompleted(ride._id)}
-              disabled={actionLoading}
-            >
-              Mark Complete
-            </button>
-          </>
-        )}
-        {isDriver && (
-          <button
-            className="btn btn-sm btn-outline-danger"
-            onClick={() => handleDelete(ride._id)}
-            disabled={actionLoading}
-          >
-            Delete
-          </button>
-        )}
+        <Link href={`/rides/${ride._id}`} className="btn btn-outline-primary btn-sm">
+          View ride
+        </Link>
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => handleHidePassengerRide(ride._id)} disabled={actionLoading}>
+          Hide
+        </button>
       </div>
     </div>
   );
 
+  const activeList = activeTab === 'driver' ? ridesAsDriver : ridesAsPassenger;
+
   return (
     <div className={styles.container}>
-      {showHeader && <h1 className={styles.title}>My Rides</h1>}
+      {showHeader && (
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.title}>My rides</h1>
+            <p className={styles.subtitle}>Manage the rides you host and the trips you have joined.</p>
+          </div>
+          <Link href="/rides/create" className="btn btn-primary">
+            Offer a ride
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
           {error}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setError(null)}
-          ></button>
+          <button type="button" className="btn-close" onClick={() => setError(null)}></button>
         </div>
       )}
 
       {success && (
         <div className="alert alert-success alert-dismissible fade show" role="alert">
           {success}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setSuccess(null)}
-          ></button>
+          <button type="button" className="btn-close" onClick={() => setSuccess(null)}></button>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className={styles.tabs}>
+      <div className={styles.segmentedTabs}>
         <button
-          className={`nav-link ${activeTab === 'driver' ? 'active' : ''}`}
+          type="button"
+          className={`${styles.segmentButton} ${activeTab === 'driver' ? styles.segmentButtonActive : ''}`}
           onClick={() => setActiveTab('driver')}
         >
-          My Rides (Driver)
+          Hosting
         </button>
         <button
-          className={`nav-link ${activeTab === 'passenger' ? 'active' : ''}`}
+          type="button"
+          className={`${styles.segmentButton} ${activeTab === 'passenger' ? styles.segmentButtonActive : ''}`}
           onClick={() => setActiveTab('passenger')}
         >
-          Rides Joined (Passenger)
+          Joined rides
         </button>
       </div>
 
       {isLoading ? (
-        <div className={styles.loading}>
-          <p>Loading rides...</p>
-        </div>
-      ) : activeTab === 'driver' ? (
-        ridesAsDriver.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p>You haven't created any rides yet</p>
-          </div>
-        ) : (
-          <div className={styles.ridesList}>
-            {ridesAsDriver.map((ride) => renderRideCard(ride, true))}
-          </div>
-        )
-      ) : ridesAsPassenger.length === 0 ? (
+        <div className={styles.emptyState}>Loading rides...</div>
+      ) : activeList.length === 0 ? (
         <div className={styles.emptyState}>
-          <p>You haven't joined any rides yet</p>
+          {activeTab === 'driver' ? "You haven't posted any rides yet." : "You haven't joined any rides yet."}
         </div>
       ) : (
-        <div className={styles.ridesList}>
-          {ridesAsPassenger.map((ride) => renderRideCard(ride, false))}
+        <div className={styles.cardList}>
+          {activeTab === 'driver'
+            ? ridesAsDriver.map(renderDriverRideCard)
+            : ridesAsPassenger.map(renderPassengerRideCard)}
         </div>
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowEditModal(false)}>
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <h2>Edit Ride</h2>
-              <button
-                className={styles.closeBtn}
-                onClick={() => setShowEditModal(false)}
-              >
-                ✕
-              </button>
-            </div>
+      <Modal show={showEditModal} onHide={closeEditModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit ride</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Pickup label</Form.Label>
+              <Form.Control
+                type="text"
+                value={editFormData.originName || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, originName: e.target.value }))}
+              />
+            </Form.Group>
 
-            <div className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label>Origin</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editFormData.originName || ''}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, originName: e.target.value })
-                  }
-                />
-              </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Drop-off label</Form.Label>
+              <Form.Control
+                type="text"
+                value={editFormData.destName || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, destName: e.target.value }))}
+              />
+            </Form.Group>
 
-              <div className={styles.formGroup}>
-                <label>Destination</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editFormData.destName || ''}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, destName: e.target.value })
-                  }
-                />
-              </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Departure</Form.Label>
+              <Form.Control
+                type="datetime-local"
+                value={editFormData.departureTime || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, departureTime: e.target.value }))}
+              />
+            </Form.Group>
 
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Vehicle Info</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g., White Honda Civic"
-                    value={editFormData.vehicleInfo || ''}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        vehicleInfo: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Seats</Form.Label>
+              <Form.Control
+                type="number"
+                min="1"
+                max="8"
+                value={editFormData.seatsTotal || 1}
+                onChange={(e) => setEditFormData((current) => ({ ...current, seatsTotal: e.target.value }))}
+              />
+            </Form.Group>
 
-                <div className={styles.formGroup}>
-                  <label>Total Seats</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    min="1"
-                    max="8"
-                    value={editFormData.seatsTotal || 1}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        seatsTotal: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Vehicle</Form.Label>
+              <Form.Control
+                type="text"
+                value={editFormData.vehicleInfo || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, vehicleInfo: e.target.value }))}
+              />
+            </Form.Group>
 
-              <div className={styles.formGroup}>
-                <label>Notes</label>
-                <textarea
-                  className="form-control"
-                  rows="3"
-                  placeholder="Additional information"
-                  value={editFormData.notes || ''}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      notes: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowEditModal(false)}
-                disabled={actionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveEdit}
-                disabled={actionLoading}
-              >
-                {actionLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <Form.Group>
+              <Form.Label>Notes</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={editFormData.notes || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, notes: e.target.value }))}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={closeEditModal} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSaveEdit} disabled={actionLoading}>
+            {actionLoading ? 'Saving...' : 'Save changes'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

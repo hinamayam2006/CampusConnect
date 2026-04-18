@@ -1,7 +1,8 @@
+// rides/page.js
 'use client';
 
 import Link from 'next/link';
-import { Car, Search, PlusCircle, Sparkles, List } from 'lucide-react';
+import { Car, Search, PlusCircle, Sparkles, List, ClipboardList } from 'lucide-react';
 import useStore from '../../store/useStore';
 
 export default function RidesHubPage() {
@@ -44,7 +45,7 @@ export default function RidesHubPage() {
       </div>
 
       <div className="row g-3">
-        <div className="col-md-6">
+        <div className="col-md-4">
           <Link href="/rides/my-rides" className="mc-tile h-100">
             <h3 className="d-flex align-items-center gap-2">
               <List size={22} /> My rides
@@ -52,7 +53,15 @@ export default function RidesHubPage() {
             <p className="text-secondary small mb-0">Driving schedule and rides you have joined.</p>
           </Link>
         </div>
-        <div className="col-md-6">
+        <div className="col-md-4">
+          <Link href="/rides/my-requests" className="mc-tile h-100">
+            <h3 className="d-flex align-items-center gap-2">
+              <ClipboardList size={22} /> My requests
+            </h3>
+            <p className="text-secondary small mb-0">Track every ride request you have sent.</p>
+          </Link>
+        </div>
+        <div className="col-md-4">
           <Link href="/rides/how-it-works" className="mc-tile h-100">
             <h3 className="d-flex align-items-center gap-2">
               <Car size={22} /> How it works
