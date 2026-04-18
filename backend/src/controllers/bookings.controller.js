@@ -2,8 +2,7 @@ import Booking from '../models/Booking.model.js';
 import TutorProfile from '../models/TutorProfile.model.js';
 import Review from '../models/Review.model.js';
 import User from '../models/User.model.js';
-import { sendEmail } from '../utils/email.js';
-import { sendSessionRequestEmail, sendApprovalEmail } from '../services/emailService.js';
+import { sendEmail, sendTutoringApprovalEmail, sendTutoringRequestEmail } from '../utils/email.js';
 import { logActivity } from '../services/activity.service.js';
 import { pushNotification } from '../services/notification.service.js';
 
@@ -91,8 +90,8 @@ export const createBooking = async (req, res) => {
     const tutorUser = await User.findById(profile.user).select('email name');
     const schedDate = new Date(scheduledAt);
     if (tutorUser?.email) {
-      await sendSessionRequestEmail({
-        tutorEmail: tutorUser.email,
+      await sendTutoringRequestEmail({
+        to: tutorUser.email,
         studentName: req.user.name || 'A student',
         sessionTitle: course,
         date: schedDate.toLocaleDateString(),
@@ -154,8 +153,8 @@ export const acceptBooking = async (req, res) => {
     const studentUser = await User.findById(booking.student).select('email name');
     const approveDate = new Date(booking.scheduledAt);
     if (studentUser?.email) {
-      await sendApprovalEmail({
-        studentEmail: studentUser.email,
+      await sendTutoringApprovalEmail({
+        to: studentUser.email,
         studentName: studentUser.name || 'Student',
         sessionTitle: booking.course,
         date: approveDate.toLocaleDateString(),

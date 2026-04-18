@@ -153,14 +153,53 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.activity-header h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
 .activity-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   background: rgba(243, 244, 246, 0.5);
   border-radius: var(--radius-md);
   transition: background 0.2s ease;
+}
+
+.activity-icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.activity-title {
+  line-height: 1.35;
+}
+
+.activity-meta {
+  line-height: 1.25;
 }
 
 .activity-item:hover { 

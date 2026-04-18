@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react'; // Added icons
 import api from '../../../lib/api';
 import useStore from '../../../store/useStore';
-
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,15 +14,14 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showPassword, setShowPassword] = useState(false); // New state
 
-  // Auto-redirect if already logged in (industry standard)
   useEffect(() => {
     if (user) {
       router.push('/');
     }
   }, [user, router]);
 
-  // Auto-clear error messages after 4 seconds
   useEffect(() => {
     if (message.type === 'error' && message.text) {
       const timer = setTimeout(() => {
@@ -43,9 +42,7 @@ export default function LoginPage() {
 
     try {
       const { data } = await api.post('/auth/login', formData);
-
-      // SUCCESS: Save user and both tokens (access + refresh) with expiry time
-      const tokenExpiry = Date.now() + (15 * 60 * 1000); // 15 minutes from now
+      const tokenExpiry = Date.now() + (15 * 60 * 1000); 
       setUser(
         data.data.user,
         data.data.accessToken,
@@ -58,7 +55,6 @@ export default function LoginPage() {
         text: `Welcome back, ${data.data.user.name.split(' ')[0]}!`,
       });
 
-      // Clear data ONLY on success
       setFormData({ email: '', password: '' });
       setLoading(false);
       setTimeout(() => {
@@ -67,15 +63,8 @@ export default function LoginPage() {
 
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Login failed';
-
-      setMessage({
-        type: 'error',
-        text: errorMessage,
-      });
-
-      // Clear password field on any error (security best practice)
+      setMessage({ type: 'error', text: errorMessage });
       setFormData((prev) => ({ ...prev, password: '' }));
-
       setLoading(false);
     }
   };
@@ -89,7 +78,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {/* Email Field */}
           <div className="form-group">
             <label className="form-label">Email</label>
             <input
@@ -104,57 +92,47 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password Field */}
           <div className="form-group">
             <label className="form-label">Password</label>
-            <input
-              type="password"
-              name="password"
-              readOnly 
-              onFocus={(e) => e.target.removeAttribute('readonly')}
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Your password"
-              required
-              className="form-control"
-            />
+            <div className="password-field-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                readOnly 
+                onFocus={(e) => e.target.removeAttribute('readonly')}
+                autoComplete="current-password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Your password"
+                required
+                className="form-control password-input"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
-          {/* Message Alert */}
           {message.text && (
             <div className={`auth-message ${message.type}`}>
               {message.text}
             </div>
           )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="auth-submit-btn"
-          >
-            {loading ? (
-              <>
-                <span
-                  className="spinner-border spinner-border-sm me-2"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                Logging in...
-              </>
-            ) : (
-              'Log In'
-            )}
+          <button type="submit" disabled={loading} className="auth-submit-btn">
+            {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
-            Don&apos;t have an account?
-            <Link href="/register" className="btn-link fw-bold">
-              Register
-            </Link>
+            Don&apos;t have an account? 
+            <Link href="/register" className="btn-link fw-bold"> Register</Link>
           </p>
         </div>
       </div>

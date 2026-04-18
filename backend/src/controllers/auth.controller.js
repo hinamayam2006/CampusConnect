@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.model.js';
 import { checkLockout, recordFailedAttempt, clearAttempts } from '../utils/loginAttemptTracker.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/tokenGenerator.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
 
 // Helper — generate tokens (access + refresh)
 const generateTokens = async (userId) => {
@@ -42,8 +43,9 @@ export const register = async (req, res, next) => {
     // 12 rounds = secure but not too slow
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Generate tokens
-    const { accessToken, refreshToken, hashedRefreshToken, refreshTokenExpiry } = await generateTokens(req.body._id || null);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Create user
     const user = await User.create({
@@ -53,17 +55,26 @@ export const register = async (req, res, next) => {
       department,
       year,
       location: location || '',
-      refreshToken: hashedRefreshToken,
-      refreshTokenExpiry,
+      isVerified: false,
+      verificationToken: hashedVerificationToken,
+      verificationTokenExpiry,
     });
+
+    try {
+      await sendVerificationEmail({
+        to: user.email,
+        name: user.name,
+        token: verificationToken,
+      });
+    } catch (emailErr) {
+      console.warn('Verification email failed:', emailErr.message);
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Account created successfully. Please verify your email before logging in.',
       data: {
-        user, // password removed by toJSON() method on model
-        accessToken,
-        refreshToken,
+        user,
       },
     });
 
@@ -110,6 +121,13 @@ export const login = async (req, res, next) => {
       });
     }
 
+    if (user.isVerified === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in.',
+      });
+    }
+
     // 5. Successful login — clear any previous failed attempts
     clearAttempts(email);
 
@@ -140,6 +158,111 @@ export const login = async (req, res, next) => {
   }
 };
 
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      verificationToken: hashedToken,
+      verificationTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification token is invalid or expired.',
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpiry = null;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully. You can now log in.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'If the email exists, a password reset link has been sent.',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    user.passwordResetToken = hashedResetToken;
+    user.passwordResetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        token: resetToken,
+      });
+    } catch (emailErr) {
+      console.warn('Password reset email failed:', emailErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If the email exists, a password reset link has been sent.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is invalid or expired.',
+      });
+    }
+
+    user.password = await bcrypt.hash(password, 12);
+    user.passwordResetToken = null;
+    user.passwordResetTokenExpiry = null;
+    user.refreshToken = null;
+    user.refreshTokenExpiry = null;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── GET CURRENT USER ────────────────────────────────────
 export const getMe = async (req, res, next) => {
   try {
@@ -158,18 +281,21 @@ export const getMe = async (req, res, next) => {
 // ─── UPDATE PROFILE ──────────────────────────────────────
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, location, department, year, canTeach, needsTutoring } = req.body;
+    const { name, location, department, year, canTeach, needsTutoring, avatar } = req.body;
+
+    const updates = {
+      ...(typeof name === 'string' ? { name } : {}),
+      ...(typeof location === 'string' ? { location } : {}),
+      ...(typeof department === 'string' ? { department } : {}),
+      ...(typeof year !== 'undefined' ? { year } : {}),
+      ...(typeof avatar === 'string' ? { avatar } : {}),
+      ...(Array.isArray(canTeach) ? { canTeach } : {}),
+      ...(Array.isArray(needsTutoring) ? { needsTutoring } : {}),
+    };
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        ...(name && { name }),
-        ...(location && { location }),
-        ...(department && { department }),
-        ...(year && { year }),
-        ...(canTeach && { canTeach }),
-        ...(needsTutoring && { needsTutoring }),
-      },
+      updates,
       { new: true, runValidators: true } // return updated doc, run schema validators
     ).select('-password -notifications');
 

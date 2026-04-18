@@ -101,6 +101,7 @@ export default function Home() {
   // ═══════════════════════════════════════════════════════════
   if (user) {
     const firstName = user.name?.split(' ')[0] || 'User';
+    const recentActivities = activities.slice(0, 5);
 
     const kpiData = [
       { label: 'Items for Sale', value: statsLoading ? '...' : stats.itemsForSale, icon: <ShoppingBag size={20} />, color: 'var(--primary)' },
@@ -165,8 +166,8 @@ export default function Home() {
           </div>
 
           <div className="activity-list">
-            {activities.length > 0 ? (
-              activities.map((notif) => (
+            {recentActivities.length > 0 ? (
+              recentActivities.map((notif) => (
                 <div key={notif._id} className="activity-item">
                   <div className="activity-icon"><Bell size={18} /></div>
                   <div className="activity-content">

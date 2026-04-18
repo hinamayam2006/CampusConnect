@@ -59,6 +59,7 @@
   border-radius: 1rem;
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 

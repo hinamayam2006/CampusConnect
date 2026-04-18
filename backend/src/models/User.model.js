@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     department: {
       type: String,
       required: [true, 'Department is required'],
-      enum: ['CS', 'EE', 'ME', 'CE', 'BBA', 'Economics', 'Law', 'Medicine', 'Other'],
+      enum: ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
     },
     year: {
       type: Number,
@@ -48,6 +48,30 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['student', 'moderator'],
       default: 'student',
+    },
+    isVerified: {
+      type: Boolean,
+      default: true,
+    },
+    verificationToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    verificationTokenExpiry: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    passwordResetToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    passwordResetTokenExpiry: {
+      type: Date,
+      default: null,
+      select: false,
     },
     // Trust & Rating System — stored directly on user
     // so we never need a separate query to show trust score

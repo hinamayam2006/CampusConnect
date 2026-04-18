@@ -18,7 +18,7 @@ export const registerSchema = z.object({
     .regex(/[!@#$%^&*(),.?":{}|<>_\-]/, 'Must contain one special character'),
 
   department: z.enum(
-    ['CS', 'EE', 'ME', 'CE', 'BBA', 'Economics', 'Law', 'Medicine', 'Other'],
+    ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
     { errorMap: () => ({ message: 'Invalid department' }) }
   ),
 
@@ -33,6 +33,23 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Must contain one uppercase letter')
+    .regex(/[0-9]/, 'Must contain one number')
+    .regex(/[!@#$%^&*(),.?":{}|<>_\-]/, 'Must contain one special character'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
 });
 
 /**
@@ -61,9 +78,15 @@ export const updateProfileSchema = z.object({
     .max(100, 'Location too long')
     .optional(),
 
+  avatar: z
+    .string()
+    .url('Avatar must be a valid URL')
+    .optional()
+    .or(z.literal('')),
+
   department: z
     .enum(
-      ['CS', 'EE', 'ME', 'CE', 'BBA', 'Economics', 'Law', 'Medicine', 'Other'],
+      ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
       { errorMap: () => ({ message: 'Invalid department' }) }
     )
     .optional(),
@@ -93,7 +116,7 @@ export const updateProfileSchema = z.object({
 });
 
 const deptEnum = z.enum(
-  ['CS', 'EE', 'ME', 'CE', 'BBA', 'Economics', 'Law', 'Medicine', 'Other'],
+  ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
   { errorMap: () => ({ message: 'Invalid department' }) }
 );
 
