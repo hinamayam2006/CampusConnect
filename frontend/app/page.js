@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import useStore from '../store/useStore';
-import { useUserRoles } from './context/UserRoleContext';
-import api from './lib/api';
+import { useUserRoles } from '../context/UserRoleContext';
+import api from '../lib/api';
 import {
   ShoppingBag,
   BookOpen,
