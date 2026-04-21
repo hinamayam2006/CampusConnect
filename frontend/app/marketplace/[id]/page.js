@@ -131,7 +131,7 @@ export default function ListingDetailPage() {
                 {seller.name}
               </Link>
               <div className="small">
-                Trust {seller.trustScore ?? '—'} · {seller.department}
+                {seller.department}
               </div>
             </div>
           )}

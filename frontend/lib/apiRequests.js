@@ -114,19 +114,6 @@ export const closeChat = async (requestId) => {
   }
 };
 
-export const rateUser = async (userId, score, comment = '', context = 'marketplace') => {
-  try {
-    const response = await api.post(`/users/${userId}/rate`, {
-      score,
-      comment,
-      context,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: error.message };
-  }
-};
-
 export const getRequestsForResource = async (refModel, refId) => {
   try {
     const response = await api.get(`/requests/resource/${refModel}/${refId}`);

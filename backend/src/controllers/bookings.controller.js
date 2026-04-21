@@ -397,7 +397,7 @@ export const listMyBookings = async (req, res) => {
     const [items, total] = await Promise.all([
       Booking.find(query)
         .populate('tutorProfile', 'bio courses hourlyRate isFree averageRating')
-        .populate('tutor', 'name department year avatar location')
+        .populate('tutor', 'name department year avatar')
         .sort({ scheduledAt: -1 })
         .skip(skip)
         .limit(lim),
@@ -421,7 +421,7 @@ export const listTutorBookings = async (req, res) => {
     const query = { tutor: req.user._id };
     const [items, total] = await Promise.all([
       Booking.find(query)
-        .populate('student', 'name department year avatar location')
+        .populate('student', 'name department year avatar')
         .populate('tutorProfile', 'bio courses hourlyRate isFree averageRating')
         .sort({ scheduledAt: -1 })
         .skip(skip)

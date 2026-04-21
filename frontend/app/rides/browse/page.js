@@ -96,7 +96,7 @@ export default function RidesBrowsePage() {
                       {new Date(ride.departureTime).toLocaleString()} · {ride.seatsAvailable} seats
                     </p>
                     <p className="small mb-0">
-                      Driver: {ride.driver?.name} · ★ {ride.driver?.trustScore ?? '—'}
+                      Driver: {ride.driver?.name}
                     </p>
                   </div>
                 </div>

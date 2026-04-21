@@ -29,9 +29,6 @@ export default function RequestApprovalModal({
     setDeclineReason('');
   };
 
-  const trustScore = request.requester?.trustScore;
-  const trustStars = trustScore ? Math.round(Math.min(5, Math.max(0, trustScore / 20))) : null;
-
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -54,19 +51,6 @@ export default function RequestApprovalModal({
                 <div className={styles.requesterDetails}>
                   <h4 className={styles.requesterName}>{request.requester?.name}</h4>
                   <p className={styles.requesterDept}>{request.requester?.department}</p>
-                  <div className={styles.trustRow}>
-                    <span className={styles.trustLabel}>Trust Score</span>
-                    <span className={styles.trustValue}>
-                      {trustScore != null ? (
-                        <>
-                          <span style={{ color: '#f59e0b' }}>
-                            {'★'.repeat(trustStars || 0)}{'☆'.repeat(5 - (trustStars || 0))}
-                          </span>
-                          {' '}{trustScore}
-                        </>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
                 </div>
               </div>
 

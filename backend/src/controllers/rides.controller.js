@@ -22,7 +22,7 @@ export const listRides = async (req, res) => {
     const rides = await Ride.find(q)
       .sort({ departureTime: 1 })
       .limit(60)
-      .populate('driver', 'name department trustScore avatar year');
+      .populate('driver', 'name department avatar year');
 
     res.status(200).json({ success: true, data: rides });
   } catch (err) {
@@ -34,7 +34,7 @@ export const getRideById = async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.id).populate(
       'driver',
-      'name department year trustScore totalRatings avatar location'
+      'name department year avatar'
     );
     if (!ride) {
       return res.status(404).json({ success: false, message: 'Ride not found' });
@@ -397,7 +397,7 @@ export const getRideSuggestions = async (req, res) => {
       })
         .sort({ departureTime: 1 })
         .limit(4)
-        .populate('driver', 'name trustScore department');
+        .populate('driver', 'name department');
       rides.push(...found);
     }
 
@@ -419,7 +419,7 @@ export const getRideSuggestions = async (req, res) => {
       })
         .sort({ departureTime: 1 })
         .limit(12 - unique.length)
-        .populate('driver', 'name trustScore department');
+        .populate('driver', 'name department');
       for (const r of more) {
         if (seen.has(String(r._id))) continue;
         unique.push(r);

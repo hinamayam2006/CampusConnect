@@ -14,6 +14,7 @@ import {
 import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import ReviewForm from '../../../components/ReviewForm';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import ImagePreviewModal from '../../../components/ImagePreviewModal';
 
 import styles from '../../tutoring/tutoring.module.css';
 
@@ -31,6 +32,7 @@ export default function StudentDashboardPage() {
   const [reviewed, setReviewed] = useState({});
   const [pendingCancelId, setPendingCancelId] = useState('');
   const [uploadingPaymentId, setUploadingPaymentId] = useState('');
+  const [proofPreview, setProofPreview] = useState({ open: false, url: '' });
 
   useEffect(() => {
     if (!isReady) return undefined;
@@ -86,8 +88,15 @@ export default function StudentDashboardPage() {
       const proofUrl = imgRes?.data?.url;
       if (!proofUrl) throw new Error('Upload failed');
       const res = await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
-      setItems((prev) => prev.map((b) => (b._id === bookingId ? (res.data || res) : b)));
+      // Immediately sync state with backend response
+      const updatedBooking = res.data || res;
+      setItems((prev) => prev.map((b) => (b._id === bookingId ? updatedBooking : b)));
       toast.success('Payment proof uploaded! Tutor will review it.');
+      // Clear the file input state cleanly
+      const fileInputs = document.querySelectorAll(`input[data-booking-id="${bookingId}"]`);
+      fileInputs.forEach((input) => {
+        input.value = '';
+      });
     } catch (err) {
       toast.error(err?.message || 'Could not upload payment proof');
     } finally {
@@ -191,8 +200,14 @@ export default function StudentDashboardPage() {
                         )}
                         {booking.paymentProofUrl && (
                           <div style={{ marginBottom: '0.4rem' }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={booking.paymentProofUrl} alt="Payment proof" className={styles.bookingProofImage} style={{ maxWidth: 140, maxHeight: 140 }} />
+                            <button
+                              type="button"
+                              className={styles.bookingProofButton}
+                              onClick={() => setProofPreview({ open: true, url: booking.paymentProofUrl })}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={booking.paymentProofUrl} alt="Payment proof" className={styles.bookingProofImage} style={{ maxWidth: 140, maxHeight: 140 }} />
+                            </button>
                           </div>
                         )}
                         {['pending', 'rejected'].includes(booking.paymentStatus) && (
@@ -200,6 +215,7 @@ export default function StudentDashboardPage() {
                             <input
                               type="file"
                               accept="image/*"
+                              data-booking-id={booking._id}
                               className={styles.filterInput}
                               style={{ maxWidth: 240, borderRadius: 'var(--cc-radius-sm)' }}
                               disabled={uploadingPaymentId === booking._id}
@@ -258,6 +274,12 @@ export default function StudentDashboardPage() {
           handleCancel(pendingCancelId);
           setPendingCancelId('');
         }}
+      />
+      <ImagePreviewModal
+        isOpen={proofPreview.open}
+        imageUrl={proofPreview.url}
+        onClose={() => setProofPreview({ open: false, url: '' })}
+        title="Payment proof"
       />
     </div>
   );

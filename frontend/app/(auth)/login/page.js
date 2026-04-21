@@ -98,8 +98,6 @@ export default function LoginPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
-                readOnly 
-                onFocus={(e) => e.target.removeAttribute('readonly')}
                 autoComplete="current-password"
                 value={formData.password}
                 onChange={handleChange}
@@ -133,6 +131,9 @@ export default function LoginPage() {
           <p>
             Don&apos;t have an account? 
             <Link href="/register" className="btn-link fw-bold"> Register</Link>
+          </p>
+          <p className="mt-2">
+            <Link href="/forgot-password" className="btn-link fw-bold">Forgot password?</Link>
           </p>
         </div>
       </div>

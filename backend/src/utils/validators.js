@@ -26,8 +26,6 @@ export const registerSchema = z.object({
     .number({ invalid_type_error: 'Year must be a number' })
     .min(1)
     .max(4),
-
-  location: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -71,11 +69,6 @@ export const updateProfileSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name too long')
-    .optional(),
-
-  location: z
-    .string()
-    .max(100, 'Location too long')
     .optional(),
 
   avatar: z
@@ -191,11 +184,7 @@ export const updateRideSchema = z
   })
   .strict();
 
-export const rateUserSchema = z.object({
-  score: z.number().min(1).max(5),
-  comment: z.string().max(500).optional().default(''),
-  context: z.enum(['marketplace', 'ride', 'borrow', 'tutoring']),
-});
+
 
 export const marketplaceSearchLogSchema = z.object({
   search: z.string().max(200).optional().default(''),

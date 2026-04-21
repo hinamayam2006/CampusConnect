@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import styles from '../requests-management.module.css';
 import {
   getMyRequests,
@@ -8,7 +9,6 @@ import {
   declineRequest,
   withdrawRequest,
   acceptChatRequest,
-  rateUser,
 } from '../lib/apiRequests';
 import RequestApprovalModal from './RequestApprovalModal';
 import ChatWindow from './ChatWindow';
@@ -30,12 +30,9 @@ export default function RequestsManagement() {
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
-  useEffect(() => {
-    loadRequests();
-  }, [role, filter]);
-
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -50,7 +47,11 @@ export default function RequestsManagement() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [role, filter]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const handleApprove = async (requestId) => {
     try {
@@ -106,26 +107,6 @@ export default function RequestsManagement() {
     } catch (err) {
       console.error('Error initiating chat:', err);
       setError(err.message || 'Failed to initiate chat');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRate = async (request) => {
-    const currentUserId = String(store.user?._id);
-    const targetUserId = String(request.owner?._id) === currentUserId ? request.requester?._id : request.owner?._id;
-    const score = Number(window.prompt('Rate this member from 1 to 5 stars:', '5'));
-    if (!score || score < 1 || score > 5) {
-      return;
-    }
-    const comment = window.prompt('Leave an optional comment (or leave blank):', '');
-    try {
-      setActionLoading(true);
-      await rateUser(targetUserId, score, comment || '', request.context || 'marketplace');
-      setSuccess('Rating submitted successfully');
-    } catch (err) {
-      console.error('Error submitting rating:', err);
-      setError(err.message || 'Failed to submit rating');
     } finally {
       setActionLoading(false);
     }
@@ -196,6 +177,17 @@ export default function RequestsManagement() {
         </div>
       )}
 
+      {success && (
+        <div className="alert alert-success alert-dismissible fade show" role="alert">
+          {success}
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setSuccess(null)}
+          ></button>
+        </div>
+      )}
+
       {/* Requests List */}
       {isLoading ? (
         <div className={styles.loading}>
@@ -212,13 +204,16 @@ export default function RequestsManagement() {
               {/* Card Header */}
               <div className={styles.cardHeader}>
                 <div className={styles.userInfo}>
-                  <img
+                  <Image
                     src={
                       role === 'owner'
                         ? request.requester?.avatar
                         : request.owner?.avatar || '/default-avatar.png'
                     }
                     alt="User"
+                    width={44}
+                    height={44}
+                    unoptimized
                     className={styles.userAvatar}
                   />
                   <div className={styles.userDetails}>

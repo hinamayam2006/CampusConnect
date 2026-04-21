@@ -1,11 +1,3 @@
 export const DEPARTMENTS = [
-  'CS',
-  'EE',
-  'ME',
-  'CE',
-  'BBA',
-  'Economics',
-  'Law',
-  'Medicine',
-  'Other',
+  'SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'
 ];

@@ -128,13 +128,7 @@ export default function TutorDetailPage() {
               <h1 className={styles.pageTitle}>{profile.user?.name || 'Tutor'}</h1>
               <p className={styles.pageSubtitle}>
                 {profile.user?.department || ''}{profile.user?.year ? ` · Year ${profile.user.year}` : ''}
-                {profile.user?.location ? ` · ${profile.user.location}` : ''}
               </p>
-              {profile.user?.trustScore !== undefined && (
-                <span className={styles.badgeOlive} style={{ marginTop: '0.35rem' }}>
-                  Trust score: {Number(profile.user.trustScore || 0).toFixed(0)}
-                </span>
-              )}
             </div>
           </div>
           <div className={styles.actionRow}>

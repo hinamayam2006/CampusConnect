@@ -59,7 +59,7 @@ export const listTutors = async (req, res) => {
 
     const [items, total] = await Promise.all([
       TutorProfile.find(query)
-        .populate('user', 'name department year trustScore avatar location')
+        .populate('user', 'name department year avatar')
         .sort({ averageRating: -1, createdAt: -1 })
         .skip(skip)
         .limit(lim),
@@ -81,7 +81,7 @@ export const getTutorById = async (req, res) => {
   try {
     const profile = await TutorProfile.findById(req.params.id).populate(
       'user',
-      'name department year trustScore avatar location'
+      'name department year avatar'
     );
 
     if (!profile || !profile.isActive) {
@@ -98,7 +98,7 @@ export const getMyTutorProfile = async (req, res) => {
   try {
     const profile = await TutorProfile.findOne({ user: req.user._id }).populate(
       'user',
-      'name department year trustScore avatar location'
+      'name department year avatar'
     );
 
     if (!profile) {

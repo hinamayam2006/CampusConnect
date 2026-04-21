@@ -473,7 +473,7 @@ export default function BookTutorPage() {
               <hr className={styles.divider} />
 
               <div className={styles.alertInfo}>
-                Tutors typically respond within 24 hours. You'll receive a notification when they accept or suggest a new time.
+                Tutors typically respond within 24 hours. You&apos;ll receive a notification when they accept or suggest a new time.
               </div>
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
 } from '../../../lib/apiRequests';
 import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import ImagePreviewModal from '../../../components/ImagePreviewModal';
 import styles from '../../tutoring/tutoring.module.css';
 
 function formatSchedule(dateValue) {
@@ -158,6 +159,7 @@ export default function TutorDashboardPage() {
             <p className={styles.pageSubtitle}>Manage your sessions, bookings &amp; payments.</p>
           </div>
           <div className={styles.actionRow}>
+            <Link href="/dashboard/tutor/earnings" className={`${styles.btnSecondary} ${styles.btnSmall}`}>View Earnings</Link>
             <Link href="/tutors/become" className={`${styles.btnPrimary} ${styles.btnSmall}`}>Edit Profile</Link>
           </div>
         </div>
@@ -383,50 +385,12 @@ export default function TutorDashboardPage() {
           setPendingAction({ type: '', bookingId: '' });
         }}
       />
-      {proofPreview.open && proofPreview.url && (
-        <div
-          className={styles.proofModalOverlay}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) closeProofPreview();
-          }}
-        >
-          <div className={styles.proofModal}>
-            <div className={styles.proofModalHeader}>
-              <span>Payment proof</span>
-              <button
-                type="button"
-                className={`${styles.btnSecondary} ${styles.btnSmall}`}
-                onClick={closeProofPreview}
-              >
-                Close
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={proofPreview.url}
-              alt="Payment proof full view"
-              className={styles.proofModalImage}
-            />
-            <div className={styles.proofModalActions}>
-              <a
-                href={proofPreview.url}
-                className={`${styles.btnSecondary} ${styles.btnSmall}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open full
-              </a>
-              <a
-                href={proofPreview.url}
-                className={`${styles.btnPrimary} ${styles.btnSmall}`}
-                download
-              >
-                Download
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImagePreviewModal
+        isOpen={proofPreview.open}
+        imageUrl={proofPreview.url}
+        onClose={closeProofPreview}
+        title="Payment proof"
+      />
     </div>
   );
 }

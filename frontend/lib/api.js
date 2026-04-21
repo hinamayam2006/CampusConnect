@@ -101,10 +101,6 @@ api.interceptors.response.use(
         store.logout();
         processQueue(err);
 
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-
         return Promise.reject(err);
       }
     }
@@ -115,9 +111,6 @@ api.interceptors.response.use(
 
       if (!isAuthEndpoint) {
         store.logout();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
       }
     }
 

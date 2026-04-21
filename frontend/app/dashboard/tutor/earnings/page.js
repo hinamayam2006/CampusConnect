@@ -40,11 +40,6 @@ export default function TutorEarningsPage() {
     };
   }, [isReady]);
 
-  if (!isReady) {
-    return <div className="container py-5 text-secondary">Loading session…</div>;
-  }
-
-  const maxEarnings = Math.max(1, ...monthly.map((m) => m.earnings || 0));
   const aggregates = useMemo(() => {
     const totalSessions = monthly.reduce((sum, m) => sum + (m.totalSessions || 0), 0);
     const totalMinutes = monthly.reduce((sum, m) => sum + (m.totalMinutes || 0), 0);
@@ -52,6 +47,12 @@ export default function TutorEarningsPage() {
     const avgEarning = totalSessions ? totalEarnings / totalSessions : 0;
     return { totalSessions, totalMinutes, totalEarnings, avgEarning };
   }, [monthly]);
+
+  const maxEarnings = Math.max(1, ...monthly.map((m) => m.earnings || 0));
+
+  if (!isReady) {
+    return <div className="container py-5 text-secondary">Loading session…</div>;
+  }
 
   return (
     <div className={styles.page}>

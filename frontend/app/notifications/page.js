@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -46,7 +46,7 @@ export default function NotificationsPage() {
   const [missingTargetMessage, setMissingTargetMessage] = useState('');
   const [showMissingTargetModal, setShowMissingTargetModal] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const res = await api.get('/notifications');
       if (res.data.success) {
@@ -59,12 +59,12 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUnreadCount]);
 
   useEffect(() => {
     if (!isReady) return;
     load();
-  }, [isReady]);
+  }, [isReady, load]);
 
   const getRequestId = (n) => n.requestId || n.meta?.requestId;
 

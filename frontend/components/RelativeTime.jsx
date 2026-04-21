@@ -1,11 +1,26 @@
 'use client';
 
-export default function RelativeTime({ value }) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
+import { useEffect, useMemo, useState } from 'react';
 
-  const diffMs = Date.now() - date.getTime();
+export default function RelativeTime({ value }) {
+  const [nowMs, setNowMs] = useState(null);
+
+  useEffect(() => {
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const intervalId = setInterval(tick, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const date = useMemo(() => {
+    if (!value) return null;
+    const next = new Date(value);
+    return Number.isNaN(next.getTime()) ? null : next;
+  }, [value]);
+
+  if (!date) return null;
+
+  const diffMs = Math.max(0, (nowMs ?? date.getTime()) - date.getTime());
   const sec = Math.max(1, Math.floor(diffMs / 1000));
   const min = Math.floor(sec / 60);
   const hour = Math.floor(min / 60);

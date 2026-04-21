@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import styles from './listing-management.module.css';
 import { markListingCompleted } from '../lib/apiRequests';
@@ -148,9 +149,12 @@ export default function ListingManagement({ showHeader = true }) {
           {listings.map((listing) => (
             <div key={listing._id} className={styles.listingCard}>
               {listing.images && listing.images[0] && (
-                <img
+                <Image
                   src={listing.images[0]}
                   alt={listing.title}
+                  width={640}
+                  height={360}
+                  unoptimized
                   className={styles.listingImage}
                 />
               )}

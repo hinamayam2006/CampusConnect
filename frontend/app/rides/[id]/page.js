@@ -108,7 +108,7 @@ export default function RideDetailPage() {
                 {driver.name}
               </Link>
               <div className="small">
-                Trust {driver.trustScore ?? '—'} · {driver.department}
+                {driver.department}
               </div>
             </div>
           )}

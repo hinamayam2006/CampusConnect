@@ -8,6 +8,8 @@ import './marketplace-rides.css';
 import './notifications.css';
 import './create-forms.css';
 import Navbar from '../components/layout/Navbar';
+import SessionActivityGuard from '../components/layout/SessionActivityGuard';
+import { UserRoleProvider } from '../context/UserRoleContext';
 import { Toaster } from 'react-hot-toast';
 import BootstrapClient from '../components/BootstrapClient';
 
@@ -20,12 +22,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        <main className="main-content">
-          {children}
-        </main>
-        <Toaster position="top-right" />
-        <BootstrapClient />
+        <UserRoleProvider>
+          <SessionActivityGuard />
+          <Navbar />
+          <main className="main-content">
+            {children}
+          </main>
+          <Toaster position="top-right" />
+          <BootstrapClient />
+        </UserRoleProvider>
       </body>
     </html>
   );

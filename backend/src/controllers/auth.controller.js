@@ -28,7 +28,7 @@ const generateTokens = async (userId) => {
 // ─── REGISTER ────────────────────────────────────────────
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, department, year, location } = req.body;
+    const { name, email, password, department, year } = req.body;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email });
@@ -54,7 +54,6 @@ export const register = async (req, res, next) => {
       password: hashedPassword,
       department,
       year,
-      location: location || '',
       isVerified: false,
       verificationToken: hashedVerificationToken,
       verificationTokenExpiry,
@@ -281,11 +280,10 @@ export const getMe = async (req, res, next) => {
 // ─── UPDATE PROFILE ──────────────────────────────────────
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, location, department, year, canTeach, needsTutoring, avatar } = req.body;
+    const { name, department, year, canTeach, needsTutoring, avatar } = req.body;
 
     const updates = {
       ...(typeof name === 'string' ? { name } : {}),
-      ...(typeof location === 'string' ? { location } : {}),
       ...(typeof department === 'string' ? { department } : {}),
       ...(typeof year !== 'undefined' ? { year } : {}),
       ...(typeof avatar === 'string' ? { avatar } : {}),

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react'; // Added icons
 import api from '../../../lib/api';
-import useStore from '../../../store/useStore';
 import toast from 'react-hot-toast';
 
 const DEPARTMENTS = ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'];
@@ -13,7 +12,6 @@ const YEARS = [1, 2, 3, 4];
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, setUser } = useStore();
 
   const [showPassword, setShowPassword] = useState(false); // New state
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
@@ -23,7 +21,6 @@ export default function RegisterPage() {
     password: '',
     department: '',
     year: '',
-    location: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -36,12 +33,6 @@ export default function RegisterPage() {
       upperCase: /[A-Z]/.test(pass),
     };
   };
-
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user, router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,10 +48,8 @@ export default function RegisterPage() {
     try {
       const payload = { ...formData, year: Number(formData.year) };
       const { data } = await api.post('/auth/register', payload);
-      const tokenExpiry = Date.now() + (15 * 60 * 1000); 
-      setUser(data.data.user, data.data.accessToken, data.data.refreshToken, tokenExpiry);
-      toast.success('Account created! Welcome to CampusConnect.');
-      router.push('/');
+      toast.success(data?.message || 'Account created. Please check your email to verify your account.');
+      router.push('/login');
     } catch (err) {
       const response = err.response?.data;
       if (response?.errors && Array.isArray(response.errors)) {
@@ -149,7 +138,7 @@ export default function RegisterPage() {
             {errors.password && <div className="invalid-feedback d-block">{errors.password}</div>}
           </div>
 
-          {/* Department, Year, and Location remain same as original */}
+          {/* Department and Year */}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Department</label>
@@ -165,11 +154,6 @@ export default function RegisterPage() {
                 {YEARS.map(y => <option key={y} value={y}>Year {y}</option>)}
               </select>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Your Area</label>
-            <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="e.g. G-11" className="form-control" />
           </div>
 
           <button type="submit" disabled={loading} className="auth-submit-btn">

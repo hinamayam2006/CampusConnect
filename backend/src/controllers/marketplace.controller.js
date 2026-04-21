@@ -36,7 +36,7 @@ export const listListings = async (req, res) => {
     const skip = (Math.max(1, Number(page)) - 1) * Math.min(48, Math.max(1, Number(limit)));
     const lim = Math.min(48, Math.max(1, Number(limit)));
 
-    let listQ = Listing.find(q).populate('seller', 'name department trustScore avatar year');
+    let listQ = Listing.find(q).populate('seller', 'name department avatar year');
     if (search && String(search).trim()) {
       listQ = listQ.select({ score: { $meta: 'textScore' } }).sort({ score: { $meta: 'textScore' } });
     } else {
@@ -55,7 +55,7 @@ export const getListingById = async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id).populate(
       'seller',
-      'name department year trustScore totalRatings avatar location'
+      'name department year avatar'
     );
     if (!listing) {
       return res.status(404).json({ success: false, message: 'Listing not found' });
@@ -281,14 +281,14 @@ export const getMarketplaceRecommendations = async (req, res) => {
       })
         .sort({ createdAt: -1 })
         .limit(10)
-        .populate('seller', 'name trustScore department');
+        .populate('seller', 'name department');
     }
 
     if (!items.length) {
       items = await Listing.find({ status: 'active', seller: { $ne: uid } })
         .sort({ views: -1, createdAt: -1 })
         .limit(10)
-        .populate('seller', 'name trustScore department');
+        .populate('seller', 'name department');
     }
 
     res.status(200).json({ success: true, data: items });

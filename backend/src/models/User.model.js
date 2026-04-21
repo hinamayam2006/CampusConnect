@@ -34,11 +34,6 @@ const userSchema = new mongoose.Schema(
       min: 1,
       max: 4,
     },
-    location: {
-      type: String,
-      default: '',
-      trim: true,
-    },
     avatar: {
       type: String,
       default: '',
@@ -73,41 +68,7 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
-    // Trust & Rating System — stored directly on user
-    // so we never need a separate query to show trust score
-    trustScore: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
-    },
-    totalRatings: {
-      type: Number,
-      default: 0,
-    },
-    ratingsReceived: [
-      {
-        by: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        score: {
-          type: Number,
-          min: 1,
-          max: 5,
-        },
-        comment: String,
-        context: {
-          type: String,
-          enum: ['marketplace', 'ride', 'borrow', 'tutoring'],
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-    // for notifications — simple array, including action metadata and linked requests
+    // Notifications array — simple array, including action metadata and linked requests
     notifications: [
       {
         type: {

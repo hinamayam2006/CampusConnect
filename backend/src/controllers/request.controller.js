@@ -139,8 +139,8 @@ export const getMyRequests = async (req, res) => {
     }
 
     const requests = await Request.find(query)
-      .populate('requester', 'name avatar department trustScore')
-      .populate('owner', 'name avatar department trustScore')
+      .populate('requester', 'name avatar department')
+      .populate('owner', 'name avatar department')
       .populate('refId')
       .sort({ createdAt: -1 });
 
@@ -159,8 +159,8 @@ export const getMyRequests = async (req, res) => {
 export const getRequestById = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id)
-      .populate('requester', 'name avatar department trustScore location')
-      .populate('owner', 'name avatar department trustScore location')
+      .populate('requester', 'name avatar department')
+      .populate('owner', 'name avatar department')
       .populate('refId');
 
     if (!request) {
@@ -709,7 +709,7 @@ export const getRequestsForResource = async (req, res) => {
       refId,
       status: { $in: ['pending', 'approved'] },
     })
-      .populate('requester', 'name avatar department trustScore')
+      .populate('requester', 'name avatar department')
       .sort({ createdAt: -1 });
 
     res.status(200).json({

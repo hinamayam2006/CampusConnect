@@ -72,7 +72,7 @@ export const listNotes = async (req, res) => {
 
     const [items, total, user] = await Promise.all([
       Note.find(query)
-        .populate('uploadedBy', 'name department year trustScore avatar')
+        .populate('uploadedBy', 'name department year avatar')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(lim),
@@ -143,7 +143,7 @@ export const searchNotes = async (req, res) => {
     if (sort === 'newest') sortOrder = { createdAt: -1 };
 
     let findQuery = Note.find(query)
-      .populate('uploadedBy', 'name department year trustScore avatar')
+      .populate('uploadedBy', 'name department year avatar')
       .skip(skip)
       .limit(lim)
       .sort(sortOrder);
@@ -244,7 +244,7 @@ export const getNoteById = async (req, res) => {
   try {
     const note = await Note.findById(req.params.id).populate(
       'uploadedBy',
-      'name department year trustScore avatar location'
+      'name department year avatar'
     );
 
     if (!note || note.status !== 'active') {
@@ -448,7 +448,7 @@ export const listBookmarks = async (req, res) => {
       .populate({
         path: 'savedNotes',
         match: { status: 'active' },
-        populate: { path: 'uploadedBy', select: 'name department year trustScore avatar' },
+        populate: { path: 'uploadedBy', select: 'name department year avatar' },
       });
 
     const items = (user?.savedNotes || []).filter(Boolean);
