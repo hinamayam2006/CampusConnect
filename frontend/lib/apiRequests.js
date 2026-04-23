@@ -279,6 +279,50 @@ export const uploadNotesFile = async (formData) => {
   }
 };
 
+// ============================================
+// BORROW
+// ============================================
+
+export const fetchBorrowItems = async (params = {}) => {
+  try {
+    const response = await api.get('/borrow', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const createBorrowItem = async (payload) => {
+  try {
+    const response = await api.post('/borrow', payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+// ============================================
+// LOST & FOUND
+// ============================================
+
+export const fetchLostnFoundItems = async (params = {}) => {
+  try {
+    const response = await api.get('/lostnfound', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const createLostnFoundItem = async (payload) => {
+  try {
+    const response = await api.post('/lostnfound', payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
 export const createNote = async (payload) => {
   try {
     const response = await api.post('/notes', payload);

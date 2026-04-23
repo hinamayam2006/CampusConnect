@@ -71,8 +71,8 @@ export default function Navbar() {
                 </Link>
               </li>
               <li className="nav-item">
-                <Link href="/needs" className={`nav-link d-flex align-items-center gap-2 ${pathname.startsWith('/needs') ? 'active' : ''}`}>
-                  <MessageSquare size={18} /> Needs
+                <Link href="/lostnfound" className={`nav-link d-flex align-items-center gap-2 ${pathname.startsWith('/lostnfound') ? 'active' : ''}`}>
+                  <MessageSquare size={18} /> Lost & Found
                 </Link>
               </li>
               <li className="nav-item">

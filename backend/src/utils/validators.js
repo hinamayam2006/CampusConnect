@@ -295,3 +295,63 @@ export const reportNoteSchema = z
     comment: z.string().max(500).optional().default(''),
   })
   .strict();
+
+// ============================================
+// BORROW + LOST & FOUND
+// ============================================
+
+export const createBorrowingSchema = z
+  .object({
+    title: z.string().min(3).max(120),
+    description: z.string().min(10).max(2000),
+    category: z.string().max(80).optional().default('general'),
+    condition: z.string().max(120).optional().default(''),
+    images: z.array(z.string().url()).max(8).optional().default([]),
+    requestedFrom: z.coerce.date().optional().nullable(),
+    requestedUntil: z.coerce.date().optional().nullable(),
+  })
+  .strict();
+
+export const updateBorrowingSchema = z
+  .object({
+    title: z.string().min(3).max(120).optional(),
+    description: z.string().min(10).max(2000).optional(),
+    category: z.string().max(80).optional(),
+    condition: z.string().max(120).optional(),
+    images: z.array(z.string().url()).max(8).optional(),
+    requestedFrom: z.coerce.date().optional().nullable(),
+    requestedUntil: z.coerce.date().optional().nullable(),
+    dueAt: z.coerce.date().optional().nullable(),
+    returnedAt: z.coerce.date().optional().nullable(),
+    borrower: z.string().optional().nullable(),
+    status: z.enum(['available', 'requested', 'borrowed', 'returned', 'unavailable']).optional(),
+  })
+  .strict();
+
+export const createLostnFoundSchema = z
+  .object({
+    postType: z.enum(['lost', 'found']),
+    title: z.string().min(3).max(120),
+    description: z.string().min(10).max(2000),
+    category: z.string().max(80).optional().default('other'),
+    location: z.string().max(200).optional().default(''),
+    incidentAt: z.coerce.date().optional().nullable(),
+    contactInfo: z.string().max(200).optional().default(''),
+    images: z.array(z.string().url()).max(8).optional().default([]),
+  })
+  .strict();
+
+export const updateLostnFoundSchema = z
+  .object({
+    postType: z.enum(['lost', 'found']).optional(),
+    title: z.string().min(3).max(120).optional(),
+    description: z.string().min(10).max(2000).optional(),
+    category: z.string().max(80).optional(),
+    location: z.string().max(200).optional(),
+    incidentAt: z.coerce.date().optional().nullable(),
+    contactInfo: z.string().max(200).optional(),
+    images: z.array(z.string().url()).max(8).optional(),
+    status: z.enum(['open', 'resolved', 'closed']).optional(),
+    resolvedAt: z.coerce.date().optional().nullable(),
+  })
+  .strict();

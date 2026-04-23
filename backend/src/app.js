@@ -14,6 +14,8 @@ import chatRoutes from './routes/chat.routes.js';
 import notesRoutes from './routes/notes.routes.js';
 import tutorsRoutes from './routes/tutors.routes.js';
 import bookingsRoutes from './routes/bookings.routes.js';
+import borrowRoutes from './routes/borrow.routes.js';
+import lostnFoundRoutes from './routes/lostnfound.routes.js';
 
 const app = express();
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -76,6 +78,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tutors', tutorsRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/borrow', borrowRoutes);
+app.use('/api/lostnfound', lostnFoundRoutes);
 
 // 404 handler — for unknown routes
 app.use((req, res) => {
