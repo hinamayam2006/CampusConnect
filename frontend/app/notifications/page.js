@@ -24,6 +24,8 @@ import styles from '../tutoring/tutoring.module.css';
 const SECTION_META = {
   Marketplace: { icon: '🛍️' },
   Rides: { icon: '🚗' },
+  Borrow: { icon: '📦' },
+  'Lost & Found': { icon: '🧭' },
   General: { icon: '🔔' },
 };
 
@@ -183,14 +185,18 @@ export default function NotificationsPage() {
     }
   };
 
-  const isPendingRequestNotification = (n) => ['marketplace_request_received', 'ride_request_received'].includes(n.type);
+  const isPendingRequestNotification = (n) =>
+    ['marketplace_request_received', 'ride_request_received', 'borrow_request_received', 'lostnfound_request_received'].includes(n.type);
   const isChatReadyNotification = (n) => ['request_approved', 'chat_initialized'].includes(n.type);
-  const isPendingRequestSentNotification = (n) => ['marketplace_request_sent', 'ride_request_sent'].includes(n.type);
+  const isPendingRequestSentNotification = (n) =>
+    ['marketplace_request_sent', 'ride_request_sent', 'borrow_request_sent', 'lostnfound_request_sent'].includes(n.type);
 
   const getNotificationSection = (n) => {
     const context = n.meta?.context || '';
     if (context === 'marketplace' || n.type.startsWith('marketplace')) return 'Marketplace';
     if (context === 'ride' || n.type.startsWith('ride')) return 'Rides';
+    if (context === 'borrow' || n.type.startsWith('borrow')) return 'Borrow';
+    if (context === 'lostnfound' || n.type.startsWith('lostnfound')) return 'Lost & Found';
     return 'General';
   };
 
@@ -254,7 +260,7 @@ export default function NotificationsPage() {
               style={{ maxWidth: 260 }}
             />
             <div className={styles.filterGroup}>
-              {['all', 'marketplace', 'rides', 'general'].map((val) => (
+              {['all', 'marketplace', 'rides', 'borrow', 'lost & found', 'general'].map((val) => (
                 <button
                   key={val}
                   className={`btn btn-sm ${sectionFilter === val ? 'btn-primary' : 'btn-outline-secondary'}`}
@@ -272,7 +278,7 @@ export default function NotificationsPage() {
         ) : filteredItems.length === 0 ? (
           <div className={`${styles.surfaceCard} text-center p-4`}>No notifications found.</div>
         ) : (
-          ['Marketplace', 'Rides', 'General'].map((section) => {
+          ['Marketplace', 'Rides', 'Borrow', 'Lost & Found', 'General'].map((section) => {
             const sectionItems = filteredGroups[section] || [];
             if (!sectionItems.length) return null;
             return (

@@ -2,12 +2,16 @@ import mongoose from 'mongoose';
 import Request from '../models/Request.model.js';
 import Listing from '../models/Listing.model.js';
 import Ride from '../models/Ride.model.js';
+import LostnFound from '../models/LostnFound.model.js';
+import Borrowing from '../models/Borrowing.model.js';
 import User from '../models/User.model.js';
 import { logActivity } from '../services/activity.service.js';
 import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 
+const REQUEST_RESEND_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
 /**
- * Create a new request (for both marketplace listings and ride offers)
+ * Create a new request for a shareable resource.
  * Status starts as PENDING
  * Owner receives a notification
  */
@@ -18,27 +22,50 @@ export const createRequest = async (req, res) => {
   try {
     const { refModel, refId, seatsRequested = 1, message = '' } = req.body;
     const requester = req.user._id;
+    const normalizedMessage = String(message || '').trim();
 
     // Validate refModel
-    if (!['Listing', 'Ride'].includes(refModel)) {
+    if (!['Listing', 'Ride', 'LostnFound', 'Borrowing'].includes(refModel)) {
       return res.status(400).json({ success: false, message: 'Invalid refModel' });
     }
 
-    // Fetch the referenced resource to get the owner
+    // Fetch referenced resource and resolve owner/context metadata.
     let resource;
+    let owner;
+    let context;
+    let resourceLabel;
+    let link;
+
     if (refModel === 'Listing') {
       resource = await Listing.findById(refId).session(session);
-    } else {
+      owner = resource?.seller;
+      context = 'marketplace';
+      resourceLabel = 'listing';
+      link = `/marketplace/${refId}`;
+    } else if (refModel === 'Ride') {
       resource = await Ride.findById(refId).session(session);
+      owner = resource?.driver;
+      context = 'ride';
+      resourceLabel = 'ride offer';
+      link = `/rides/${refId}`;
+    } else if (refModel === 'LostnFound') {
+      resource = await LostnFound.findById(refId).session(session);
+      owner = resource?.owner;
+      context = 'lostnfound';
+      resourceLabel = resource?.postType === 'found' ? 'found-item post' : 'lost-item post';
+      link = `/lostnfound/${refId}`;
+    } else {
+      resource = await Borrowing.findById(refId).session(session);
+      owner = resource?.owner;
+      context = 'borrow';
+      resourceLabel = 'borrow request';
+      link = '/borrow';
     }
 
     if (!resource) {
       await session.abortTransaction();
       return res.status(404).json({ success: false, message: `${refModel} not found` });
     }
-
-    // Determine owner field (seller for Listing, driver for Ride)
-    const owner = refModel === 'Listing' ? resource.seller : resource.driver;
 
     // Prevent user from requesting their own resource
     if (owner.equals(requester)) {
@@ -48,8 +75,80 @@ export const createRequest = async (req, res) => {
         .json({ success: false, message: 'Cannot request your own resource' });
     }
 
-    // Determine context
-    const context = refModel === 'Listing' ? 'marketplace' : 'ride';
+    // If there is already an approved, still-open request/chat for this resource,
+    // do not create another request.
+    const existingApprovedOpen = await Request.findOne({
+      requester,
+      refModel,
+      refId,
+      status: 'approved',
+      chatClosed: { $ne: true },
+    }).session(session);
+
+    if (existingApprovedOpen) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        success: false,
+        message: 'You already have an approved active request for this item. Open the existing chat from the item page.',
+      });
+    }
+
+    // Prevent immediate repeat requests on the same resource.
+    // After cooldown, allow a follow-up ping on the same pending request.
+    const existingPending = await Request.findOne({
+      requester,
+      refModel,
+      refId,
+      status: 'pending',
+    }).session(session);
+
+    if (existingPending) {
+      const elapsed = Date.now() - new Date(existingPending.createdAt).getTime();
+      if (elapsed < REQUEST_RESEND_COOLDOWN_MS) {
+        const retryAfterMinutes = Math.ceil((REQUEST_RESEND_COOLDOWN_MS - elapsed) / (60 * 1000));
+        await session.abortTransaction();
+        return res.status(429).json({
+          success: false,
+          message: `You already sent a request. Try again in about ${retryAfterMinutes} minute(s).`,
+        });
+      }
+
+      if (normalizedMessage) {
+        existingPending.message = normalizedMessage;
+      }
+      await existingPending.save({ session });
+
+      await logActivity(
+        {
+          userId: requester,
+          type: `${context}_request_create`,
+          refModel: 'Request',
+          refId: existingPending._id,
+          meta: { refModel, refId, context, followUp: true },
+        },
+        { session }
+      );
+
+      await pushNotification(
+        owner,
+        {
+          type: `${context}_request_received`,
+          message: `${req.user.name} sent a follow-up request about your ${resourceLabel}.`,
+          link,
+          requestId: existingPending._id,
+          meta: { refModel, refId, context, requester, message: normalizedMessage, followUp: true },
+        },
+        { session, emailQueue }
+      );
+
+      await session.commitTransaction();
+      await flushQueuedNotificationEmails(emailQueue);
+      return res.status(200).json({
+        success: true,
+        data: existingPending,
+        message: 'Follow-up request sent successfully',
+      });
+    }
 
     // Create the request
     const request = await Request.create(
@@ -61,8 +160,8 @@ export const createRequest = async (req, res) => {
           refId,
           status: 'pending',
           context,
-          seatsRequested,
-          message,
+          seatsRequested: context === 'ride' ? seatsRequested : 1,
+          message: normalizedMessage,
         },
       ],
       { session }
@@ -72,7 +171,7 @@ export const createRequest = async (req, res) => {
     await logActivity(
       {
         userId: requester,
-        type: context === 'marketplace' ? 'marketplace_request_create' : 'ride_request_create',
+        type: `${context}_request_create`,
         refModel: 'Request',
         refId: request[0]._id,
         meta: { refModel, refId, context },
@@ -85,13 +184,10 @@ export const createRequest = async (req, res) => {
       owner,
       {
         type: `${context}_request_received`,
-        message: `${req.user.name} is interested in your ${context === 'marketplace' ? 'listing' : 'ride offer'}!`,
-        link:
-          context === 'marketplace'
-            ? `/marketplace/${refId}`
-            : `/rides/${refId}`,
+        message: `${req.user.name} contacted you about your ${resourceLabel}.`,
+        link,
         requestId: request[0]._id,
-        meta: { refModel, refId, context, requester, message }, // Added message here
+        meta: { refModel, refId, context, requester, message: normalizedMessage },
       },
       { session, emailQueue }
     );
@@ -105,6 +201,12 @@ export const createRequest = async (req, res) => {
     });
   } catch (err) {
     await session.abortTransaction();
+    if (err?.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have a pending request for this post.',
+      });
+    }
     res.status(500).json({ success: false, message: err.message });
   } finally {
     session.endSession();
@@ -676,7 +778,7 @@ export const closeChat = async (req, res) => {
 };
 
 /**
- * Get requests related to a specific listing or ride
+ * Get requests related to a specific resource
  */
 export const getRequestsForResource = async (req, res) => {
   try {
@@ -688,6 +790,10 @@ export const getRequestsForResource = async (req, res) => {
       resource = await Listing.findById(refId);
     } else if (refModel === 'Ride') {
       resource = await Ride.findById(refId);
+    } else if (refModel === 'LostnFound') {
+      resource = await LostnFound.findById(refId);
+    } else if (refModel === 'Borrowing') {
+      resource = await Borrowing.findById(refId);
     } else {
       return res.status(400).json({ success: false, message: 'Invalid refModel' });
     }
@@ -696,7 +802,11 @@ export const getRequestsForResource = async (req, res) => {
       return res.status(404).json({ success: false, message: `${refModel} not found` });
     }
 
-    const owner = refModel === 'Listing' ? resource.seller : resource.driver;
+    let owner;
+    if (refModel === 'Listing') owner = resource.seller;
+    else if (refModel === 'Ride') owner = resource.driver;
+    else owner = resource.owner;
+
     if (!owner.equals(req.user._id)) {
       return res.status(403).json({
         success: false,

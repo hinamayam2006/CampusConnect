@@ -2,6 +2,8 @@ import User from '../models/User.model.js';
 import Request from '../models/Request.model.js';
 import Listing from '../models/Listing.model.js';
 import Ride from '../models/Ride.model.js';
+import LostnFound from '../models/LostnFound.model.js';
+import Borrowing from '../models/Borrowing.model.js';
 
 function extractPathId(link = '', prefix) {
   const match = String(link).match(new RegExp(`^/${prefix}/([^/?#]+)`));
@@ -23,6 +25,8 @@ async function resolveNotificationTarget(notification) {
   if (!refModel || !refId) {
     const listingId = extractPathId(notification.link, 'marketplace');
     const rideId = extractPathId(notification.link, 'rides');
+    const lostFoundId = extractPathId(notification.link, 'lostnfound');
+    const borrowId = extractPathId(notification.link, 'borrow');
 
     if (listingId) {
       refModel = 'Listing';
@@ -30,6 +34,12 @@ async function resolveNotificationTarget(notification) {
     } else if (rideId) {
       refModel = 'Ride';
       refId = rideId;
+    } else if (lostFoundId) {
+      refModel = 'LostnFound';
+      refId = lostFoundId;
+    } else if (borrowId) {
+      refModel = 'Borrowing';
+      refId = borrowId;
     }
   }
 
@@ -60,6 +70,36 @@ async function resolveNotificationTarget(notification) {
     return {
       exists: true,
       path: `/rides/${ride._id}`,
+    };
+  }
+
+  if (refModel === 'LostnFound' && refId) {
+    const item = await LostnFound.findById(refId).select('_id');
+    if (!item) {
+      return {
+        exists: false,
+        message: 'This lost and found post was deleted and is no longer available.',
+      };
+    }
+
+    return {
+      exists: true,
+      path: `/lostnfound/${item._id}`,
+    };
+  }
+
+  if (refModel === 'Borrowing' && refId) {
+    const item = await Borrowing.findById(refId).select('_id');
+    if (!item) {
+      return {
+        exists: false,
+        message: 'This borrow listing was deleted and is no longer available.',
+      };
+    }
+
+    return {
+      exists: true,
+      path: '/borrow',
     };
   }
 

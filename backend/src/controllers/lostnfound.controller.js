@@ -58,3 +58,16 @@ export const createLostnFoundItem = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const getLostnFoundItemById = async (req, res) => {
+  try {
+    const item = await LostnFound.findById(req.params.id).populate('owner', 'name avatar department year');
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    return res.status(200).json({ success: true, data: item });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
