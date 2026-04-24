@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
-import Modal from 'react-bootstrap/Modal';
-import Button from 'react-bootstrap/Button';
+import {
+  Bell, ShoppingBag, Car, Package, Compass, Info,
+  Check, CheckCheck, MessageCircle, ExternalLink,
+  ChevronRight, X, Search, GraduationCap,
+} from 'lucide-react';
 import api from '../../lib/api';
 import useStore from '../../store/useStore';
 import useRequireAuth from '../../lib/useRequireAuth';
@@ -19,15 +21,18 @@ import {
   withdrawRequest,
 } from '../../lib/apiRequests';
 import ChatWindow from '../../components/ChatWindow';
-import styles from '../tutoring/tutoring.module.css';
+import styles from './notifications.module.css';
 
 const SECTION_META = {
-  Marketplace: { icon: '🛍️' },
-  Rides: { icon: '🚗' },
-  Borrow: { icon: '📦' },
-  'Lost & Found': { icon: '🧭' },
-  General: { icon: '🔔' },
+  Marketplace:   { Icon: ShoppingBag,   colorClass: 'iconMarket'   },
+  Rides:         { Icon: Car,           colorClass: 'iconRide'     },
+  Borrow:        { Icon: Package,       colorClass: 'iconBorrow'   },
+  'Lost & Found':{ Icon: Compass,       colorClass: 'iconLost'     },
+  Tutoring:      { Icon: GraduationCap, colorClass: 'iconTutoring' },
+  General:       { Icon: Info,          colorClass: 'iconGeneral'  },
 };
+
+const FILTER_OPTIONS = ['all', 'marketplace', 'rides', 'borrow', 'lost & found', 'tutoring', 'general'];
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -38,12 +43,8 @@ export default function NotificationsPage() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  
-  // From Upstream: Filtering & Search
   const [sectionFilter, setSectionFilter] = useState('all');
   const [search, setSearch] = useState('');
-
-  // From Stashed: Missing target handling
   const [openingNotificationId, setOpeningNotificationId] = useState(null);
   const [missingTargetMessage, setMissingTargetMessage] = useState('');
   const [showMissingTargetModal, setShowMissingTargetModal] = useState(false);
@@ -107,9 +108,9 @@ export default function NotificationsPage() {
     setOpeningNotificationId(notification._id);
     try {
       const response = await resolveNotificationTarget(notification._id);
-      const path = response?.data?.path;
-      if (!path) return showMissingTarget();
-      router.push(path);
+      const navPath = response?.data?.path;
+      if (!navPath) return showMissingTarget();
+      router.push(navPath);
     } catch (err) {
       showMissingTarget(err?.message);
     } finally {
@@ -187,7 +188,8 @@ export default function NotificationsPage() {
 
   const isPendingRequestNotification = (n) =>
     ['marketplace_request_received', 'ride_request_received', 'borrow_request_received', 'lostnfound_request_received'].includes(n.type);
-  const isChatReadyNotification = (n) => ['request_approved', 'chat_initialized'].includes(n.type);
+  const isChatReadyNotification = (n) =>
+    ['request_approved', 'chat_initialized'].includes(n.type);
   const isPendingRequestSentNotification = (n) =>
     ['marketplace_request_sent', 'ride_request_sent', 'borrow_request_sent', 'lostnfound_request_sent'].includes(n.type);
 
@@ -197,10 +199,11 @@ export default function NotificationsPage() {
     if (context === 'ride' || n.type.startsWith('ride')) return 'Rides';
     if (context === 'borrow' || n.type.startsWith('borrow')) return 'Borrow';
     if (context === 'lostnfound' || n.type.startsWith('lostnfound')) return 'Lost & Found';
+    const tutoringTypes = ['booking_created', 'booking_confirmed', 'booking_rejected', 'booking_cancelled', 'booking_completed', 'booking_deleted', 'payment_uploaded', 'payment_approved', 'payment_rejected'];
+    if (tutoringTypes.includes(n.type) || n.link === '/tutoring') return 'Tutoring';
     return 'General';
   };
 
-  // Memoized Logic for Filtering and Grouping
   const filteredItems = useMemo(() => {
     const trimmed = search.trim().toLowerCase();
     return items.filter((n) => {
@@ -224,108 +227,142 @@ export default function NotificationsPage() {
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`}>
+      <div className={styles.container}>
+
+        {/* Header */}
         <div className={styles.pageHeader}>
-          <div>
-            <h1 className={styles.pageTitle}>🔔 Notifications</h1>
+          <div className={styles.headerLeft}>
+            <h1 className={styles.pageTitle}>Notifications</h1>
             <p className={styles.pageSubtitle}>Manage your requests, approvals, and chats.</p>
           </div>
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={markAll}>
-            ✓ Mark all read
+          <button type="button" className={styles.btnMarkAll} onClick={markAll}>
+            <CheckCheck size={14} /> Mark all read
           </button>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats */}
         {!loading && (
-          <div className={`${styles.statGrid} mb-3`}>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Total</div>
-              <div className={styles.statValue}>{items.length}</div>
+          <div className={styles.statsRow}>
+            <div className={styles.statPill}>
+              <Bell size={13} /><strong>{items.length}</strong> Total
             </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Unread</div>
-              <div className={styles.statValue}>{unreadCount}</div>
+            <div className={styles.statPill}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4F6EF7', display: 'inline-block' }} />
+              <strong>{unreadCount}</strong> Unread
             </div>
           </div>
         )}
 
         {/* Filter Bar */}
-        <div className={`${styles.surfaceCard} mb-3`}>
-          <div className={styles.filterBar}>
+        <div className={styles.filterBar}>
+          <div className={styles.searchWrap}>
+            <Search size={14} className={styles.searchIcon} />
             <input
-              className="form-control form-control-sm"
+              className={styles.searchInput}
               placeholder="Search notifications..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ maxWidth: 260 }}
             />
-            <div className={styles.filterGroup}>
-              {['all', 'marketplace', 'rides', 'borrow', 'lost & found', 'general'].map((val) => (
-                <button
-                  key={val}
-                  className={`btn btn-sm ${sectionFilter === val ? 'btn-primary' : 'btn-outline-secondary'}`}
-                  onClick={() => setSectionFilter(val)}
-                >
-                  {val.charAt(0).toUpperCase() + val.slice(1)}
-                </button>
-              ))}
-            </div>
+          </div>
+          <div className={styles.pillGroup}>
+            {FILTER_OPTIONS.map((val) => (
+              <button
+                key={val}
+                type="button"
+                className={`${styles.pill}${sectionFilter === val ? ' ' + styles.pillActive : ''}`}
+                onClick={() => setSectionFilter(val)}
+              >
+                {val.charAt(0).toUpperCase() + val.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Content */}
         {loading ? (
-          <div className="text-center p-5"><div className="spinner-border text-primary"></div></div>
+          <div>
+            {[1,2,3,4].map((i) => (
+              <div key={i} className={styles.skeleton} style={{ height: 90, marginBottom: '0.6rem' }} />
+            ))}
+          </div>
         ) : filteredItems.length === 0 ? (
-          <div className={`${styles.surfaceCard} text-center p-4`}>No notifications found.</div>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}><Bell size={40} /></div>
+            <p className={styles.emptyTitle}>No notifications</p>
+            <p className={styles.emptyText}>You are all caught up. New alerts will appear here.</p>
+          </div>
         ) : (
-          ['Marketplace', 'Rides', 'Borrow', 'Lost & Found', 'General'].map((section) => {
+          ['Marketplace', 'Rides', 'Borrow', 'Lost & Found', 'Tutoring', 'General'].map((section) => {
             const sectionItems = filteredGroups[section] || [];
             if (!sectionItems.length) return null;
+            const { Icon, colorClass } = SECTION_META[section];
             return (
-              <div key={section} className="mb-4">
-                <h2 className="h5 mb-3">{SECTION_META[section].icon} {section}</h2>
-                <div className="d-grid gap-2">
-                  {sectionItems.map((n) => (
-                    <div key={n._id} className={`${styles.listCard} ${!n.read ? styles.unread : ''}`}>
-                      <div className={styles.listCardHeader}>
-                        <div style={{ flex: 1 }}>
-                          <p className="mb-1">{n.message}</p>
-                          {n.meta?.message && (
-                           <div
-  className="alert alert-light py-1 px-2 mb-1 small border-start"
-  style={{ borderLeft: "2px solid navy" }}
->
-                              <span>Message:</span> {n.meta.message}
-                            </div>
-                          )}
-                          <small className="text-secondary">{new Date(n.createdAt).toLocaleString()}</small>
+              <div key={section}>
+                <div className={styles.sectionHeader}>
+                  <div className={`${styles.sectionIconWrap} ${styles[colorClass]}`}>
+                    <Icon size={14} />
+                  </div>
+                  <span className={styles.sectionTitle}>{section}</span>
+                </div>
+                {sectionItems.map((n) => (
+                  <div key={n._id} className={`${styles.notifCard}${!n.read ? ' ' + styles.notifUnread : ''}`}>
+                    <div className={styles.notifTop}>
+                      {!n.read
+                        ? <span className={styles.unreadDot} />
+                        : <span className={styles.readDot} />
+                      }
+                      <div className={styles.notifBody}>
+                        <p className={styles.notifMessage}>{n.message}</p>
+                        {n.meta?.message && (
+                          <div className={styles.notifQuoteWrap}>
+                            <p className={styles.notifQuote}>{n.meta.message}</p>
+                          </div>
+                        )}
+                        <div className={styles.notifMeta}>
+                          <span className={styles.notifTime}>{new Date(n.createdAt).toLocaleString()}</span>
                         </div>
-                        <button className="btn btn-sm text-secondary" onClick={() => hideOne(n._id)}>✕</button>
                       </div>
+                      <button type="button" className={styles.dismissBtn} onClick={() => hideOne(n._id)} aria-label="Dismiss">
+                        <X size={14} />
+                      </button>
+                    </div>
 
+                    {(isPendingRequestNotification(n) || isPendingRequestSentNotification(n) || isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized) || n.link || !n.read) && (
                       <div className={styles.cardActions}>
                         {isPendingRequestNotification(n) && (
                           <>
-                            <Button size="sm" variant="success" onClick={() => handleApprove(n)} disabled={actionLoading}>Approve</Button>
-                            <Button size="sm" variant="danger" onClick={() => handleDecline(n)} disabled={actionLoading}>Decline</Button>
+                            <button type="button" className={`${styles.btnAction} ${styles.btnApprove}`} onClick={() => handleApprove(n)} disabled={actionLoading}>
+                              <Check size={12} /> Approve
+                            </button>
+                            <button type="button" className={`${styles.btnAction} ${styles.btnDecline}`} onClick={() => handleDecline(n)} disabled={actionLoading}>
+                              <X size={12} /> Decline
+                            </button>
                           </>
                         )}
                         {isPendingRequestSentNotification(n) && (
-                          <Button size="sm" variant="outline-danger" onClick={() => handleWithdraw(n)} disabled={actionLoading}>Withdraw</Button>
+                          <button type="button" className={`${styles.btnAction} ${styles.btnWithdraw}`} onClick={() => handleWithdraw(n)} disabled={actionLoading}>
+                            <X size={12} /> Withdraw
+                          </button>
                         )}
                         {(isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized)) && (
-                          <Button size="sm" variant="primary" onClick={() => handleChat(n)} disabled={actionLoading}>💬 Chat</Button>
+                          <button type="button" className={`${styles.btnAction} ${styles.btnChat}`} onClick={() => handleChat(n)} disabled={actionLoading}>
+                            <MessageCircle size={12} /> Chat
+                          </button>
                         )}
                         {n.link && (
-                          <Button size="sm" variant="link" onClick={() => handleOpenNotification(n)} disabled={openingNotificationId === n._id}>
-                             {openingNotificationId === n._id ? 'Opening...' : 'View ↗'}
-                          </Button>
+                          <button type="button" className={`${styles.btnAction} ${styles.btnView}`} onClick={() => handleOpenNotification(n)} disabled={openingNotificationId === n._id}>
+                            <ExternalLink size={12} /> {openingNotificationId === n._id ? 'Opening...' : 'View'}
+                          </button>
                         )}
-                        {!n.read && <Button size="sm" variant="light" onClick={() => markOne(n._id)}>Mark read</Button>}
+                        {!n.read && (
+                          <button type="button" className={`${styles.btnAction} ${styles.btnMarkRead}`} onClick={() => markOne(n._id)}>
+                            <Check size={12} /> Mark read
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                ))}
               </div>
             );
           })
@@ -340,11 +377,19 @@ export default function NotificationsPage() {
         />
       )}
 
-      <Modal show={showMissingTargetModal} onHide={() => setShowMissingTargetModal(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Item unavailable</Modal.Title></Modal.Header>
-        <Modal.Body>{missingTargetMessage}</Modal.Body>
-        <Modal.Footer><Button variant="primary" onClick={() => setShowMissingTargetModal(false)}>OK</Button></Modal.Footer>
-      </Modal>
+      {showMissingTargetModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <p className={styles.modalTitle}>Item unavailable</p>
+            <p className={styles.modalMessage}>{missingTargetMessage}</p>
+            <div className={styles.modalFooter}>
+              <button type="button" className={styles.btnModalOk} onClick={() => setShowMissingTargetModal(false)}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

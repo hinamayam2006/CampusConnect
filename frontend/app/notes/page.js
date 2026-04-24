@@ -1,347 +1,248 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { Search, Upload, BookOpen, X, Star, Download, Eye, Clock, Tag } from 'lucide-react';
+import toast from 'react-hot-toast';
+import styles from './notes.module.css';
+import { searchNotes } from '../../lib/apiRequests';
 import useRequireAuth from '../../lib/useRequireAuth';
 import BookmarkButton from '../../components/BookmarkButton';
 import Pagination from '../../components/Pagination';
-import { searchNotes } from '../../lib/apiRequests';
 import StarRating from '../../components/StarRating';
 import FileTypeBadge from '../../components/FileTypeBadge';
 import { formatFileSize } from '../../lib/uiHelpers';
-import styles from './notes.module.css';
 
-export default function NotesPage() {
-  const { user, isReady } = useRequireAuth();
-  const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
-  const [course, setCourse] = useState('');
-  const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState([]);
-  const [sort, setSort] = useState('newest');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
+const SORT_OPTIONS = [
+  { value: 'recent',    label: 'Most Recent' },
+  { value: 'popular',   label: 'Most Popular' },
+  { value: 'rating',    label: 'Top Rated' },
+  { value: 'downloads', label: 'Most Downloaded' },
+];
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(id);
-  }, [q]);
+const TYPE_OPTIONS = [
+  { value: '',                label: 'All Types' },
+  { value: 'lecture_notes',   label: 'Lecture Notes' },
+  { value: 'past_paper',      label: 'Past Papers' },
+  { value: 'assignment',      label: 'Assignments' },
+  { value: 'textbook',        label: 'Textbook' },
+  { value: 'other',           label: 'Other' },
+];
 
-  const params = useMemo(() => {
-    const query = {
-      q: debouncedQ,
-      course: course.trim(),
-      sort,
-      page,
-      limit: 12,
-    };
-    if (tags.length) query.tags = tags.join(',');
-    return query;
-  }, [debouncedQ, course, sort, page, tags]);
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+}
 
-  useEffect(() => {
-    if (!isReady) return undefined;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await searchNotes(params);
-        if (!cancelled) {
-          setItems(res.data?.items || []);
-          setTotalPages(res.data?.totalPages || 1);
-          setTotal(res.data?.total || 0);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.response?.data?.message || err.message || 'Failed to load notes. Please check your connection and try again.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [params, isReady]);
-
-  if (!isReady) {
-    return (
-      <div className={styles.page}>
-        <div className="container">
-          <div className={styles.surfaceCard} style={{ textAlign: 'center', padding: '3rem' }}>
-            <div className={styles.emptyStateTitle}>Loading your session…</div>
-            <p className={styles.emptyStateText}>Please wait while we verify your credentials.</p>
-          </div>
+function NoteCard({ note, onBookmark }) {
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardTop}>
+        <div className={styles.cardIcon}>
+          <BookOpen size={20} />
+        </div>
+        <div className={styles.cardBadgeWrap}>
+          {note.fileType && <FileTypeBadge type={note.fileType} />}
+          {note.price === 0 || note.isFree
+            ? <span className={`${styles.cardBadge} ${styles.cardBadgeFree}`}>Free</span>
+            : note.price > 0
+              ? <span className={`${styles.cardBadge} ${styles.cardBadgePaid}`}>PKR {note.price}</span>
+              : null
+          }
         </div>
       </div>
-    );
-  }
+      <div className={styles.cardBody}>
+        {note.course && <p className={styles.cardCourse}>{note.course}</p>}
+        <h3 className={styles.cardTitle}>{note.title}</h3>
+        {note.description && <p className={styles.cardDesc}>{note.description}</p>}
+        <div className={styles.cardMeta}>
+          {note.averageRating > 0 && (
+            <span className={styles.cardMetaItem}>
+              <Star size={12} style={{ color: '#F59E0B', fill: '#F59E0B' }} />
+              {note.averageRating.toFixed(1)}
+            </span>
+          )}
+          {note.downloadCount > 0 && (
+            <span className={styles.cardMetaItem}>
+              <Download size={12} /> {note.downloadCount}
+            </span>
+          )}
+          {note.fileSize && (
+            <span className={styles.cardMetaItem}>
+              <Eye size={12} /> {formatFileSize(note.fileSize)}
+            </span>
+          )}
+          {note.price === 0 || note.isFree
+            ? <span className={`${styles.cardPrice} ${styles.cardPriceFree}`}>Free</span>
+            : note.price > 0
+              ? <span className={styles.cardPrice}>PKR {note.price}</span>
+              : null
+          }
+        </div>
+      </div>
+      <div className={styles.ownerRow}>
+        <div className={styles.ownerAvatar}>{initials(note.uploader?.name || note.uploadedBy?.name)}</div>
+        <span className={styles.ownerName}>{note.uploader?.name || note.uploadedBy?.name || 'Unknown'}</span>
+        <div onClick={(e) => e.preventDefault()}>
+          <BookmarkButton noteId={note._id} initialBookmarked={note.isBookmarked} onChange={(s) => onBookmark && onBookmark(note._id, s)} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const addTag = () => {
-    const value = tagInput.trim();
-    if (!value) return;
-    if (tags.includes(value)) {
-      setTagInput('');
-      return;
+export default function NotesPage() {
+  useRequireAuth();
+  const [notes, setNotes]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [q, setQ]                   = useState('');
+  const [course, setCourse]         = useState('');
+  const [type, setType]             = useState('');
+  const [sort, setSort]             = useState('recent');
+  const [tags, setTags]             = useState([]);
+  const [tagInput, setTagInput]     = useState('');
+  const [page, setPage]             = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal]           = useState(0);
+  const debounceRef = useRef(null);
+
+  const load = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await searchNotes({ q, course, type, sort, tags, page, limit: 12, ...params });
+      const d = res?.data || res;
+      setNotes(d.items || []);
+      setTotalPages(d.totalPages || 1);
+      setTotal(d.total || 0);
+    } catch {
+      setError('Could not load notes. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setTags((prev) => [...prev, value]);
-    setTagInput('');
-    setPage(1);
+  }, [q, course, type, sort, tags, page]);
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => load(), 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [load]);
+
+  const addTag = (e) => {
+    if (e.key === 'Enter' && tagInput.trim()) {
+      e.preventDefault();
+      const val = tagInput.trim().toLowerCase();
+      if (!tags.includes(val)) setTags((p) => [...p, val]);
+      setTagInput('');
+      setPage(1);
+    }
+  };
+  const removeTag = (t) => { setTags((p) => p.filter((x) => x !== t)); setPage(1); };
+
+  const handleBookmark = (id, state) => {
+    if (!state) setNotes((p) => p.filter((n) => n._id !== id));
   };
 
-  const removeTag = (tag) => {
-    setTags((prev) => prev.filter((t) => t !== tag));
-    setPage(1);
-  };
-
-  const downloadLabel = (count) => {
-    if (!count) return 'No downloads yet';
-    if (count === 1) return '1 download';
-    return `${count} downloads`;
-  };
+  const skeletons = Array.from({ length: 6 }, (_, i) => (
+    <div key={i} className={styles.skeleton} style={{ height: 220 }} />
+  ));
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`}>
-        {/* Page header */}
+      <div className={styles.container}>
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.pageTitle}>Notes Marketplace</h1>
-            <p className={styles.pageSubtitle}>Browse, search, and share course notes, past papers, and study materials.</p>
+            <h1 className={styles.pageTitle}>Notes Library</h1>
+            <p className={styles.pageSubtitle}>Browse and download study notes shared by fellow students.</p>
           </div>
           <div className={styles.actionRow}>
-            <Link href="/notes/saved" className={styles.btnSecondary}>
-              Saved Notes
-            </Link>
-            <Link href="/dashboard/uploader" className={styles.btnSecondary}>
-              My Uploads
-            </Link>
-            <Link
-              href="/notes/upload"
-              className={user ? styles.btnPrimary : styles.btnSecondary}
-            >
-              Upload Notes
-            </Link>
+            <Link href="/notes/saved" className={styles.btnSecondary}><BookOpen size={15} /> Saved Notes</Link>
+            <Link href="/notes/upload" className={styles.btnPrimary}><Upload size={15} /> Upload Notes</Link>
           </div>
         </div>
 
-        {/* Stats */}
-        {!loading && (
-          <div className={`${styles.statGrid} mb-3`}>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Total Results</div>
-              <div className={styles.statValue}>{total}</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Showing</div>
-              <div className={styles.statValue}>{items.length}</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Active Tags</div>
-              <div className={styles.statValue}>{tags.length}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Search and filters */}
-        <div className={`${styles.surfaceCard} mb-3`}>
-          <div className={styles.filterBar}>
+        {/* Filter Bar */}
+        <div className={styles.filterBar}>
+          <div className={styles.searchWrap}>
+            <Search size={14} className={styles.searchIcon} />
             <input
-              className="form-control form-control-sm"
-              placeholder="Search by title, course, or subject…"
+              className={styles.searchInput}
+              placeholder="Search notes, courses, topics…"
               value={q}
-              style={{ maxWidth: 280 }}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setQ(e.target.value); setPage(1); }}
             />
-            <input
-              className="form-control form-control-sm"
-              placeholder="Filter by course…"
-              value={course}
-              style={{ maxWidth: 200 }}
-              onChange={(e) => {
-                setCourse(e.target.value);
-                setPage(1);
-              }}
-            />
-            <select
-              className="form-select form-select-sm"
-              value={sort}
-              style={{ maxWidth: 180 }}
-              onChange={(e) => setSort(e.target.value)}
-            >
-              <option value="newest">Newest first</option>
-              <option value="popular">Most downloaded</option>
-              <option value="rating">Top rated</option>
-            </select>
-            <span style={{ fontSize: '0.82rem', color: 'var(--cc-muted)', whiteSpace: 'nowrap' }}>
-              {loading ? 'Searching…' : `${total} result${total !== 1 ? 's' : ''} found`}
-            </span>
           </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Type:</span>
+            <select className={styles.filterSelect} value={type} onChange={(e) => { setType(e.target.value); setPage(1); }}>
+              {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Sort:</span>
+            <select className={styles.filterSelect} value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <Tag size={13} style={{ color: '#9E9E9E' }} />
+            <input
+              className={styles.tagInput}
+              placeholder="Add tag, Enter"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={addTag}
+            />
+          </div>
+        </div>
 
-          {/* Tag input */}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            <div className="input-group input-group-sm" style={{ maxWidth: 240 }}>
-              <input
-                className="form-control"
-                placeholder="Add a tag…"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-              />
-              <button type="button" className={`${styles.btnPrimary} ${styles.btnSmall}`} onClick={addTag} style={{ borderRadius: '0 6px 6px 0' }}>
-                Add
-              </button>
-            </div>
-            {tags.map((tag) => (
-              <span key={tag} className={styles.tagActive} style={{ cursor: 'pointer' }} onClick={() => removeTag(tag)}>
-                {tag} ✕
+        {/* Active Tags */}
+        {tags.length > 0 && (
+          <div className={styles.tagList} style={{ marginBottom: '0.75rem' }}>
+            {tags.map((t) => (
+              <span key={t} className={styles.tag}>
+                #{t}
+                <button type="button" className={styles.tagRemove} onClick={() => removeTag(t)}>
+                  <X size={11} />
+                </button>
               </span>
             ))}
           </div>
-        </div>
-
-        {/* Error state */}
-        {error && (
-          <div className={`${styles.alertDanger} mb-3`}>
-            <strong>Something went wrong.</strong> {error}
-          </div>
         )}
 
-        {/* Card grid */}
-        <div className="row g-3">
-          {/* Loading skeletons */}
-          {loading &&
-            Array.from({ length: 6 }).map((_, idx) => (
-              <div className="col-12 col-md-6 col-lg-4" key={`sk-${idx}`}>
-                <div className={styles.skeletonCard}>
-                  <div className={styles.skeleton} style={{ height: 140, marginBottom: '0.75rem' }} />
-                  <div className={styles.skeleton} style={{ height: 16, width: '70%', marginBottom: '0.5rem' }} />
-                  <div className={styles.skeleton} style={{ height: 14, width: '50%', marginBottom: '0.75rem' }} />
-                  <div className={styles.skeleton} style={{ height: 40, marginBottom: '0.5rem' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div className={styles.skeleton} style={{ height: 14, width: '35%' }} />
-                    <div className={styles.skeleton} style={{ height: 14, width: '30%' }} />
-                  </div>
-                </div>
-              </div>
-            ))}
+        {error && <div className={styles.errorBanner}>{error}</div>}
+        {!loading && !error && <p className={styles.resultsCount}>{total} note{total !== 1 ? 's' : ''} found</p>}
 
-          {/* Note cards */}
-          {!loading &&
-            items.map((note) => (
-              <div className="col-12 col-md-6 col-lg-4" key={note._id}>
-                <div className={styles.noteCard}>
-                  {note.previewImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={note.previewImageUrl}
-                      className={styles.noteCardImage}
-                      alt={note.title}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        height: 100,
-                        background: 'var(--cc-bg-dark)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--cc-muted)',
-                        fontSize: '0.82rem',
-                        borderBottom: '1px solid var(--cc-border-light)',
-                      }}
-                    >
-                      No preview available
-                    </div>
-                  )}
-                  <div className={styles.noteCardBody}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                      <h5 className={styles.noteCardTitle}>{note.title}</h5>
-                      <span className={styles.badgeOlive}>{note.subject}</span>
-                    </div>
-                    <div className={styles.noteCardMeta}>{note.course}</div>
-
-                    <div className={styles.noteCardUploader}>
-                      {note.uploadedBy?.avatar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={note.uploadedBy.avatar}
-                          alt={note.uploadedBy?.name || 'Uploader'}
-                          className={styles.uploaderAvatar}
-                        />
-                      ) : (
-                        <div className={styles.uploaderAvatar}>
-                          {String(note.uploadedBy?.name || 'U').slice(0, 1)}
-                        </div>
-                      )}
-                      <span>by {note.uploadedBy?.name || 'Unknown user'}</span>
-                    </div>
-
-                    <p className={styles.noteCardDesc}>
-                      {String(note.description || '').slice(0, 100)}
-                      {String(note.description || '').length > 100 ? '…' : ''}
-                    </p>
-
-                    <div className={styles.noteStats}>
-                      <FileTypeBadge fileType={note.fileType} fileName={note.fileName} />
-                      <span>{formatFileSize(note.fileSize)}</span>
-                      <span>{downloadLabel(note.downloadCount)}</span>
-                    </div>
-
-                    <StarRating value={Number(note.averageRating || 0)} disabled />
-
-                    <div className={styles.noteCardFooter}>
-                      <Link href={`/notes/${note._id}`} className={`${styles.btnPrimary} ${styles.btnSmall}`}>
-                        View Details
-                      </Link>
-                      <BookmarkButton
-                        noteId={note._id}
-                        initialBookmarked={Boolean(note.isBookmarked)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-          {/* Empty state */}
-          {!loading && !items.length && !error && (
-            <div className="col-12">
+        {/* Grid */}
+        {loading
+          ? <div className={styles.grid}>{skeletons}</div>
+          : notes.length === 0
+            ? (
               <div className={styles.emptyState}>
-                <div className={styles.emptyStateIcon}>📝</div>
-                <div className={styles.emptyStateTitle}>No notes found</div>
-                <p className={styles.emptyStateText}>
-                  {q || course || tags.length
-                    ? 'Try adjusting your search or filters to find what you need.'
-                    : 'Be the first to share your study materials with the community.'}
-                </p>
-                <Link href="/notes/upload" className={styles.btnPrimary}>
-                  Upload Notes
-                </Link>
+                <BookOpen size={40} className={styles.emptyIcon} />
+                <h3 className={styles.emptyStateTitle}>No notes found</h3>
+                <p className={styles.emptyStateText}>Try adjusting your filters or be the first to upload notes.</p>
+                <Link href="/notes/upload" className={styles.btnPrimary}><Upload size={15} /> Upload Notes</Link>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {!loading && totalPages > 1 && (
-          <div className="d-flex justify-content-center mt-4">
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </div>
-        )}
+            )
+            : (
+              <>
+                <div className={styles.grid}>
+                  {notes.map((n) => (
+                    <Link key={n._id} href={`/notes/${n._id}`} className={styles.cardLink}>
+                      <NoteCard note={n} onBookmark={handleBookmark} />
+                    </Link>
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                    <Pagination page={page} totalPages={totalPages} onPageChange={(p) => { setPage(p); window.scrollTo(0, 0); }} />
+                  </div>
+                )}
+              </>
+            )
+        }
       </div>
     </div>
   );

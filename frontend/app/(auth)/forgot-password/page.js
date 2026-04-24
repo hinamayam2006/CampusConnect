@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import api from '../../../lib/api';
+import styles from '../auth.module.css';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -25,36 +26,42 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
+    <div className={styles['auth-container']}>
+      <div className={styles['auth-card']}>
+        <div className={styles['auth-header']}>
           <h1>Forgot password</h1>
           <p>Enter your email and we&apos;ll send a reset link.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label className="form-label">Email</label>
+        <form onSubmit={handleSubmit} className={styles['auth-form']}>
+          <div className={styles['form-group']}>
+            <label className={styles['form-label']}>Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@university.edu"
               required
-              className="form-control"
+              className={styles['form-control']}
             />
           </div>
 
-          {message.text && <div className={`auth-message ${message.type}`}>{message.text}</div>}
+          {message.text && (
+            <div
+              className={`${styles['auth-message']} ${message.type === 'success' ? styles['auth-message--success'] : styles['auth-message--error']}`}
+            >
+              {message.text}
+            </div>
+          )}
 
-          <button type="submit" disabled={loading} className="auth-submit-btn">
+          <button type="submit" disabled={loading} className={styles['auth-submit-btn']}>
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
 
-        <div className="auth-footer">
+        <div className={styles['auth-footer']}>
           <p>
-            Remembered it? <Link href="/login" className="btn-link fw-bold">Log in</Link>
+            Remembered it? <Link href="/login">Log in</Link>
           </p>
         </div>
       </div>

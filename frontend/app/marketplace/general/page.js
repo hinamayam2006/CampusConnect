@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useStore from '../../../store/useStore';
+import styles from '../../shared/marketplace-rides.module.css';
 
 function formatPrice(listing) {
   if (listing.listingType === 'exchange') return 'Exchange';
@@ -71,7 +72,7 @@ export default function GeneralMarketplacePage() {
         </Link>
       </div>
 
-      <form className="mc-filters" onSubmit={onSubmit}>
+      <form className={styles['mc-filters']} onSubmit={onSubmit}>
         <div className="row g-2 align-items-end">
           <div className="col-md-4">
             <label className="form-label small">Search</label>
@@ -119,18 +120,18 @@ export default function GeneralMarketplacePage() {
             return (
               <div key={item._id} className="col-6 col-lg-3">
                 <Link href={`/marketplace/${item._id}`} className="text-decoration-none text-reset">
-                  <div className="mc-listing-card">
+                  <div className={styles['mc-listing-card']}>
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={img} alt="" />
                     ) : (
-                      <div className="mc-img-ph" />
+                      <div className={styles['mc-img-ph']} />
                     )}
-                    <div className="mc-card-body">
-                      <span className="mc-badge">{item.listingType}</span>
+                    <div className={styles['mc-card-body']}>
+                      <span className={styles['mc-badge']}>{item.listingType}</span>
                       <h3 className="h6 mt-1 mb-1">{item.title}</h3>
                       <p className="small text-secondary mb-1">{item.department}</p>
-                      <p className="mc-price mb-0">{formatPrice(item)}</p>
+                      <p className={`${styles['mc-price']} mb-0`}>{formatPrice(item)}</p>
                     </div>
                   </div>
                 </Link>

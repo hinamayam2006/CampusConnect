@@ -7,11 +7,12 @@ import toast from 'react-hot-toast';
 import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import styles from '../../create-forms.module.css';
 
 function RequiredLabel({ children }) {
   return (
     <span>
-      <span className="form-required-asterisk" aria-hidden="true">*</span>
+      <span className={styles['form-required-asterisk']} aria-hidden="true">*</span>
       {children}
     </span>
   );
@@ -23,7 +24,7 @@ export default function CreateListingPage() {
   const [category, setCategory] = useState('general');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [department, setDepartment] = useState('CS');
+  const [department, setDepartment] = useState('SEECS');
   const [courseCode, setCourseCode] = useState('');
   const [semester, setSemester] = useState('');
   const [listingType, setListingType] = useState('sale');
@@ -31,6 +32,7 @@ export default function CreateListingPage() {
   const [condition, setCondition] = useState('');
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   const onFiles = async (e) => {
@@ -38,13 +40,23 @@ export default function CreateListingPage() {
     if (!files.length) return;
 
     setUploading(true);
+    setUploadProgress(0);
     const urls = [];
 
     try {
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
         const fd = new FormData();
-        fd.append('image', file);
-        const res = await api.post('/upload/image', fd, { timeout: 120000 });
+        fd.append('image', files[i]);
+        const res = await api.post('/upload/image', fd, {
+          timeout: 120000,
+          onUploadProgress: (e) => {
+            if (e.total) {
+              const fileBase = Math.round((i / files.length) * 100);
+              const fileChunk = Math.round((e.loaded / e.total) * (100 / files.length));
+              setUploadProgress(fileBase + fileChunk);
+            }
+          },
+        });
         if (res.data.success) urls.push(res.data.data.url);
       }
 
@@ -54,6 +66,7 @@ export default function CreateListingPage() {
       toast.error('Image upload failed - check Cloudinary env on the server');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -101,7 +114,7 @@ export default function CreateListingPage() {
   }
 
   return (
-    <div className="container py-4 py-md-5 form-page-shell">
+    <div className={`container py-4 py-md-5 ${styles['form-page-shell']}`}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">New listing</h1>
         <Link href="/marketplace" className="btn btn-outline-secondary btn-sm">
@@ -242,11 +255,16 @@ export default function CreateListingPage() {
             onChange={onFiles}
             disabled={uploading}
           />
+          {uploading && (
+            <div style={{ marginTop: '0.5rem', height: 4, background: '#E5E7EB', borderRadius: 9999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#166534', borderRadius: 9999, width: `${uploadProgress}%`, transition: 'width 0.2s ease' }} />
+            </div>
+          )}
           {images.length > 0 && (
             <div className="d-flex flex-wrap gap-2 mt-2">
               {images.map((url) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={url} src={url} alt="" className="form-image-preview" />
+                <img key={url} src={url} alt="" className={styles['form-image-preview']} />
               ))}
             </div>
           )}

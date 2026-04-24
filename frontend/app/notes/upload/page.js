@@ -1,350 +1,528 @@
-'use client';
+﻿'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
-import api from '../../../lib/api';
-import useRequireAuth from '../../../lib/useRequireAuth';
-import FileTypeBadge from '../../../components/FileTypeBadge';
-import { formatFileSize } from '../../../lib/uiHelpers';
-import styles from '../notes.module.css';
+import {
+  ArrowLeft,
+  FolderOpen,
+  BookOpen,
+  FileText,
+  ClipboardList,
+  Check,
+  X,
+  Info,
+  Upload,
+  File,
+  ChevronRight,
+  AlertCircle,
+} from 'lucide-react';
+import api from '@/lib/api';
+import { fetchMyNotes } from '@/lib/apiRequests';
+import useRequireAuth from '@/lib/useRequireAuth';
+import styles from './upload.module.css';
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-const ALLOWED_TYPES = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.jpg', '.jpeg', '.png', '.webp'];
+/* --- Material types --------------------------- */
+const TYPES = [
+  {
+    id: 'lecture_notes',
+    label: 'Lecture Notes',
+    desc: 'Class notes & summaries',
+    icon: BookOpen,
+    tag: 'Lecture Notes',
+  },
+  {
+    id: 'past_paper',
+    label: 'Past Paper',
+    desc: 'Previous exam papers',
+    icon: FileText,
+    tag: 'Past Paper',
+  },
+  {
+    id: 'assignment',
+    label: 'Assignment',
+    desc: 'Coursework & assignments',
+    icon: ClipboardList,
+    tag: 'Assignment',
+  },
+];
 
-export default function NotesUploadPage() {
+const ACCEPTED_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt';
+const MAX_MB = 25;
+
+export default function UploadNotePage() {
   const { isReady } = useRequireAuth();
-  const router = useRouter();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [course, setCourse] = useState('');
-  const [subject, setSubject] = useState('');
-  const [tags, setTags] = useState('');
+  /* --- File state --- */
   const [file, setFile] = useState(null);
+  const [dragging, setDragging] = useState(false);
   const [fileError, setFileError] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  /* --- Form state --- */
+  const [materialType, setMaterialType] = useState('lecture_notes');
+  const [title, setTitle] = useState('');
+  const [courseCode, setCourseCode] = useState('');
+  const [academicYear, setAcademicYear] = useState('');
+  const [description, setDescription] = useState('');
+
+  /* --- Submit state --- */
   const [submitting, setSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [dragActive, setDragActive] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const validateFile = (f) => {
-    if (!f) return '';
-    if (f.size > MAX_FILE_SIZE) {
-      return `File is too large (${formatFileSize(f.size)}). Maximum allowed is 25 MB.`;
-    }
-    const ext = '.' + f.name.split('.').pop().toLowerCase();
-    if (!ALLOWED_TYPES.includes(ext)) {
-      return `File type "${ext}" is not supported. Allowed: ${ALLOWED_TYPES.join(', ')}`;
-    }
-    return '';
-  };
+  /* --- My recent uploads --- */
+  const [recentUploads, setRecentUploads] = useState([]);
+  const [loadingUploads, setLoadingUploads] = useState(true);
 
-  const handleFilePick = (picked) => {
-    if (!picked) {
-      setFile(null);
-      setFileError('');
-      return;
-    }
-    const err = validateFile(picked);
-    if (err) {
-      setFileError(err);
-      setFile(null);
-      return;
-    }
+  useEffect(() => {
+    if (!isReady) return;
+    fetchMyNotes({ limit: 4 })
+      .then((res) => setRecentUploads(res.data?.items || []))
+      .catch(() => setRecentUploads([]))
+      .finally(() => setLoadingUploads(false));
+  }, [isReady]);
+
+  /* --- File helpers --- */
+  const validateAndSetFile = useCallback((f) => {
+    if (!f) return;
     setFileError('');
-    setFile(picked);
+    if (f.size > MAX_MB * 1024 * 1024) {
+      setFileError(`File is too large (max ${MAX_MB} MB).`);
+      return;
+    }
+    setFile(f);
+  }, []);
+
+  const handleFileInput = (e) => {
+    validateAndSetFile(e.target.files?.[0]);
+    e.target.value = '';
   };
 
-  const onSubmit = async (e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
+    setDragging(false);
+    validateAndSetFile(e.dataTransfer.files?.[0]);
+  };
 
-    if (!title.trim()) {
-      toast.error('Please provide a title for your notes.');
-      return;
-    }
-    if (title.trim().length < 3) {
-      toast.error('Title must be at least 3 characters long.');
-      return;
-    }
-    if (!course.trim()) {
-      toast.error('Course name is required.');
-      return;
-    }
-    if (!subject.trim()) {
-      toast.error('Subject is required.');
-      return;
-    }
-    if (!description.trim()) {
-      toast.error('Please add a description so others know what to expect.');
-      return;
-    }
-    if (description.trim().length < 10) {
-      toast.error('Description should be at least 10 characters.');
-      return;
-    }
-    if (!file) {
-      toast.error('Please choose a file to upload.');
-      return;
-    }
-    const fErr = validateFile(file);
-    if (fErr) {
-      toast.error(fErr);
-      return;
-    }
+  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = () => setDragging(false);
+
+  const clearFile = (e) => {
+    e.stopPropagation();
+    setFile(null);
+    setFileError('');
+  };
+
+  /* --- Submit --- */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!file) { setError('Please select a file to upload.'); return; }
+    if (!title.trim()) { setError('Please enter a title.'); return; }
+    if (!courseCode.trim()) { setError('Please enter the course code.'); return; }
+    if (!academicYear) { setError('Please select the academic year.'); return; }
 
     setSubmitting(true);
+    setProgress(10);
+
     try {
-      setUploading(true);
-      const fd = new FormData();
-      fd.append('file', file);
-      const uploadRes = await api.post('/upload/notes', fd, {
-        timeout: 120000,
-        onUploadProgress: (event) => {
-          if (!event.total) return;
-          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+      /* Step 1 -- Upload file to Cloudinary via backend */
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadRes = await api.post('/upload/notes', formData, {
+        onUploadProgress: (evt) => {
+          const pct = Math.round((evt.loaded / evt.total) * 70);
+          setProgress(10 + pct);
         },
       });
-      const {
-        fileUrl,
-        previewImageUrl,
-        publicId,
-        resourceType,
-        fileFormat,
-        fileName,
-        fileType,
-        fileSize,
-        downloadFileName,
-      } = uploadRes.data?.data || {};
-      if (!fileUrl) {
-        throw new Error('Upload completed but no file URL was returned. Please try again.');
-      }
-      setUploading(false);
 
-      const body = {
+      const uploadData = uploadRes.data?.data || uploadRes.data;
+      setProgress(85);
+
+      /* Step 2 -- Create note record */
+      const selectedType = TYPES.find((t) => t.id === materialType);
+      const tags = [selectedType?.tag, academicYear].filter(Boolean);
+
+      await api.post('/notes', {
         title: title.trim(),
         description: description.trim(),
-        course: course.trim(),
-        subject: subject.trim(),
-        tags: tags
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean),
-        fileUrl,
-        previewImageUrl: previewImageUrl || '',
-        publicId: publicId || '',
-        resourceType: resourceType || '',
-        fileFormat: fileFormat || '',
-        fileName: downloadFileName || fileName || file?.name || '',
-        fileType: fileType || file?.type || '',
-        fileSize: fileSize || file?.size || 0,
-      };
+        course: courseCode.trim().toUpperCase(),
+        subject: courseCode.trim().toUpperCase(),
+        tags,
+        fileUrl: uploadData.fileUrl || uploadData.url,
+        previewImageUrl: uploadData.previewImageUrl || '',
+        publicId: uploadData.publicId || '',
+        resourceType: uploadData.resourceType || 'raw',
+        fileFormat: uploadData.fileFormat || '',
+        fileName: uploadData.fileName || file.name,
+        fileType: uploadData.fileType || file.type,
+        fileSize: uploadData.fileSize || file.size,
+      });
 
-      const res = await api.post('/notes', body);
-      if (res.data?.success && res.data?.data?._id) {
-        toast.success('Notes uploaded successfully! Redirecting to your note…');
-        router.push(`/notes/${res.data.data._id}`);
-      } else {
-        toast.error(res.data?.message || 'Note was uploaded but could not be saved. Please try again.');
-      }
+      setProgress(100);
+      setSuccess(true);
+
+      /* Refresh recent uploads list */
+      fetchMyNotes({ limit: 4 })
+        .then((res) => setRecentUploads(res.data?.items || []))
+        .catch(() => {});
     } catch (err) {
-      const msg =
-        err.code === 'ECONNABORTED'
-          ? 'Upload timed out. Please check your internet connection and try again.'
-          : err.response?.status === 413
-          ? 'File is too large for the server. Maximum allowed is 25 MB.'
-          : err.response?.status === 415
-          ? 'File type is not supported by the server.'
-          : err.response?.data?.message ||
-            err.response?.data?.errors?.[0]?.message ||
-            err.message ||
-            'Upload failed. Please try again later.';
-      toast.error(msg);
-      setUploading(false);
-      setUploadProgress(0);
+      setError(err.message || 'Upload failed. Please try again.');
+      setProgress(0);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!isReady) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 720 }}>
-          <div className={styles.surfaceCard} style={{ textAlign: 'center', padding: '3rem' }}>
-            <div className={styles.emptyStateTitle}>Loading your session…</div>
-            <p className={styles.emptyStateText}>Please wait while we verify your credentials.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /* --- Reset after success --- */
+  const handleUploadAnother = () => {
+    setSuccess(false);
+    setFile(null);
+    setTitle('');
+    setCourseCode('');
+    setAcademicYear('');
+    setDescription('');
+    setProgress(0);
+    setError('');
+  };
 
-  const tagCount = tags.split(',').map((t) => t.trim()).filter(Boolean).length;
+  if (!isReady) return null;
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 740 }}>
-        <div className={styles.pageHeader}>
+      <div className={styles.container}>
+        {/* -- Page header -- */}
+        <div className={styles.pageTop}>
+          <Link href="/notes" className={styles.backLink}>
+            <ArrowLeft size={14} />
+            Back
+          </Link>
           <div>
-            <h1 className={styles.pageTitle}>Upload Notes</h1>
-            <p className={styles.pageSubtitle}>Share your study materials with the campus community.</p>
-          </div>
-          <div className={styles.actionRow}>
-            <Link href="/notes" className={styles.btnSecondary}>Cancel</Link>
+            <h1 className={styles.pageTitle}>Upload a Note or Paper</h1>
+            <p className={styles.pageSub}>Share your study materials with fellow students</p>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className={styles.formCard}>
-          {/* Title */}
-          <div className="mb-3">
-            <label className={styles.formLabel}>
-              Title <span className={styles.formRequired}>*</span>
-            </label>
-            <input
-              className="form-control"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. DBMS Unit 3 - Normalization Notes"
-              maxLength={120}
-              required
-            />
-            <div className={styles.formHint}>{title.length}/120 characters</div>
-          </div>
+        <div className={styles.layout}>
+          {/* ========== MAIN FORM CARD ========== */}
+          <form className={styles.formCard} onSubmit={handleSubmit} noValidate>
 
-          {/* Course & Subject */}
-          <div className="row g-3 mb-3">
-            <div className="col-12 col-md-6">
-              <label className={styles.formLabel}>
-                Course <span className={styles.formRequired}>*</span>
-              </label>
-              <input
-                className="form-control"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                placeholder="e.g. CS301"
-                required
-              />
-            </div>
-            <div className="col-12 col-md-6">
-              <label className={styles.formLabel}>
-                Subject <span className={styles.formRequired}>*</span>
-              </label>
-              <input
-                className="form-control"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Database Management"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-3">
-            <label className={styles.formLabel}>
-              Description <span className={styles.formRequired}>*</span>
-            </label>
-            <textarea
-              className="form-control"
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what's in these notes — topics covered, exam relevance, etc."
-              maxLength={1000}
-              required
-            />
-            <div className={styles.formHint}>{description.length}/1000 characters</div>
-          </div>
-
-          {/* Tags */}
-          <div className="mb-3">
-            <label className={styles.formLabel}>Tags</label>
-            <input
-              className="form-control"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="exam prep, unit 1, lecture notes"
-            />
-            <div className={styles.formHint}>
-              Comma separated — helps others find your notes. {tagCount > 0 ? `${tagCount} tag${tagCount > 1 ? 's' : ''} added.` : 'No tags yet.'}
-            </div>
-          </div>
-
-          <hr className={styles.divider} />
-
-          {/* File upload */}
-          <div className="mb-3">
-            <label className={styles.formLabel}>
-              File <span className={styles.formRequired}>*</span>
-            </label>
-            <input
-              className="form-control mb-2"
-              type="file"
-              accept={ALLOWED_TYPES.join(',')}
-              onChange={(e) => handleFilePick(e.target.files?.[0] || null)}
-              required
-            />
-            <div
-              className={`${styles.dropZone} ${dragActive ? styles.dropZoneActive : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-                handleFilePick(e.dataTransfer.files?.[0] || null);
-              }}
-            >
-              Drop your file here
-            </div>
-            <div className={styles.formHint}>
-              Accepted: PDF, DOC, DOCX, PPT, PPTX, JPG, PNG, WEBP — Max 25 MB
-            </div>
-
-            {fileError && (
-              <div className={`${styles.alertDanger} mt-2`}>{fileError}</div>
-            )}
-
-            {file && !fileError && (
-              <div className={`${styles.alertSuccess} mt-2`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <FileTypeBadge fileType={file.type} fileName={file.name} />
-                <span style={{ fontWeight: 600 }}>{file.name}</span>
-                <span style={{ opacity: 0.7 }}>{formatFileSize(file.size)}</span>
+            {/* Success State */}
+            {success ? (
+              <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: '#F0FDF4', border: '2px solid #A7D4A7',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 1.25rem',
+                }}>
+                  <Check size={28} color="#16A34A" />
+                </div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem', color: '#1A1A1A' }}>
+                  Note Uploaded!
+                </h3>
+                <p style={{ color: '#6B6B6B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  Your material has been submitted and will be visible after review.
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                  <button type="button" onClick={handleUploadAnother} className={styles.submitBtn} style={{ width: 'auto', padding: '10px 22px' }}>
+                    Upload Another
+                  </button>
+                  <Link href="/notes" style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '10px 22px', background: '#fff', border: '1px solid #E8E2D9',
+                    borderRadius: 12, fontSize: '0.85rem', fontWeight: 600, color: '#6B6B6B', textDecoration: 'none',
+                  }}>
+                    Browse Notes
+                  </Link>
+                </div>
               </div>
-            )}
+            ) : (
+              <>
+                {/* -- 1. Drop Zone -- */}
+                <div className={styles.cardSection}>
+                  <p className={styles.sectionLabel}>Select File</p>
+                  <div
+                    className={[
+                      styles.dropZone,
+                      dragging ? styles.dropZoneActive : '',
+                      file ? styles.dropZoneHasFile : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => !file && fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && !file && fileInputRef.current?.click()}
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className={styles.dzFileInput}
+                      accept={ACCEPTED_TYPES}
+                      onChange={handleFileInput}
+                    />
 
-            {file?.type?.startsWith('image/') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={URL.createObjectURL(file)}
-                alt="Preview"
-                style={{ maxHeight: 140, borderRadius: 'var(--cc-radius-sm)', border: '1px solid var(--cc-border)', marginTop: '0.75rem' }}
-              />
-            )}
+                    {file ? (
+                      <div className={styles.dzFileRow}>
+                        <div className={styles.dzIconWrap}>
+                          <Check size={22} />
+                        </div>
+                        <div className={styles.dzFileName}>
+                          <strong>{file.name}</strong>
+                          <span>{(file.size / (1024 * 1024)).toFixed(1)} MB -- ready to upload</span>
+                        </div>
+                        <button type="button" className={styles.dzClearBtn} onClick={clearFile} aria-label="Remove file">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={styles.dzIconWrap}>
+                          <FolderOpen size={26} />
+                        </div>
+                        <p className={styles.dzHeading}>Drag &amp; drop your file here</p>
+                        <p className={styles.dzSub}>PDF, Word, PowerPoint, Excel, TXT -- up to {MAX_MB} MB</p>
+                        <button
+                          type="button"
+                          className={styles.dzBrowseBtn}
+                          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        >
+                          Browse File
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {fileError && (
+                    <div className={styles.dzErrorMsg}>
+                      <AlertCircle size={13} />
+                      {fileError}
+                    </div>
+                  )}
+                </div>
 
-            {uploading && (
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: `${uploadProgress}%` }} />
+                <hr className={styles.divider} />
+
+                {/* -- 2. Material Type -- */}
+                <div className={styles.cardSection}>
+                  <p className={styles.sectionLabel}>Material Type</p>
+                  <div className={styles.typeTiles}>
+                    {TYPES.map((t) => {
+                      const Icon = t.icon;
+                      const active = materialType === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={[styles.typeTile, active ? styles.typeTileActive : ''].filter(Boolean).join(' ')}
+                          onClick={() => setMaterialType(t.id)}
+                          aria-pressed={active}
+                        >
+                          {active && (
+                            <span className={styles.tileCheckBadge}>
+                              <Check size={10} />
+                            </span>
+                          )}
+                          <span className={styles.tileIcon}>
+                            <Icon size={18} />
+                          </span>
+                          <span className={styles.tileLabel}>{t.label}</span>
+                          <span className={styles.tileDesc}>{t.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <hr className={styles.divider} />
+
+                {/* -- 3. Form Fields -- */}
+                <div className={styles.cardSection}>
+                  <p className={styles.sectionLabel}>Details</p>
+                  <div className={styles.fieldGrid}>
+                    {/* Title */}
+                    <div className={[styles.field, styles.fieldFull].join(' ')}>
+                      <label className={styles.fieldLabel}>
+                        Title <span className={styles.fieldReq}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={styles.fieldInput}
+                        placeholder="e.g. Chapter 3 -- Data Structures"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        maxLength={120}
+                        required
+                      />
+                    </div>
+
+                    {/* Course Code */}
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>
+                        Course Code <span className={styles.fieldReq}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={styles.fieldInput}
+                        placeholder="e.g. CS301"
+                        value={courseCode}
+                        onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
+                        maxLength={20}
+                        required
+                      />
+                    </div>
+
+                    {/* Academic Year */}
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>
+                        Academic Year <span className={styles.fieldReq}>*</span>
+                      </label>
+                      <select
+                        className={styles.fieldSelect}
+                        value={academicYear}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                        required
+                      >
+                        <option value="">Select year…</option>
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                        <option value="Postgraduate">Postgraduate</option>
+                      </select>
+                    </div>
+
+                    {/* Description */}
+                    <div className={[styles.field, styles.fieldFull].join(' ')}>
+                      <label className={styles.fieldLabel}>Description</label>
+                      <textarea
+                        className={styles.fieldTextarea}
+                        placeholder="What does this note cover? Any topics, chapters or units to mention?"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        maxLength={500}
+                        rows={4}
+                      />
+                      <p className={styles.fieldHint}>{description.length}/500 characters</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload progress */}
+                {submitting && progress > 0 && (
+                  <div className={styles.progressWrap}>
+                    <div className={styles.progressBar}>
+                      <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+                    </div>
+                    <p className={styles.progressLabel}>
+                      {progress < 80 ? 'Uploading file…' : 'Creating note record…'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Error */}
+                {error && (
+                  <div className={styles.dzErrorMsg}>
+                    <AlertCircle size={13} />
+                    {error}
+                  </div>
+                )}
+
+                <hr className={styles.divider} />
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  className={[styles.submitBtn, file && title && courseCode && academicYear ? styles.submitBtnReady : ''].filter(Boolean).join(' ')}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <span className={styles.spinner} />
+                      Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} />
+                      Upload Note
+                    </>
+                  )}
+                </button>
+                <p className={styles.uploadHint}>
+                  <Info size={12} color="#9E9E9E" />
+                  Your note will be reviewed before going live.
+                </p>
+              </>
+            )}
+          </form>
+
+          {/* ========== RIGHT SIDEBAR ========== */}
+          <aside className={styles.sideCol}>
+            {/* Upload Guidelines */}
+            <div className={styles.sideCard}>
+              <div className={styles.sideCardHead}>
+                <Info size={13} />
+                Upload Guidelines
               </div>
-            )}
-            {uploading && (
-              <div className={styles.formHint} style={{ marginTop: '0.35rem' }}>
-                Uploading… {uploadProgress}% complete
+              <div className={styles.sideCardBody}>
+                <ul className={styles.guideList}>
+                  {[
+                    'Only upload your own original notes or materials you have the right to share.',
+                    'Accepted formats: PDF, Word, PowerPoint, Excel, TXT.',
+                    'Maximum file size is 25 MB per upload.',
+                    'Include an accurate title and course code so others can find your material.',
+                    'Notes are reviewed before going live -- avoid plagiarised content.',
+                    'Repeated policy violations may result in account suspension.',
+                  ].map((rule, i) => (
+                    <li key={i} className={styles.guideItem}>
+                      <span className={styles.guideDot} />
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            )}
-          </div>
-
-          <button className={styles.btnPrimary} style={{ width: '100%', padding: '0.75rem' }} disabled={submitting || uploading}>
-            {uploading ? `Uploading… ${uploadProgress}%` : submitting ? 'Saving your notes…' : 'Upload Notes'}
-          </button>
-
-          {submitting && (
-            <div className={`${styles.alertInfo} mt-3`}>
-              Please do not close this page while your upload is in progress.
             </div>
-          )}
-        </form>
+
+            {/* My Uploads */}
+            <div className={styles.sideCard}>
+              <div className={styles.sideCardHead}>
+                <File size={13} />
+                My Recent Uploads
+              </div>
+              <div className={styles.sideCardBody} style={{ padding: '0.25rem 0' }}>
+                {loadingUploads ? (
+                  <div style={{ padding: '1rem', textAlign: 'center' }}>
+                    <span className={styles.spinner} style={{ borderColor: '#C8BFB5', borderTopColor: 'transparent' }} />
+                  </div>
+                ) : recentUploads.length === 0 ? (
+                  <p className={styles.uploadsEmpty}>No uploads yet.</p>
+                ) : (
+                  recentUploads.map((note) => (
+                    <Link key={note._id} href={`/notes/${note._id}`} className={styles.uploadItem} style={{ padding: '0.7rem 1.1rem' }}>
+                      <div className={styles.uploadItemIcon}>
+                        <FileText size={15} />
+                      </div>
+                      <div className={styles.uploadItemBody}>
+                        <p className={styles.uploadItemTitle}>{note.title}</p>
+                        <p className={styles.uploadItemMeta}>{note.course || note.subject}</p>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+              {recentUploads.length > 0 && (
+                <Link href="/notes?mine=true" className={styles.sideViewAll}>
+                  View all my uploads
+                  <ChevronRight size={12} />
+                </Link>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );

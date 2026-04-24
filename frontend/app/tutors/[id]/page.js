@@ -1,218 +1,234 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import api from '../../../lib/api';
+import Link from 'next/link';
+import { ArrowLeft, MapPin, BookOpen, Clock, Star, ArrowRight } from 'lucide-react';
+import styles from '../../tutoring/tutoring.module.css';
+import { fetchTutorById, fetchTutorReviews } from '../../../lib/apiRequests';
 import useRequireAuth from '../../../lib/useRequireAuth';
-import { fetchTutorReviews } from '../../../lib/apiRequests';
-import { dayLabel } from '../../../lib/uiHelpers';
+import useStore from '../../../store/useStore';
 import StarRating from '../../../components/StarRating';
 import ReviewsList from '../../../components/ReviewsList';
-import styles from '../../tutoring/tutoring.module.css';
+
+const DAY_SHORT = { Monday:'Mon', Tuesday:'Tue', Wednesday:'Wed', Thursday:'Thu', Friday:'Fri', Saturday:'Sat', Sunday:'Sun' };
+
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+}
 
 export default function TutorDetailPage() {
-  const params = useParams();
-  const tutorId = params?.id;
-  const { isReady } = useRequireAuth();
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [profile, setProfile] = useState(null);
+  useRequireAuth();
+  const { id } = useParams();
+  const { user } = useStore();
+  const [tutor, setTutor]     = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
 
   useEffect(() => {
-    if (!isReady) return undefined;
-    if (!tutorId) return;
-    let cancelled = false;
-
+    if (!id) return;
     (async () => {
       setLoading(true);
-      setError('');
       try {
-        const [res, reviewRes] = await Promise.all([
-          api.get(`/tutors/${tutorId}`),
-          fetchTutorReviews(tutorId),
+        const [tRes, rRes] = await Promise.allSettled([
+          fetchTutorById(id),
+          fetchTutorReviews(id),
         ]);
-        if (!cancelled) {
-          setProfile(res.data?.data || null);
-          setReviews(reviewRes?.data?.items || []);
+        if (tRes.status === 'fulfilled') {
+          setTutor(tRes.value?.data?.data || tRes.value?.data || null);
+        } else {
+          setError('Could not load tutor profile.');
         }
-      } catch (err) {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load tutor');
+        if (rRes.status === 'fulfilled') {
+          setReviews(rRes.value?.data?.data || rRes.value?.data || []);
+        }
+      } catch {
+        setError('Could not load tutor profile.');
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     })();
+  }, [id]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [tutorId, isReady]);
-
-  /* ---------- SKELETON ---------- */
-  if (!isReady || loading) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 980 }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: 24 }}>
-            <div className={styles.skeleton} style={{ width: 64, height: 64, borderRadius: '50%' }} />
-            <div style={{ flex: 1 }}>
-              <div className={styles.skeleton} style={{ width: '50%', height: 22, marginBottom: 8 }} />
-              <div className={styles.skeleton} style={{ width: '35%', height: 14 }} />
-            </div>
-          </div>
-          <div className="row g-3">
-            <div className="col-12 col-lg-7">
-              <div className={styles.skeletonCard} style={{ minHeight: 180 }}>
-                <div className={styles.skeleton} style={{ width: '80%', height: 16, marginBottom: 10 }} />
-                <div className={styles.skeleton} style={{ width: '100%', height: 14, marginBottom: 8 }} />
-                <div className={styles.skeleton} style={{ width: '60%', height: 14 }} />
-              </div>
-            </div>
-            <div className="col-12 col-lg-5">
-              <div className={styles.skeletonCard} style={{ minHeight: 180 }}>
-                <div className={styles.skeleton} style={{ width: '45%', height: 16, marginBottom: 10 }} />
-                <div className={styles.skeleton} style={{ width: '70%', height: 14, marginBottom: 8 }} />
-                <div className={styles.skeleton} style={{ width: '55%', height: 14 }} />
-              </div>
-            </div>
-          </div>
-        </div>
+  if (loading) return (
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.skeleton} style={{ height: 300, marginBottom: '1rem' }} />
+        <div className={styles.skeleton} style={{ height: 180 }} />
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* ---------- ERROR ---------- */
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 980 }}>
-          <div className={styles.alertDanger}>{error}</div>
-          <Link href="/tutors" className={`${styles.btnSecondary} ${styles.btnSmall}`} style={{ marginTop: '0.75rem' }}>Back to tutors</Link>
-        </div>
+  if (error || !tutor) return (
+    <div className={styles.page}>
+      <div className={styles.container} style={{ textAlign: 'center', paddingTop: '4rem' }}>
+        <p style={{ color: '#6B6B6B', marginBottom: '1rem' }}>{error || 'Tutor not found.'}</p>
+        <Link href="/tutors" className={styles.btnSecondary}><ArrowLeft size={14} /> Back to Tutors</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* ---------- NOT FOUND ---------- */
-  if (!profile) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 980 }}>
-          <div className={styles.emptyState}>
-            <div className={styles.emptyStateIcon}>👤</div>
-            <div className={styles.emptyStateTitle}>Tutor not found</div>
-            <div className={styles.emptyStateText}>This profile may have been removed or the link is invalid.</div>
-            <Link href="/tutors" className={`${styles.btnPrimary} ${styles.btnSmall}`}>Browse tutors</Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const subjects = tutor.subjects || tutor.courses || [];
+  const hourlyRate = tutor.hourlyRate;
+  const isFree = tutor.isFree || hourlyRate === 0;
+  const slots = tutor.availabilitySlots || [];
+  const isOwner = Boolean(user?._id && tutor?.user?._id && String(user._id) === String(tutor.user._id));
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 980 }}>
-        <div className={styles.pageHeader}>
-          <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-            {profile.user?.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.user.avatar} alt={profile.user?.name || 'Tutor'} className={styles.avatar} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-              <div className={styles.avatar} style={{ width: 64, height: 64, fontSize: '1.6rem' }}>
-                {String(profile.user?.name || 'T').slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h1 className={styles.pageTitle}>{profile.user?.name || 'Tutor'}</h1>
-              <p className={styles.pageSubtitle}>
-                {profile.user?.department || ''}{profile.user?.year ? ` · Year ${profile.user.year}` : ''}
-              </p>
-            </div>
-          </div>
-          <div className={styles.actionRow}>
-            <Link href={`/tutors/${profile._id}/book`} className={`${styles.btnPrimary} ${styles.btnSmall}`}>Book session</Link>
-            <Link href="/tutors" className={`${styles.btnSecondary} ${styles.btnSmall}`}>Browse tutors</Link>
-          </div>
-        </div>
+      <div className={styles.container}>
+        <Link href="/tutors" className={styles.btnSecondary} style={{ marginBottom: '1.25rem', display: 'inline-flex' }}>
+          <ArrowLeft size={14} /> Back to Tutors
+        </Link>
 
-        <div className="row g-3">
-          <div className="col-12 col-lg-7">
-            <div className={styles.surfaceCardStrong}>
-              <h5 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>About</h5>
-              <p style={{ color: '#8a7e78', lineHeight: 1.65, marginBottom: '1rem' }}>{profile.bio || 'No bio provided.'}</p>
-
-              <hr className={styles.divider} />
-
-              <h6 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Expertise</h6>
-              {(profile.courses || []).length > 0 ? (
-                <div className={styles.tagRow}>
-                  {(profile.courses || []).map((c) => (
-                    <span key={c} className={styles.tag}>{c}</span>
-                  ))}
+        <div className={styles.detailLayout}>
+          {/* ── Left Column ── */}
+          <div>
+            <div className={styles.detailCard}>
+              <div className={styles.detailCardHeader}>
+                <div className={styles.detailAvatar}>
+                  {tutor.user?.avatar
+                    ? <img src={tutor.user.avatar} alt={tutor.user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : initials(tutor.user?.name)
+                  }
                 </div>
-              ) : (
-                <p style={{ color: '#8a7e78', fontSize: '0.88rem' }}>No courses listed yet.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="col-12 col-lg-5">
-            <div className={styles.surfaceCardStrong}>
-              <h5 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Details</h5>
-
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Hourly rate</div>
-                  <div className={styles.statValue}>{profile.isFree ? 'Free' : `Rs ${profile.hourlyRate}/hr`}</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Rating</div>
-                  <div style={{ marginTop: '0.35rem' }}>
-                    <StarRating value={Number(profile.averageRating || 0)} disabled />
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.82rem', color: '#8a7e78' }}>
-                      ({Number(profile.averageRating || 0).toFixed(1)})
-                    </span>
+                <div style={{ flex: 1 }}>
+                  <h1 className={styles.detailName}>{tutor.user?.name || 'Tutor'}</h1>
+                  <div className={styles.detailBadges}>
+                    {tutor.user?.department && (
+                      <span className={styles.detailBadge}><MapPin size={11} /> {tutor.user.department}</span>
+                    )}
+                    {isFree
+                      ? <span className={styles.tutorFreeBadge}>Free Tutoring</span>
+                      : hourlyRate > 0
+                        ? <span className={styles.tutorPaidBadge}>PKR {hourlyRate}/hr</span>
+                        : null
+                    }
+                    {tutor.averageRating > 0 && (
+                      <span className={styles.detailBadge}>
+                        <Star size={11} style={{ color: '#F59E0B', fill: '#F59E0B' }} />
+                        {tutor.averageRating.toFixed(1)} ({tutor.reviewCount || 0} reviews)
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Sessions completed</div>
-                  <div className={styles.statValue}>{profile.totalSessions || 0}</div>
-                </div>
               </div>
 
-              <hr className={styles.divider} />
+              <div className={styles.detailCardBody}>
+                {tutor.bio && (
+                  <>
+                    <p className={styles.sectionLabel}>About</p>
+                    <p className={styles.bioText}>{tutor.bio}</p>
+                  </>
+                )}
 
-              <h6 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Availability</h6>
-              {!profile.availabilitySlots?.length ? (
-                <p style={{ color: '#8a7e78', fontSize: '0.88rem' }}>No availability slots provided yet.</p>
-              ) : (
-                <div style={{ display: 'grid', gap: '0.4rem', marginTop: '0.5rem' }}>
-                  {profile.availabilitySlots.map((s, idx) => (
-                    <div
-                      key={`${s.day}-${s.startTime}-${idx}`}
-                      className={styles.tag}
-                      style={{ justifyContent: 'flex-start', fontSize: '0.82rem', padding: '0.3rem 0.65rem' }}
-                    >
-                      {dayLabel(s.day)} · {s.startTime} – {s.endTime}
+                {subjects.length > 0 && (
+                  <>
+                    <p className={styles.sectionTitle}><BookOpen size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />Subjects</p>
+                    <div className={styles.subjectList}>
+                      {subjects.map((s, i) => <span key={i} className={styles.subjectPill}>{s}</span>)}
                     </div>
-                  ))}
+                  </>
+                )}
+
+                {slots.length > 0 && (
+                  <>
+                    <p className={styles.sectionTitle}><Clock size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />Availability</p>
+                    <div className={styles.slotGrid}>
+                      {slots.map((s, i) => (
+                        <span key={i} className={styles.slotPill}>
+                          {DAY_SHORT[s.day] || s.day} {s.startTime}–{s.endTime}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {tutor.paymentMethod && (
+                  <>
+                    <p className={styles.sectionTitle}>Payment</p>
+                    <p className={styles.bioText}>{tutor.paymentMethod}{tutor.paymentDetails ? ' — ' + tutor.paymentDetails : ''}</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Reviews */}
+            {reviews.length > 0 && (
+              <div className={styles.detailCard} style={{ marginTop: '1rem' }}>
+                <div className={styles.detailCardBody}>
+                  <p className={styles.formTitle}>Reviews</p>
+                  <StarRating value={tutor.averageRating || 0} readOnly size={16} />
+                  <ReviewsList reviews={reviews} />
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Right Column — Book Card ── */}
+          <div>
+            <div className={styles.bookingCard}>
+              {isOwner ? (
+                <>
+                  <p className={styles.bookingTitle}>Your Tutor Profile</p>
+                  <p style={{ fontSize: '0.85rem', color: '#6B6B6B', marginBottom: '1rem' }}>
+                    Students can find and book sessions with you from this page.
+                  </p>
+                  <Link
+                    href="/tutors/become"
+                    className={styles.btnSecondary}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    Edit Profile <ArrowRight size={14} />
+                  </Link>
+                  <Link
+                    href="/tutoring"
+                    className={styles.btnPrimary}
+                    style={{ width: '100%', justifyContent: 'center', marginTop: '0.6rem' }}
+                  >
+                    My Sessions <ArrowRight size={14} />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className={styles.bookingTitle}>Book a Session</p>
+
+                  <div className={styles.rateRow}>
+                    {isFree
+                      ? <span className={styles.rateAmount} style={{ color: '#16A34A' }}>Free</span>
+                      : hourlyRate > 0
+                        ? <>
+                            <span className={styles.rateAmount}>PKR {hourlyRate}</span>
+                            <span className={styles.ratePer}>per hour</span>
+                          </>
+                        : <span className={styles.rateAmount} style={{ fontSize: '1rem', color: '#9E9E9E' }}>Rate on request</span>
+                    }
+                  </div>
+
+                  {slots.length > 0 && (
+                    <div style={{ margin: '1rem 0', padding: '0.75rem', background: '#F2EDE4', borderRadius: 10 }}>
+                      <p className={styles.sectionLabel} style={{ marginBottom: '0.5rem' }}>Available slots</p>
+                      <div className={styles.slotGrid}>
+                        {slots.slice(0, 4).map((s, i) => (
+                          <span key={i} className={styles.slotPill}>{DAY_SHORT[s.day] || s.day} {s.startTime}</span>
+                        ))}
+                        {slots.length > 4 && <span className={styles.slotPill}>+{slots.length - 4} more</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  <Link
+                    href={'/tutors/' + tutor._id + '/book'}
+                    className={styles.btnPrimary}
+                    style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}
+                  >
+                    Book Session <ArrowRight size={14} />
+                  </Link>
+                </>
               )}
             </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '0.75rem' }}>
-          <div className={styles.surfaceCardStrong}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div>
-                <h5 style={{ fontWeight: 700, marginBottom: '0.15rem' }}>Reviews</h5>
-                <p style={{ color: '#8a7e78', fontSize: '0.88rem', margin: 0 }}>{reviews.length} student review{reviews.length === 1 ? '' : 's'}</p>
-              </div>
-            </div>
-            <ReviewsList items={reviews} emptyText="No reviews for this tutor yet. Be the first after a session!" />
           </div>
         </div>
       </div>

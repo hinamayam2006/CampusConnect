@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const DEPTS = ['', 'EE', 'ME', 'CE', 'BBA', 'Economi', 'Law', 'Medicine', 'Other'];
+const DEPTS = ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS', 'Other'];
 
 const listingSchema = new mongoose.Schema(
   {

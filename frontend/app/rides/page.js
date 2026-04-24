@@ -1,75 +1,111 @@
 // rides/page.js
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Car, Search, PlusCircle, Sparkles, List, ClipboardList } from 'lucide-react';
+import { Car, PlusCircle, ArrowRight, Users, Clock } from 'lucide-react';
 import useStore from '../../store/useStore';
+import api from '../../lib/api';
+import styles from './rides-pages.module.css';
 
 export default function RidesHubPage() {
   const { user } = useStore();
+  const [rides, setRides] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/rides?limit=8&status=scheduled')
+      .then((r) => {
+        const items = r.data?.data?.items || r.data?.items || r.data?.data || [];
+        setRides(Array.isArray(items) ? items : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <div className="container py-4 py-md-5">
-      <div className="mc-hero">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-          <div>
-            <h1 className="mb-2">Carpooling</h1>
-            <p className="mb-0 text-secondary">
-              Offer or discover rides, log the routes you care about, and get suggestions that follow your history.
-              Recurring routes can be flagged when you post.
-            </p>
+    <div className={styles.hubPage}>
+      {/* Hero */}
+      <div className={styles.hubHero}>
+        <div>
+          <h1 className={styles.hubTitle}>Carpooling</h1>
+          <p className={styles.hubSubtitle}>
+            Share rides, save on fuel, and connect with campus commuters going your way.
+          </p>
+        </div>
+        {user && (
+          <Link href="/rides/create" className={styles.hubBtnDark}>
+            <PlusCircle size={16} /> Offer a Ride
+          </Link>
+        )}
+      </div>
+
+      {/* Active Rides */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTitle}>Available Rides</span>
+          <Link href="/rides/browse" className={styles.sectionLink}>
+            Browse all <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className={styles.rideGrid}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className={styles.skeletonCard}>
+                <div className={styles.skeletonLine} style={{ width: '65%', height: 20 }} />
+                <div className={styles.skeletonLine} style={{ width: '45%', height: 13, marginTop: 10 }} />
+              </div>
+            ))}
           </div>
-          {user && (
-            <Link href="/rides/create" className="btn btn-primary d-inline-flex align-items-center gap-2">
-              <PlusCircle size={20} /> Offer a ride
-            </Link>
-          )}
-        </div>
-      </div>
+        ) : rides.length === 0 ? (
+          <div className={styles.hubEmptyPanel}>
+            <Car size={30} style={{ opacity: 0.25, marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />
+            <p style={{ margin: 0 }}>No rides scheduled right now. Be the first to offer one!</p>
+          </div>
+        ) : (
+          <div className={styles.rideGrid}>
+            {rides.map((ride) => (
+              <Link key={ride._id} href={`/rides/${ride._id}`} className={styles.rideCard}>
+                <div className={styles.rideRoute}>
+                  {ride.originName || ride.origin?.name || '?'}
+                  <ArrowRight size={13} style={{ flexShrink: 0 }} />
+                  {ride.destName || ride.destination?.name || '?'}
+                </div>
+                <div className={styles.rideMeta}>
+                  <span className={styles.rideMetaItem}>
+                    <Clock size={12} />
+                    {new Date(ride.departureTime).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </span>
+                  <span className={styles.rideMetaItem}>
+                    <Users size={12} />
+                    <span className={styles.seatsBadge}>
+                      {ride.seatsAvailable ?? ride.availableSeats ?? '?'} seats
+                    </span>
+                  </span>
+                </div>
+                {ride.driver?.name && (
+                  <div className={styles.rideDriver}>by {ride.driver.name}</div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
-      <div className="mc-grid-2 mb-4">
-        <Link href="/rides/browse" className="mc-tile">
-          <span className="mc-badge mb-2">Discover</span>
-          <h3 className="d-flex align-items-center gap-2">
-            <Search size={22} /> Find a ride
-          </h3>
-          <p className="text-secondary small mb-0">Filter by pickup, drop-off, and departure window.</p>
-        </Link>
-        <Link href="/rides/matches" className="mc-tile">
-          <span className="mc-badge mb-2">Smart</span>
-          <h3 className="d-flex align-items-center gap-2">
-            <Sparkles size={22} /> Suggested matches
-          </h3>
-          <p className="text-secondary small mb-0">Uses your past searches, views, and joins (signed-in).</p>
-        </Link>
-      </div>
-
-      <div className="row g-3">
-        <div className="col-md-4">
-          <Link href="/rides/my-rides" className="mc-tile h-100">
-            <h3 className="d-flex align-items-center gap-2">
-              <List size={22} /> My rides
-            </h3>
-            <p className="text-secondary small mb-0">Driving schedule and rides you have joined.</p>
-          </Link>
+      {/* Quick Nav */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTitle}>Quick Links</span>
         </div>
-        <div className="col-md-4">
-          <Link href="/rides/my-requests" className="mc-tile h-100">
-            <h3 className="d-flex align-items-center gap-2">
-              <ClipboardList size={22} /> My requests
-            </h3>
-            <p className="text-secondary small mb-0">Track every ride request you have sent.</p>
-          </Link>
+        <div className={styles.navTiles}>
+          <Link href="/rides/browse" className={styles.navTile}>Find a Ride</Link>
+          <Link href="/rides/matches" className={styles.navTile}>Suggested Matches</Link>
+          <Link href="/rides/my-rides" className={styles.navTile}>My Rides</Link>
+          <Link href="/rides/my-requests" className={styles.navTile}>My Requests</Link>
+          <Link href="/rides/how-it-works" className={styles.navTile}>How It Works</Link>
         </div>
-        <div className="col-md-4">
-          <Link href="/rides/how-it-works" className="mc-tile h-100">
-            <h3 className="d-flex align-items-center gap-2">
-              <Car size={22} /> How it works
-            </h3>
-            <p className="text-secondary small mb-0">Safety, trust scores, and what happens after you join.</p>
-          </Link>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

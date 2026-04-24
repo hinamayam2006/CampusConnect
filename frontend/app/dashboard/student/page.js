@@ -15,13 +15,31 @@ import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import ReviewForm from '../../../components/ReviewForm';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import ImagePreviewModal from '../../../components/ImagePreviewModal';
+import {
+  CalendarCheck,
+  Clock,
+  CreditCard,
+  GraduationCap,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 
-import styles from '../../tutoring/tutoring.module.css';
+import styles from './student.module.css';
 
 function formatSchedule(dateValue) {
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return String(dateValue || '');
-  return date.toLocaleString();
+  return date.toLocaleString('en-PK', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export default function StudentDashboardPage() {
@@ -49,9 +67,7 @@ export default function StudentDashboardPage() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [isReady]);
 
   const handleCancel = async (bookingId) => {
@@ -88,15 +104,11 @@ export default function StudentDashboardPage() {
       const proofUrl = imgRes?.data?.url;
       if (!proofUrl) throw new Error('Upload failed');
       const res = await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
-      // Immediately sync state with backend response
       const updatedBooking = res.data || res;
       setItems((prev) => prev.map((b) => (b._id === bookingId ? updatedBooking : b)));
       toast.success('Payment proof uploaded! Tutor will review it.');
-      // Clear the file input state cleanly
       const fileInputs = document.querySelectorAll(`input[data-booking-id="${bookingId}"]`);
-      fileInputs.forEach((input) => {
-        input.value = '';
-      });
+      fileInputs.forEach((input) => { input.value = ''; });
     } catch (err) {
       toast.error(err?.message || 'Could not upload payment proof');
     } finally {
@@ -105,48 +117,114 @@ export default function StudentDashboardPage() {
   };
 
   if (!isReady) {
-    return <div className="container py-5 text-secondary">Loading session…</div>;
+    return (
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.skeletonCard}>
+            <div className={styles.skeleton} style={{ width: '40%', height: 20, marginBottom: 10 }} />
+            <div className={styles.skeleton} style={{ width: '25%', height: 14 }} />
+          </div>
+        </div>
+      </div>
+    );
   }
+
+  const firstName = user?.name?.split(' ')[0] || 'Student';
+
+  // Derived stats
+  const totalBookings   = items.length;
+  const activeSessions  = items.filter((b) => ['pending', 'confirmed'].includes(b.status)).length;
+  const pendingPayments = items.filter((b) => b.paymentStatus === 'pending').length;
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`}>
-        <div className={styles.pageHeader}>
-          <div>
-            <h1 className={styles.pageTitle}>My Bookings</h1>
-            <p className={styles.pageSubtitle}>Track your tutoring sessions &amp; payments.</p>
+      <div className={styles.container}>
+
+        {/* ── Greeting ── */}
+        <div className={styles.greeting}>
+          <p className={styles.greetingEyebrow}>Student Dashboard · {user?.department || 'NUST'}</p>
+          <h1 className={styles.greetingTitle}>
+            {getGreeting()}, <em>{firstName}.</em>
+          </h1>
+          <p className={styles.greetingSub}>
+            Here&apos;s an overview of your tutoring activity.
+          </p>
+        </div>
+
+        {/* ── Stats row ── */}
+        <div className={styles.statsRow}>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><CalendarCheck size={18} /></div>
+            <div className={styles.statBody}>
+              <div className={styles.statValue}>{totalBookings}</div>
+              <div className={styles.statLabel}>Total Sessions</div>
+            </div>
           </div>
-          <div className={styles.actionRow}>
-            <Link href="/tutors" className={`${styles.btnPrimary} ${styles.btnSmall}`}>Find Tutors</Link>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><Clock size={18} /></div>
+            <div className={styles.statBody}>
+              <div className={styles.statValue}>{activeSessions}</div>
+              <div className={styles.statLabel}>Active Now</div>
+            </div>
           </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><CreditCard size={18} /></div>
+            <div className={styles.statBody}>
+              <div className={styles.statValue}>{pendingPayments}</div>
+              <div className={styles.statLabel}>Payments Due</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── CTA Banner ── */}
+        <div className={styles.ctaBanner}>
+          <div className={styles.ctaBannerText}>
+            <p className={styles.ctaBannerTitle}>Find a Peer Tutor</p>
+            <p className={styles.ctaBannerSub}>Browse verified NUST tutors across all departments.</p>
+          </div>
+          <Link href="/tutors" className={styles.ctaBannerBtn}>
+            <GraduationCap size={14} />
+            Browse Tutors
+          </Link>
+        </div>
+
+        {/* ── My Bookings ── */}
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>My Tutoring Sessions</h2>
+          <Link href="/tutors" className={styles.sectionLink}>
+            Find more <ChevronRight size={13} />
+          </Link>
         </div>
 
         {error && <div className={styles.alertDanger}>{error}</div>}
 
         {loading ? (
-          <div style={{ display: 'grid', gap: '0.6rem' }}>
+          <div className={styles.bookingList}>
             {Array.from({ length: 3 }).map((_, idx) => (
               <div key={`sk-${idx}`} className={styles.skeletonCard}>
-                <div className={styles.skeleton} style={{ width: '50%', height: 16, marginBottom: 8 }} />
-                <div className={styles.skeleton} style={{ width: '35%', height: 12, marginBottom: 8 }} />
-                <div className={styles.skeleton} style={{ width: '25%', height: 12 }} />
+                <div className={styles.skeleton} style={{ width: '50%', height: 15, marginBottom: 9 }} />
+                <div className={styles.skeleton} style={{ width: '35%', height: 11, marginBottom: 9 }} />
+                <div className={styles.skeleton} style={{ width: '25%', height: 11 }} />
               </div>
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyStateIcon}>📚</div>
-            <div className={styles.emptyStateTitle}>No bookings yet</div>
-            <div className={styles.emptyStateText}>Find a tutor to book your first session.</div>
-            <Link href="/tutors" className={`${styles.btnPrimary} ${styles.btnSmall}`}>Browse Tutors</Link>
+          <div className={styles.emptyCard}>
+            <div className={styles.emptyIcon}><GraduationCap size={20} /></div>
+            <p className={styles.emptyTitle}>No sessions yet</p>
+            <p className={styles.emptyText}>Book your first tutoring session to get started.</p>
+            <Link href="/tutors" className={styles.btnPrimary} style={{ marginTop: '0.4rem' }}>
+              Browse Tutors
+            </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '0.6rem' }}>
+          <div className={styles.bookingList}>
             {items.map((booking) => {
               const canCancel = ['pending', 'confirmed'].includes(booking.status);
               const canReview = booking.status === 'completed' && !reviewed[booking._id];
               const isSelfReview = !!(
-                user?._id && booking.tutor?._id && String(user._id) === String(booking.tutor._id)
+                user?._id && booking.tutor?._id &&
+                String(user._id) === String(booking.tutor._id)
               );
 
               return (
@@ -159,15 +237,15 @@ export default function StudentDashboardPage() {
 
                     <div className={styles.bookingMeta}>
                       <div className={styles.bookingMetaItem}>
-                        <span>👨‍🏫</span>
+                        <GraduationCap size={13} />
                         <strong>{booking.tutor?.name || 'Tutor'}</strong>
                       </div>
                       <div className={styles.bookingMetaItem}>
-                        <span>📅</span>
+                        <CalendarCheck size={13} />
                         <span>{formatSchedule(booking.scheduledAt)}</span>
                       </div>
                       <div className={styles.bookingMetaItem}>
-                        <span>⏱</span>
+                        <Clock size={13} />
                         <span>{booking.durationMinutes || 0} mins</span>
                       </div>
                     </div>
@@ -180,21 +258,21 @@ export default function StudentDashboardPage() {
 
                     {/* Payment section */}
                     {booking.paymentStatus && booking.paymentStatus !== 'not_required' && (
-                      <div className={styles.paymentSection} style={{ marginTop: '0.5rem' }}>
+                      <div className={styles.paymentSection}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                          <span className={styles.paymentLabel} style={{ margin: 0 }}>Payment</span>
+                          <span className={styles.paymentLabel}>Payment</span>
                           <span
-                            className={styles.bookingPaymentBadge}
+                            className={styles.paymentBadge}
                             data-status={booking.paymentStatus}
                           >
-                            {booking.paymentStatus === 'pending' && 'Upload required'}
+                            {booking.paymentStatus === 'pending'  && 'Upload required'}
                             {booking.paymentStatus === 'uploaded' && 'Awaiting approval'}
                             {booking.paymentStatus === 'approved' && 'Approved ✓'}
                             {booking.paymentStatus === 'rejected' && 'Rejected'}
                           </span>
                         </div>
                         {booking.paymentStatus === 'rejected' && booking.tutorNote && (
-                          <div style={{ fontSize: '0.82rem', color: 'var(--cc-danger)', marginBottom: '0.3rem' }}>
+                          <div style={{ fontSize: '0.78rem', color: '#991B1B', marginBottom: '0.3rem' }}>
                             Tutor note: {booking.tutorNote}
                           </div>
                         )}
@@ -202,11 +280,15 @@ export default function StudentDashboardPage() {
                           <div style={{ marginBottom: '0.4rem' }}>
                             <button
                               type="button"
-                              className={styles.bookingProofButton}
+                              className={styles.proofBtn}
                               onClick={() => setProofPreview({ open: true, url: booking.paymentProofUrl })}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={booking.paymentProofUrl} alt="Payment proof" className={styles.bookingProofImage} style={{ maxWidth: 140, maxHeight: 140 }} />
+                              <img
+                                src={booking.paymentProofUrl}
+                                alt="Payment proof"
+                                className={styles.proofImg}
+                              />
                             </button>
                           </div>
                         )}
@@ -216,8 +298,7 @@ export default function StudentDashboardPage() {
                               type="file"
                               accept="image/*"
                               data-booking-id={booking._id}
-                              className={styles.filterInput}
-                              style={{ maxWidth: 240, borderRadius: 'var(--cc-radius-sm)' }}
+                              className={styles.fileInput}
                               disabled={uploadingPaymentId === booking._id}
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
@@ -225,7 +306,9 @@ export default function StudentDashboardPage() {
                               }}
                             />
                             {uploadingPaymentId === booking._id && (
-                              <div style={{ fontSize: '0.78rem', color: 'var(--cc-muted)', marginTop: '0.25rem' }}>Uploading…</div>
+                              <div style={{ fontSize: '0.74rem', color: '#9E9E9E', marginTop: '0.25rem' }}>
+                                Uploading…
+                              </div>
                             )}
                           </div>
                         )}
@@ -233,22 +316,22 @@ export default function StudentDashboardPage() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  {(canCancel || canReview) && (
+                  {/* Actions row */}
+                  {canCancel && (
                     <div className={styles.bookingActions}>
-                      {canCancel && (
-                        <button
-                          className={`${styles.btnOutlineDanger} ${styles.btnSmall}`}
-                          onClick={() => setPendingCancelId(booking._id)}
-                        >
-                          Cancel Booking
-                        </button>
-                      )}
+                      <button
+                        className={styles.btnDanger}
+                        onClick={() => setPendingCancelId(booking._id)}
+                      >
+                        <X size={13} />
+                        Cancel Booking
+                      </button>
                     </div>
                   )}
 
+                  {/* Review zone */}
                   {canReview && (
-                    <div style={{ padding: '0.75rem 1.15rem', borderTop: '1px solid var(--cc-border-light)' }}>
+                    <div className={styles.reviewZone}>
                       {isSelfReview ? (
                         <div className={styles.alertWarning}>
                           You cannot review your own tutoring profile.
@@ -264,6 +347,7 @@ export default function StudentDashboardPage() {
           </div>
         )}
       </div>
+
       <ConfirmDialog
         open={Boolean(pendingCancelId)}
         title="Cancel booking?"

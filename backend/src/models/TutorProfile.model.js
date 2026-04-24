@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const availabilitySlotSchema = new mongoose.Schema(
   {
-    day: { type: Number, required: true, min: 0, max: 6 },
+    day: { type: String, required: true, trim: true, maxlength: 10 }, // e.g. "Monday"
     startTime: { type: String, required: true, trim: true, maxlength: 10 }, // e.g. "09:00"
     endTime: { type: String, required: true, trim: true, maxlength: 10 }, // e.g. "11:00"
   },

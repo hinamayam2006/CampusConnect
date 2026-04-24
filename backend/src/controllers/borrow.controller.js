@@ -47,6 +47,21 @@ export const listBorrowItems = async (req, res) => {
   }
 };
 
+export const getBorrowItemById = async (req, res) => {
+  try {
+    const item = await Borrowing.findById(req.params.id).populate(
+      'owner',
+      'name avatar department year'
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+    return res.status(200).json({ success: true, data: item });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 export const createBorrowItem = async (req, res) => {
   try {
     const created = await Borrowing.create({ ...req.body, owner: req.user._id });

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import { Clock, Users, Car, X } from 'lucide-react';
 import styles from './ride-management.module.css';
 import { hidePassengerRide, markRideCompleted } from '../lib/apiRequests';
 import api from '../lib/api';
@@ -173,15 +174,16 @@ export default function RideManagement({ showHeader = true }) {
           </span>
         </div>
 
-        <div className={styles.statGrid}>
-          <div className={styles.statCard}>
-            <span className={styles.statLabel}>Seats filled</span>
-            <span className={styles.statValue}>{seatsTaken}/{ride.seatsTotal}</span>
-          </div>
-          <div className={styles.statCard}>
-            <span className={styles.statLabel}>Seats left</span>
-            <span className={styles.statValue}>{ride.seatsAvailable}</span>
-          </div>
+        <div className={styles.metaRow}>
+          <span className={styles.metaItem}>
+            <Users size={13} />
+            <span className={styles.metaLabel}>Filled</span>
+            {seatsTaken}/{ride.seatsTotal}
+          </span>
+          <span className={styles.metaItem}>
+            <span className={styles.metaLabel}>Available</span>
+            {ride.seatsAvailable} seat{ride.seatsAvailable !== 1 ? 's' : ''}
+          </span>
         </div>
 
         {(ride.vehicleInfo || ride.notes) && (
@@ -208,20 +210,20 @@ export default function RideManagement({ showHeader = true }) {
         )}
 
         <div className={styles.cardActions}>
-          <Link href={`/rides/${ride._id}`} className="btn btn-outline-primary btn-sm">
+          <Link href={`/rides/${ride._id}`} className={styles.btnView}>
             View ride
           </Link>
           {ride.status !== 'completed' && ride.status !== 'cancelled' && (
             <>
-              <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => openEditModal(ride)} disabled={actionLoading}>
+              <button type="button" className={styles.btnOutline} onClick={() => openEditModal(ride)} disabled={actionLoading}>
                 Edit
               </button>
-              <button type="button" className="btn btn-outline-warning btn-sm" onClick={() => handleMarkCompleted(ride._id)} disabled={actionLoading}>
+              <button type="button" className={styles.btnOutline} onClick={() => handleMarkCompleted(ride._id)} disabled={actionLoading}>
                 Mark complete
               </button>
             </>
           )}
-          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(ride._id)} disabled={actionLoading}>
+          <button type="button" className={styles.btnDanger} onClick={() => handleDelete(ride._id)} disabled={actionLoading}>
             Delete
           </button>
         </div>
@@ -249,10 +251,10 @@ export default function RideManagement({ showHeader = true }) {
       </div>
 
       <div className={styles.cardActions}>
-        <Link href={`/rides/${ride._id}`} className="btn btn-outline-primary btn-sm">
+        <Link href={`/rides/${ride._id}`} className={styles.btnView}>
           View ride
         </Link>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => handleHidePassengerRide(ride._id)} disabled={actionLoading}>
+        <button type="button" className={styles.btnOutline} onClick={() => handleHidePassengerRide(ride._id)} disabled={actionLoading}>
           Hide
         </button>
       </div>
@@ -269,23 +271,23 @@ export default function RideManagement({ showHeader = true }) {
             <h1 className={styles.title}>My rides</h1>
             <p className={styles.subtitle}>Manage the rides you host and the trips you have joined.</p>
           </div>
-          <Link href="/rides/create" className="btn btn-primary">
+          <Link href="/rides/create" className={styles.btnView}>
             Offer a ride
           </Link>
         </div>
       )}
 
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          {error}
-          <button type="button" className="btn-close" onClick={() => setError(null)}></button>
+        <div className={styles.alertError}>
+          <span>{error}</span>
+          <button type="button" className={styles.alertClose} onClick={() => setError(null)}><X size={14} /></button>
         </div>
       )}
 
       {success && (
-        <div className="alert alert-success alert-dismissible fade show" role="alert">
-          {success}
-          <button type="button" className="btn-close" onClick={() => setSuccess(null)}></button>
+        <div className={styles.alertSuccess}>
+          <span>{success}</span>
+          <button type="button" className={styles.alertClose} onClick={() => setSuccess(null)}><X size={14} /></button>
         </div>
       )}
 

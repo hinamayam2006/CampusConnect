@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import api from '../../../lib/api';
 import { createRequest } from '../../../lib/apiRequests';
 import useStore from '../../../store/useStore';
+import styles from '../../shared/marketplace-rides.module.css';
 
 function formatPrice(listing) {
   if (listing.listingType === 'exchange') return 'Exchange';
@@ -96,9 +97,9 @@ export default function ListingDetailPage() {
           )}
         </div>
         <div className="col-lg-5">
-          <span className="mc-badge">{listing.category}</span>
+          <span className={styles['mc-badge']}>{listing.category}</span>
           <h1 className="h2 mt-2">{listing.title}</h1>
-          <p className="mc-price">{formatPrice(listing)}</p>
+          <p className={styles['mc-price']}>{formatPrice(listing)}</p>
           <p className="text-secondary">{listing.description}</p>
           <ul className="list-unstyled small">
             <li>
@@ -159,7 +160,7 @@ export default function ListingDetailPage() {
                   </div>
                   <button
                     type="button"
-                    className="btn btn-primary mc-btn-interest"
+                    className={`btn btn-primary ${styles['mc-btn-interest']}`}
                     onClick={interest}
                     disabled={requesting}
                   >

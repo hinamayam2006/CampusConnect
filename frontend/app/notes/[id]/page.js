@@ -157,7 +157,7 @@ export default function NoteDetailPage() {
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 940 }}>
+      <div className={`container ${styles.container}`} style={{ maxWidth: 1000 }}>
         {/* Header */}
         <div className={styles.pageHeader}>
           <div>
@@ -165,96 +165,62 @@ export default function NoteDetailPage() {
             <p className={styles.pageSubtitle}>{note.course} • {note.subject}</p>
           </div>
           <div className={styles.actionRow}>
-            <Link href="/notes" className={styles.btnSecondary}>Back to Notes</Link>
+            <Link href="/notes" className={styles.btnSecondary}>← Back to Notes</Link>
           </div>
         </div>
 
-        <div className="row g-3">
-          {/* Left: Preview */}
-          <div className="col-12 col-lg-7">
+        <div className={styles.detailLayout}>
+          {/* ── Left: Preview + Description ── */}
+          <div>
+            {/* Preview */}
             <div className={styles.surfaceCardStrong}>
               {note.previewImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={note.previewImageUrl}
                   alt={note.title}
-                  style={{ width: '100%', borderRadius: 'var(--cc-radius-sm)', objectFit: 'contain', maxHeight: 420 }}
+                  style={{ width: '100%', borderRadius: 10, objectFit: 'contain', maxHeight: 460 }}
                 />
               ) : (
-                <div className={styles.emptyState} style={{ padding: '3rem 1.5rem' }}>
+                <div className={styles.emptyState} style={{ padding: '3.5rem 1.5rem' }}>
                   <div className={styles.emptyStateIcon}>📎</div>
                   <div className={styles.emptyStateTitle}>No preview available</div>
                   <p className={styles.emptyStateText}>Download the file to view its contents.</p>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Right: Details */}
-          <div className="col-12 col-lg-5">
-            <div className={styles.surfaceCardStrong}>
-              <h5 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Details</h5>
-              <p style={{ fontSize: '0.9rem', color: 'var(--cc-muted)', lineHeight: 1.6 }}>{note.description}</p>
-
-              {/* Uploader */}
-              <div className={styles.noteCardUploader} style={{ marginBottom: '0.75rem' }}>
-                {note.uploadedBy?.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={note.uploadedBy.avatar}
-                    alt={note.uploadedBy?.name || 'Uploader'}
-                    className={styles.uploaderAvatar}
-                    style={{ width: 28, height: 28 }}
-                  />
-                ) : (
-                  <div className={styles.uploaderAvatar} style={{ width: 28, height: 28 }}>
-                    {String(note.uploadedBy?.name || 'U').slice(0, 1)}
+            {/* Description + Tags + Rating */}
+            {(note.description || !!(note.tags || []).length) && (
+              <div className={styles.surfaceCardStrong} style={{ marginTop: '1rem' }}>
+                {note.description && (
+                  <>
+                    <div className={styles.detailSectionLabel}>About this note</div>
+                    <p className={styles.detailDesc}>{note.description}</p>
+                  </>
+                )}
+                {!!(note.tags || []).length && (
+                  <div className={styles.tagRow} style={{ marginTop: note.description ? '1rem' : 0 }}>
+                    {(note.tags || []).map((t) => (
+                      <span key={t} className={styles.tag}>{t}</span>
+                    ))}
                   </div>
                 )}
-                <span>
-                  by <Link href={`/profile/${note.uploadedBy?._id || ''}`} style={{ color: 'var(--cc-primary)', fontWeight: 600, textDecoration: 'none' }}>{note.uploadedBy?.name || 'Unknown'}</Link>
-                  {' '} • <RelativeTime value={note.createdAt} />
-                </span>
+                {Number(note.averageRating) > 0 && (
+                  <div style={{ marginTop: '0.85rem' }}>
+                    <StarRating value={Number(note.averageRating)} disabled />
+                  </div>
+                )}
               </div>
+            )}
+          </div>
 
-              {/* Tags */}
-              {!!(note.tags || []).length && (
-                <div className={`${styles.tagRow} mb-3`}>
-                  {(note.tags || []).map((t) => (
-                    <span key={t} className={styles.tag}>{t}</span>
-                  ))}
-                </div>
-              )}
-
-              <hr className={styles.divider} />
-
-              {/* Stats */}
-              <div className={styles.statGrid} style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '1rem' }}>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Downloads</div>
-                  <div className={styles.statValue}>{note.downloadCount || 0}</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>File Size</div>
-                  <div className={styles.statValue}>{formatFileSize(note.fileSize)}</div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '0.75rem' }}>
-                <StarRating value={Number(note.averageRating || 0)} disabled />
-              </div>
-
-              {(note.fileName || note.fileType) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--cc-muted)' }}>
-                  <span>{note.fileName || 'Attachment'}{note.fileType ? ` • ${note.fileType}` : ''}</span>
-                  <FileTypeBadge fileType={note.fileType} fileName={note.fileName} />
-                </div>
-              )}
-
-              <hr className={styles.divider} />
-
-              {/* Actions */}
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
+          {/* ── Right sidebar ── */}
+          <div>
+            {/* Action card */}
+            <div className={styles.surfaceCardStrong}>
+              <div className={styles.detailSectionLabel}>Get this note</div>
+              <div className={styles.detailActionsCard}>
                 <DownloadButton
                   noteId={note._id}
                   fileUrl={note.fileUrl}
@@ -270,28 +236,81 @@ export default function NoteDetailPage() {
                   initialBookmarked={isBookmarked}
                   onChange={setIsBookmarked}
                 />
-                <button type="button" className={styles.btnDanger} onClick={() => setReportOpen(true)}>
-                  Report Note
-                </button>
               </div>
-
               {!accessToken && (
-                <div className={`${styles.alertWarning} mt-2`}>
-                  You must <Link href="/login" style={{ color: 'var(--cc-primary-dark)', fontWeight: 600 }}>log in</Link> to download or review this note.
+                <div className={`${styles.alertWarning}`} style={{ marginTop: '0.75rem' }}>
+                  <Link href="/login" style={{ fontWeight: 600 }}>Log in</Link> to download or review.
+                </div>
+              )}
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#9E9E9E', fontSize: '0.75rem', cursor: 'pointer', marginTop: '0.75rem', padding: 0 }}
+                onClick={() => setReportOpen(true)}
+              >
+                Report this note
+              </button>
+            </div>
+
+            {/* Uploader Info */}
+            <div className={styles.surfaceCardStrong} style={{ marginTop: '0.75rem' }}>
+              <div className={styles.detailSectionLabel}>Uploaded by</div>
+              <div className={styles.detailUploaderCard}>
+                {note.uploadedBy?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={note.uploadedBy.avatar}
+                    alt={note.uploadedBy?.name || 'Uploader'}
+                    className={styles.uploaderAvatar}
+                    style={{ width: 38, height: 38 }}
+                  />
+                ) : (
+                  <div className={styles.uploaderAvatar} style={{ width: 38, height: 38 }}>
+                    {String(note.uploadedBy?.name || 'U').slice(0, 1)}
+                  </div>
+                )}
+                <div>
+                  <Link
+                    href={`/profile/${note.uploadedBy?._id || ''}`}
+                    style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1A1A1A', textDecoration: 'none' }}
+                  >
+                    {note.uploadedBy?.name || 'Unknown'}
+                  </Link>
+                  <div style={{ fontSize: '0.75rem', color: '#9E9E9E', marginTop: 2 }}>
+                    <RelativeTime value={note.createdAt} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className={styles.surfaceCardStrong} style={{ marginTop: '0.75rem' }}>
+              <div className={styles.detailSectionLabel}>File Info</div>
+              <div className={styles.statGrid} style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className={styles.statCard}>
+                  <div className={styles.statLabel}>Downloads</div>
+                  <div className={styles.statValue}>{note.downloadCount || 0}</div>
+                </div>
+                <div className={styles.statCard}>
+                  <div className={styles.statLabel}>Size</div>
+                  <div className={styles.statValue}>{formatFileSize(note.fileSize)}</div>
+                </div>
+              </div>
+              {(note.fileName || note.fileType) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: '0.8rem', color: '#9E9E9E' }}>
+                  <span>{note.fileName || 'Attachment'}</span>
+                  <FileTypeBadge fileType={note.fileType} fileName={note.fileName} />
                 </div>
               )}
             </div>
 
             {/* Review form after download */}
             {hasDownloaded && (
-              <div className={`${styles.surfaceCardStrong} mt-3`}>
+              <div className={styles.surfaceCardStrong} style={{ marginTop: '0.75rem' }}>
                 {isOwnNote ? (
-                  <div className={styles.alertWarning}>
-                    You cannot review your own notes.
-                  </div>
+                  <div className={styles.alertWarning}>You cannot review your own notes.</div>
                 ) : (
                   <>
-                    <h6 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Leave a Review</h6>
+                    <div className={styles.detailSectionLabel}>Leave a Review</div>
                     <ReviewForm onSubmit={handleReview} />
                   </>
                 )}
@@ -304,16 +323,14 @@ export default function NoteDetailPage() {
         <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} onSubmit={handleReport} />
 
         {/* Reviews section */}
-        <div className={`${styles.surfaceCardStrong} mt-3`}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <div>
-              <h5 style={{ fontWeight: 700, marginBottom: '0.15rem' }}>Reviews</h5>
-              <p style={{ fontSize: '0.85rem', color: 'var(--cc-muted)', margin: 0 }}>
-                {reviews.length} review{reviews.length !== 1 ? 's' : ''} from students
-              </p>
-            </div>
+        <div className={styles.surfaceCardStrong} style={{ marginTop: '1.25rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <h5 style={{ fontWeight: 700, margin: '0 0 0.15rem' }}>Reviews</h5>
+            <p style={{ fontSize: '0.82rem', color: '#9E9E9E', margin: 0 }}>
+              {reviews.length} review{reviews.length !== 1 ? 's' : ''} from students
+            </p>
           </div>
-          <ReviewsList items={reviews} emptyText="No reviews for this note yet. Download it and be the first to leave feedback!" />
+          <ReviewsList items={reviews} emptyText="No reviews yet. Download it and be the first to leave feedback!" />
         </div>
       </div>
     </div>

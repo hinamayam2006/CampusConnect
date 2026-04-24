@@ -10,12 +10,18 @@ import {
   ShoppingBag,
   BookOpen,
   Car,
-  PlusCircle,
-  FileUp,
   Bell,
   BookMarked,
   TrendingUp,
+  FileText,
+  Upload,
+  Package,
+  Clipboard,
+  Search,
+  Download,
+  ArrowUpRight,
 } from 'lucide-react';
+import styles from './home.module.css';
 
 export default function Home() {
   const { user, accessToken, setUnreadCount } = useStore();
@@ -31,8 +37,11 @@ export default function Home() {
   });
   const fetchingDashboardRef = useRef(false);
 
-  // 1. Unified State for Activity (Renamed to avoid shadowing)
   const [activities, setActivities] = useState([]);
+  const [recentNotes, setRecentNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [upcomingRides, setUpcomingRides] = useState([]);
+  const [ridesLoading, setRidesLoading] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -50,9 +59,13 @@ export default function Home() {
 
       try {
         setStatsLoading(true);
-        const [statsRes, activityRes] = await Promise.all([
+        setNotesLoading(true);
+        setRidesLoading(true);
+        const [statsRes, activityRes, notesRes, ridesRes] = await Promise.all([
           api.get('/dashboard/summary'),
           api.get('/dashboard/activity'),
+          api.get('/notes?limit=6&page=1'),
+          api.get('/rides?limit=4'),
         ]);
 
         if (statsRes.data.success) {
@@ -60,6 +73,9 @@ export default function Home() {
           setUnreadCount(statsRes.data.data.unreadNotifications ?? 0);
         }
         if (activityRes.data.success) setActivities(activityRes.data.data);
+        if (notesRes.data.success) setRecentNotes(notesRes.data.data?.items ?? []);
+        const rawRides = ridesRes.data?.data?.items ?? ridesRes.data?.data ?? ridesRes.data?.items ?? [];
+        setUpcomingRides(Array.isArray(rawRides) ? rawRides : []);
       } catch (err) {
         const status = err.response?.status || err.status;
         if (status === 429) {
@@ -70,6 +86,8 @@ export default function Home() {
         console.error('Dashboard error:', err);
       } finally {
         setStatsLoading(false);
+        setNotesLoading(false);
+        setRidesLoading(false);
         fetchingDashboardRef.current = false;
       }
     };
@@ -103,190 +121,317 @@ export default function Home() {
   // ═══════════════════════════════════════════════════════════
   if (user) {
     const firstName = user.name?.split(' ')[0] || 'User';
-    const recentActivities = activities.slice(0, 5);
 
-    const kpiData = [
+    const hour = new Date().getHours();
+    const greeting =
+      hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+    });
+
+    const metricCards = [
       {
-        label: 'Items for Sale',
-        value: statsLoading ? '...' : stats.itemsForSale,
-        icon: <ShoppingBag size={20} />,
-        color: 'var(--primary)',
-      },
-      {
-        label: 'Borrow Requests',
-        value: statsLoading ? '...' : stats.borrowRequests,
-        icon: <BookOpen size={20} />,
-        color: 'var(--accent-orange)',
+        label: 'Active Listings',
+        value: stats.itemsForSale,
+        icon: <ShoppingBag size={18} />,
+        badge: stats.itemsForSale > 0 ? `${stats.itemsForSale} for sale` : 'None active',
+        badgeColor: 'badge--blue',
       },
       {
         label: 'Upcoming Rides',
-        value: statsLoading ? '...' : stats.upcomingRides,
-        icon: <Car size={20} />,
-        color: 'var(--accent-green)',
+        value: stats.upcomingRides,
+        icon: <Car size={18} />,
+        badge: stats.upcomingRides > 0 ? `↑ ${stats.upcomingRides} today` : 'No rides',
+        badgeColor: 'badge--green',
       },
       {
-        label: 'Alerts',
-        value: statsLoading ? '...' : stats.unreadNotifications,
-        icon: <Bell size={20} />,
-        color: stats.unreadNotifications > 0 ? '#ef4444' : '#64748b',
+        label: 'Borrow Requests',
+        value: stats.borrowRequests,
+        icon: <Package size={18} />,
+        badge: stats.borrowRequests > 0 ? `${stats.borrowRequests} pending` : 'None',
+        badgeColor: 'badge--amber',
+      },
+      {
+        label: 'Notifications',
+        value: stats.unreadNotifications,
+        icon: <Bell size={18} />,
+        badge: stats.unreadNotifications > 0 ? `${stats.unreadNotifications} unread` : 'All read',
+        badgeColor: stats.unreadNotifications > 0 ? 'badge--red' : 'badge--neutral',
       },
     ];
 
-    const topQuickActions = [
+    const quickActions = [
       {
-        label: 'Sell an Item',
-        desc: 'Post books or gear',
-        href: '/marketplace/create',
-        icon: <PlusCircle size={24} />,
-        primary: true,
-      },
-      {
-        label: 'Offer a Ride',
-        desc: 'Share your route',
-        href: '/rides/create',
-        icon: <Car size={24} />,
-        primary: false,
-      },
-      {
-        label: 'Share Notes',
-        desc: 'Upload PDFs',
+        label: 'Upload Note',
         href: '/notes/upload',
-        icon: <FileUp size={24} />,
-        primary: false,
+        icon: <Upload size={18} />,
+        iconBg: '#2563EB',
+      },
+      {
+        label: 'Post Ride',
+        href: '/rides/create',
+        icon: <Car size={18} />,
+        iconBg: '#059669',
+      },
+      {
+        label: 'Post Need',
+        href: '/lostnfound/create',
+        icon: <Clipboard size={18} />,
+        iconBg: '#7C3AED',
+      },
+      {
+        label: 'List Item',
+        href: '/marketplace/create',
+        icon: <ShoppingBag size={18} />,
+        iconBg: '#D97706',
       },
     ];
+
+    /* Note pill color derived from subject/tag */
+    const pillColors = ['pill--blue', 'pill--amber', 'pill--green', 'pill--purple'];
+    const getPillClass = (note, idx) => pillColors[idx % pillColors.length];
+    const getPillLabel = (note) => {
+      if (note.tags && note.tags.length > 0) return note.tags[0].toUpperCase();
+      if (note.subject) return note.subject.slice(0, 12).toUpperCase();
+      return 'NOTE';
+    };
 
     return (
-      <div className="dashboard-container">
-        <section className="welcome-section">
-          <div className="welcome-header">
-            <div>
-              <h1>Welcome back, {firstName}!</h1>
-              <p>Here is what&apos;s happening on campus today.</p>
+      <div className={styles['dashboard-container']}>
+
+        {/* ── Top Header ── */}
+        <header className={styles['dash-header']}>
+          <div className={styles['dash-header__left']}>
+            <h1 className={styles['dash-header__greeting']}>
+              {greeting}, {firstName} <span className={styles['dash-star']}>✦</span>
+            </h1>
+            <p className={styles['dash-header__date']}>{today}</p>
+          </div>
+          <div className={styles['dash-header__right']}>
+            <div className={styles['dash-search']}>
+              <Search size={15} strokeWidth={2} className={styles['dash-search__icon']} />
+              <input
+                type="text"
+                placeholder="Search CampusConnect…"
+                className={styles['dash-search__input']}
+                readOnly
+              />
             </div>
-          </div>
-
-          <div className="kpi-grid">
-            {kpiData.map((kpi, i) => (
-              <div key={i} className="kpi-card" style={{ borderLeft: `4px solid ${kpi.color}` }}>
-                <div className="kpi-icon">{kpi.icon}</div>
-                <div className="kpi-info">
-                  <span className="kpi-value">{kpi.value}</span>
-                  <span className="kpi-label">{kpi.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="section-header">
-            <h2>Your Dashboards</h2>
-          </div>
-          <div className="quick-actions-grid">
-            {/* Student Booking Dashboard - Always show for logged-in users */}
-            <Link href="/dashboard/student" className="action-card">
-              <div className="action-icon-circle">
-                <BookOpen size={24} />
-              </div>
-              <div className="action-text">
-                <span className="action-label">My Student Bookings</span>
-                <span className="action-desc">Track tutoring sessions</span>
-              </div>
+            <Link href="/notifications" className={styles['dash-bell']} aria-label="Notifications">
+              <Bell size={17} strokeWidth={1.8} />
+              {stats.unreadNotifications > 0 && <span className={styles['dash-bell__dot']} />}
             </Link>
-
-            {/* Tutor Center - Only show if user is a tutor */}
-            {!isLoadingRoles && isTutor && (
-              <Link href="/dashboard/tutor" className="action-card">
-                <div className="action-icon-circle primary">
-                  <BookMarked size={24} />
-                </div>
-                <div className="action-text">
-                  <span className="action-label">Tutor Center</span>
-                  <span className="action-desc">Manage student bookings</span>
-                </div>
-              </Link>
-            )}
-
-            {/* My Uploads - Always show for logged-in users */}
-            <Link href="/dashboard/uploader" className="action-card">
-              <div className="action-icon-circle">
-                <FileUp size={24} />
-              </div>
-              <div className="action-text">
-                <span className="action-label">My Uploads</span>
-                <span className="action-desc">Manage your notes</span>
-              </div>
-            </Link>
-
-            {/* Earnings - Only show if user is a tutor */}
-            {!isLoadingRoles && isTutor && (
-              <Link href="/dashboard/tutor/earnings" className="action-card">
-                <div className="action-icon-circle">
-                  <TrendingUp size={24} />
-                </div>
-                <div className="action-text">
-                  <span className="action-label">Earnings</span>
-                  <span className="action-desc">View your revenue</span>
-                </div>
-              </Link>
-            )}
           </div>
+        </header>
 
-          <div className="section-header">
-            <h2>Quick Actions</h2>
-          </div>
-          <div className="quick-actions-grid">
-            {topQuickActions.map((action) => (
-              <Link key={action.label} href={action.href} className="action-card">
-                <div className={`action-icon-circle ${action.primary ? 'primary' : ''}`}>
-                  {action.icon}
-                </div>
-                <div className="action-text">
-                  <span className="action-label">{action.label}</span>
-                  <span className="action-desc">{action.desc}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="activity-section">
-          <div className="activity-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Bell size={20} color="var(--text-secondary)" />
-              <h2>Recent Activity</h2>
+        {/* ── Metric Cards Row ── */}
+        <div className={styles['metric-grid']}>
+          {metricCards.map((card) => (
+            <div key={card.label} className={styles['metric-card']}>
+              <span className={`${styles['metric-card__badge']} ${styles[card.badgeColor]}`}>{statsLoading ? '…' : card.badge}</span>
+              <div className={styles['metric-card__icon']}>{card.icon}</div>
+              <span className={styles['metric-card__value']}>{statsLoading ? '—' : card.value}</span>
+              <span className={styles['metric-card__label']}>{card.label}</span>
             </div>
-            {activities.length > 0 && (
-              <Link href="/notifications" className="view-all-link">
-                View All
+          ))}
+        </div>
+
+        {/* ── Body: 2-column grid ── */}
+        <div className={styles['dash-body']}>
+
+          {/* Left column */}
+          <div className={styles['dash-left']}>
+
+            {/* Recent Notes & Papers */}
+            <div className={styles['dash-section-card']}>
+              <div className={styles['dash-section-card__header']}>
+                <div className={styles['dash-section-card__title']}>
+                  <FileText size={16} strokeWidth={1.8} />
+                  Recent Notes &amp; Papers
+                </div>
+                <Link href="/notes" className={styles['dash-viewall']}>View all <ArrowUpRight size={13} /></Link>
+              </div>
+
+              {notesLoading ? (
+                <p className={styles['dash-empty']}>Loading…</p>
+              ) : recentNotes.length === 0 ? (
+                <p className={styles['dash-empty']}>No notes uploaded yet.</p>
+              ) : (
+                <ul className={styles['notes-list']}>
+                  {recentNotes.map((note, idx) => (
+                    <li key={note._id} className={styles['notes-list__item']}>
+                      <div className={styles['notes-list__icon']}>
+                        <FileText size={16} strokeWidth={1.6} />
+                      </div>
+                      <div className={styles['notes-list__body']}>
+                        <Link href={`/notes/${note._id}`} className={styles['notes-list__title']}>
+                          {note.title}
+                        </Link>
+                        <span className={styles['notes-list__meta']}>
+                          {note.course} · {note.uploadedBy?.name || 'Unknown'}
+                        </span>
+                      </div>
+                      <span className={`${styles['notes-pill']} ${styles[getPillClass(note, idx)]}`}>
+                        {getPillLabel(note)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Sub-dashboards row */}
+            <div className={styles['sub-dash-grid']}>
+              <Link href="/dashboard/student" className={styles['sub-dash-card']}>
+                <BookOpen size={20} strokeWidth={1.7} />
+                <span>My Bookings</span>
               </Link>
-            )}
+              {!isLoadingRoles && isTutor && (
+                <Link href="/dashboard/tutor" className={`${styles['sub-dash-card']} ${styles['sub-dash-card--dark']}`}>
+                  <BookMarked size={20} strokeWidth={1.7} />
+                  <span>Tutor Centre</span>
+                </Link>
+              )}
+              <Link href="/dashboard/uploader" className={styles['sub-dash-card']}>
+                <Download size={20} strokeWidth={1.7} />
+                <span>My Uploads</span>
+              </Link>
+              {!isLoadingRoles && isTutor && (
+                <Link href="/dashboard/tutor/earnings" className={styles['sub-dash-card']}>
+                  <TrendingUp size={20} strokeWidth={1.7} />
+                  <span>Earnings</span>
+                </Link>
+              )}
+            </div>
+
           </div>
 
-          <div className="activity-list">
-            {recentActivities.length > 0 ? (
-              recentActivities.map((notif) => (
-                <div key={notif._id} className="activity-item">
-                  <div className="activity-icon">
-                    <Bell size={18} />
-                  </div>
-                  <div className="activity-content">
-                    <div className="activity-title">
-                      {notif.link ? <Link href={notif.link}>{notif.message}</Link> : notif.message}
-                    </div>
-                    <div className="activity-meta">
-                      {notif.kind === 'activity' ? 'Activity' : 'Alert'}
-                      {notif.createdAt ? ` · ${new Date(notif.createdAt).toLocaleString()}` : ''}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-activity">
-                <p>No new activity. You&apos;re all caught up!</p>
+          {/* Right column */}
+          <aside className={styles['dash-right']}>
+
+            {/* Quick Actions (dark box) */}
+            <div className={styles['qa-box']}>
+              <p className={styles['qa-box__eyebrow']}>Quick Actions</p>
+              <div className={styles['qa-grid']}>
+                {quickActions.map((action) => (
+                  <Link key={action.label} href={action.href} className={styles['qa-item']}>
+                    <span className={styles['qa-item__icon']} style={{ background: action.iconBg }}>
+                      {action.icon}
+                    </span>
+                    <span className={styles['qa-item__label']}>{action.label}</span>
+                  </Link>
+                ))}
               </div>
-            )}
-          </div>
-        </section>
+
+              {/* Recent activity strip */}
+              <div className={styles['qa-activity']}>
+                <p className={styles['qa-activity__heading']}>Recent Activity</p>
+                {activities.slice(0, 4).length === 0 ? (
+                  <p className={styles['qa-activity__empty']}>No recent activity.</p>
+                ) : (
+                  activities.slice(0, 4).map((a) => (
+                    <div key={a._id} className={styles['qa-activity__item']}>
+                      <span className={styles['qa-activity__dot']} />
+                      <span className={styles['qa-activity__text']}>
+                        {a.link
+                          ? <Link href={a.link}>{a.message}</Link>
+                          : a.message}
+                      </span>
+                    </div>
+                  ))
+                )}
+                {activities.length > 4 && (
+                  <Link href="/notifications" className={styles['qa-activity__more']}>
+                    View all activity <ArrowUpRight size={12} />
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Upcoming Rides Widget */}
+            <div className={styles['dash-widget-card']}>
+              <div className={styles['dash-widget-head']}>
+                <span className={styles['dash-widget-title']}>
+                  <Car size={14} strokeWidth={1.8} />
+                  Upcoming Rides
+                </span>
+                <Link href="/rides" className={styles['dash-viewall']}>
+                  View all <ArrowUpRight size={12} />
+                </Link>
+              </div>
+              {ridesLoading ? (
+                <p className={styles['dash-widget-empty']}>Loading…</p>
+              ) : upcomingRides.length === 0 ? (
+                <p className={styles['dash-widget-empty']}>No rides posted yet.</p>
+              ) : (
+                <div className={styles['dash-ride-list']}>
+                  {upcomingRides.slice(0, 4).map((ride, idx) => {
+                    const dotColors = ['#3B82F6', '#22C55E', '#92400E', '#8B5CF6'];
+                    const dotColor = dotColors[idx % dotColors.length];
+                    const seats = ride.seatsAvailable ?? ride.availableSeats ?? 0;
+                    return (
+                      <div key={ride._id} className={styles['dash-ride-item']}>
+                        <span className={styles['dash-ride-dot']} style={{ background: dotColor }} />
+                        <div className={styles['dash-ride-body']}>
+                          <span className={styles['dash-ride-route']}>
+                            {ride.from || ride.origin} → {ride.to || ride.destination}
+                          </span>
+                          <span className={styles['dash-ride-time']}>
+                            {ride.departureTime
+                              ? new Date(ride.departureTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                              : ride.date
+                              ? new Date(ride.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                              : ''}
+                          </span>
+                        </div>
+                        <span className={styles['dash-ride-seats']}>{seats} seat{seats !== 1 ? 's' : ''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Your Trust Score — only shown when user has reviews */}
+            {(() => {
+              const rating = Number(user?.averageRating ?? stats?.averageRating ?? 0);
+              if (rating === 0) return null;
+              const reviewCount = user?.reviewCount ?? user?.totalReviews ?? null;
+              const topLabel = rating >= 4.8 ? 'Top 5% in your department'
+                : rating >= 4.5 ? 'Top 15% in your department'
+                : rating >= 4.0 ? 'Top 30% in your department'
+                : rating >= 3.5 ? 'Top 50% in your department'
+                : null;
+              const pct = (rating / 5) * 100;
+              return (
+                <div className={styles['dash-trust-card']}>
+                  <div className={styles['dash-trust-header']}>
+                    <span className={styles['dash-trust-title']}>Your Trust Score</span>
+                    {reviewCount != null && (
+                      <span className={styles['dash-trust-review-count']}>Based on {reviewCount} review{reviewCount !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                  <div className={styles['dash-trust-score']}>
+                    {rating.toFixed(1)}
+                    <span className={styles['dash-trust-star']}>★</span>
+                  </div>
+                  <div className={styles['dash-trust-bar-track']}>
+                    <div
+                      className={styles['dash-trust-bar-fill']}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className={styles['dash-trust-sub']}>
+                    {topLabel || 'Based on your reviews & activity'}
+                  </p>
+                </div>
+              );
+            })()}
+
+          </aside>
+
+        </div>
       </div>
     );
   }
@@ -295,25 +440,25 @@ export default function Home() {
   // LANDING PAGE RENDER
   // ═══════════════════════════════════════════════════════════
   return (
-    <div className="landing-container" onMouseMove={handleMouseMove}>
-      <div className="star-field">
-        <div className="stars-sm"></div>
-        <div className="stars-md"></div>
-        <div className="stars-lg"></div>
+    <div className={styles['landing-container']} onMouseMove={handleMouseMove}>
+      <div className={styles['star-field']}>
+        <div className={styles['stars-sm']}></div>
+        <div className={styles['stars-md']}></div>
+        <div className={styles['stars-lg']}></div>
       </div>
       {particles.map((p) => (
         <div
           key={p.id}
-          className={`particle ${p.type}`}
+          className={`${styles.particle} ${styles[p.type]}`}
           style={{ left: p.x, top: p.y, width: p.size, height: p.size }}
         />
       ))}
-      <div className="landing-content">
-        <h1 className="landing-title">CampusConnect</h1>
-        <p className="landing-subtitle">
+      <div className={styles['landing-content']}>
+        <h1 className={styles['landing-title']}>CampusConnect</h1>
+        <p className={styles['landing-subtitle']}>
           Buy, sell, borrow, carpool, and share notes — all in one place for students.
         </p>
-        <div className="landing-actions">
+        <div className={styles['landing-actions']}>
           <Link href="/register" className="btn btn-primary">
             Get Started
           </Link>

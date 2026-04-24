@@ -118,7 +118,7 @@ export const createBooking = async (req, res) => {
       await pushNotification(profile.user, {
         type: 'booking_created',
         message: `New booking request for ${course}.`,
-        link: '/dashboard/tutor',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -174,7 +174,7 @@ export const acceptBooking = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'booking_confirmed',
         message: `Your booking for ${booking.course} was confirmed.`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -224,7 +224,7 @@ export const rejectBooking = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'booking_rejected',
         message: `Your booking request for ${booking.course} was rejected.`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -273,7 +273,7 @@ export const cancelBooking = async (req, res) => {
       await pushNotification(booking.tutor, {
         type: 'booking_cancelled',
         message: `Booking for ${booking.course} was cancelled by the student.`,
-        link: '/dashboard/tutor',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -324,7 +324,7 @@ export const completeBooking = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'booking_completed',
         message: `Your booking for ${booking.course} was marked complete.`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -476,7 +476,7 @@ export const uploadPaymentProof = async (req, res) => {
       await pushNotification(booking.tutor, {
         type: 'payment_uploaded',
         message: `Payment proof uploaded for ${booking.course} booking. Please review and approve.`,
-        link: '/dashboard/tutor',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -526,7 +526,7 @@ export const approvePayment = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'payment_approved',
         message: `Your payment for ${booking.course} was approved. Booking confirmed!`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -568,7 +568,7 @@ export const rejectPayment = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'payment_rejected',
         message: `Your payment proof for ${booking.course} was rejected. Please upload a valid screenshot.`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {
@@ -631,7 +631,7 @@ export const deleteBooking = async (req, res) => {
       await pushNotification(booking.student, {
         type: 'booking_deleted',
         message: `Your session for ${booking.course} was deleted by the tutor.${reason ? ` Reason: ${reason}` : ''}`,
-        link: '/dashboard/student',
+        link: '/tutoring',
         meta: { refModel: 'Booking', refId: booking._id },
       });
     } catch (logErr) {

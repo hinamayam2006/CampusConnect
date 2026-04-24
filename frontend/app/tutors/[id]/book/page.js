@@ -1,480 +1,296 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Clock, Upload, ArrowRight, Calendar, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import useRequireAuth from '../../../../lib/useRequireAuth';
-import { fetchTutorById, createBooking, uploadPaymentProof, uploadImage } from '../../../../lib/apiRequests';
-import { dayLabel } from '../../../../lib/uiHelpers';
 import styles from '../../../tutoring/tutoring.module.css';
+import { fetchTutorById, createBooking, uploadPaymentProof, uploadImage } from '../../../../lib/apiRequests';
+import useRequireAuth from '../../../../lib/useRequireAuth';
 
-const MAX_MESSAGE = 1000;
-const MIN_ADVANCE_MINUTES = 5;
-const MIN_DURATION = 15;
-const MAX_DURATION = 480;
-const MAX_BOOKING_DAYS_AHEAD = 30;
+const DURATIONS = [30, 45, 60, 90, 120];
 
-function getMinDateTime() {
-  return new Date(Date.now() + MIN_ADVANCE_MINUTES * 60 * 1000).toISOString().slice(0, 16);
-}
-
-function getMaxDateTime() {
-  const d = new Date();
-  d.setDate(d.getDate() + MAX_BOOKING_DAYS_AHEAD);
-  return d.toISOString().slice(0, 16);
-}
-
-function computeEndTime(start, durationMin) {
-  if (!start || !durationMin) return null;
-  const d = new Date(start);
-  if (Number.isNaN(d.getTime())) return null;
-  d.setMinutes(d.getMinutes() + Number(durationMin));
-  return d;
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
 export default function BookTutorPage() {
-  const { isReady, user } = useRequireAuth();
-  const params = useParams();
-  const tutorId = params?.id;
-  const router = useRouter();
+  useRequireAuth();
+  const { id }  = useParams();
+  const router  = useRouter();
 
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [tutor, setTutor]           = useState(null);
+  const [loading, setLoading]       = useState(true);
 
-  const [course, setCourse] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState('60');
-  const [message, setMessage] = useState('');
-  const [paymentFile, setPaymentFile] = useState(null);
+  // form state
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [scheduledAt, setScheduledAt]   = useState('');
+  const [duration, setDuration]         = useState(60);
+  const [course, setCourse]             = useState('');
+  const [message, setMessage]           = useState('');
+  const [paymentFile, setPaymentFile]   = useState(null);
   const [paymentPreview, setPaymentPreview] = useState('');
-  const [uploadingPayment, setUploadingPayment] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting]     = useState(false);
 
   useEffect(() => {
-    if (!isReady || !tutorId) return undefined;
-    let cancelled = false;
+    if (!id) return;
     (async () => {
-      setLoading(true);
-      setError('');
       try {
-        const res = await fetchTutorById(tutorId);
-        if (!cancelled) setProfile(res.data || null);
-      } catch (err) {
-        if (!cancelled) setError(err?.message || 'Failed to load tutor profile');
+        const res = await fetchTutorById(id);
+        setTutor(res?.data?.data || res?.data || null);
+      } catch {
+        toast.error('Could not load tutor.');
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isReady, tutorId]);
+  }, [id]);
 
-  const estimatedCost = useMemo(() => {
-    if (!profile || profile.isFree) return 0;
-    return (Number(durationMinutes || 0) / 60) * Number(profile.hourlyRate || 0);
-  }, [profile, durationMinutes]);
+  const handlePaymentFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPaymentFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPaymentPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
 
-  const endTime = useMemo(() => computeEndTime(scheduledAt, durationMinutes), [scheduledAt, durationMinutes]);
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!course.trim()) {
-      toast.error('Please select a course.');
-      return;
-    }
-    if (course === 'custom' && !message.trim()) {
-      toast.error('Please describe the custom course in the message field.');
-      return;
-    }
-    if (!scheduledAt) {
-      toast.error('Please select a date and time for the session.');
-      return;
-    }
-
-    const scheduledDate = new Date(scheduledAt);
-    if (Number.isNaN(scheduledDate.getTime())) {
-      toast.error('Invalid date and time. Please re-enter.');
-      return;
-    }
-
-    const minDate = new Date(Date.now() + MIN_ADVANCE_MINUTES * 60 * 1000);
-    if (scheduledDate <= minDate) {
-      toast.error(`Session must be at least ${MIN_ADVANCE_MINUTES} minutes from now.`);
-      return;
-    }
-
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + MAX_BOOKING_DAYS_AHEAD);
-    if (scheduledDate > maxDate) {
-      toast.error(`You can only book up to ${MAX_BOOKING_DAYS_AHEAD} days in advance.`);
-      return;
-    }
-
-    const durationValue = Number(durationMinutes || 0);
-    if (!Number.isInteger(durationValue) || durationValue <= 0) {
-      toast.error('Duration must be a positive whole number.');
-      return;
-    }
-    if (durationValue < MIN_DURATION) {
-      toast.error(`Minimum session duration is ${MIN_DURATION} minutes.`);
-      return;
-    }
-    if (durationValue > MAX_DURATION) {
-      toast.error(`Maximum session duration is ${MAX_DURATION / 60} hours.`);
-      return;
-    }
-    if (message && message.length > MAX_MESSAGE) {
-      toast.error(`Message must be ${MAX_MESSAGE} characters or less.`);
-      return;
-    }
-
-    if (profile?.user && user) {
-      const profileUserId = String(profile.user._id || profile.user.id || '');
-      const currentUserId = String(user._id || user.id || '');
-      if (profileUserId && currentUserId && profileUserId === currentUserId) {
-        toast.error("You can't book your own tutoring profile.");
-        return;
-      }
-    }
-
+  const handleSubmit = async () => {
+    if (!scheduledAt) return toast.error('Please select a date and time.');
+    if (!course.trim()) return toast.error('Please enter the course / subject.');
+    const isFreeCheck = tutor?.isFree || tutor?.hourlyRate === 0;
+    if (!isFreeCheck && !paymentFile) return toast.error('Please upload your payment screenshot before submitting.');
     setSubmitting(true);
     try {
-      const payload = {
-        tutorProfileId: tutorId,
-        course,
-        scheduledAt: scheduledDate.toISOString(),
-        durationMinutes: durationValue,
-        studentMessage: message,
-      };
-      const bookingRes = await createBooking(payload);
-      const bookingData = bookingRes.data || bookingRes;
+      // Step 1: create the booking
+      const bookingRes = await createBooking({
+        tutorProfileId: id,
+        scheduledAt,
+        durationMinutes: duration,
+        course: course.trim(),
+        studentMessage: message.trim(),
+      });
+      const booking = bookingRes?.data || bookingRes;
+      const bookingId = booking?._id;
 
-      // If tutor is paid and student selected a payment file, upload proof
-      if (!profile.isFree && paymentFile && bookingData?._id) {
-        setUploadingPayment(true);
-        try {
-          const imgRes = await uploadImage(paymentFile);
-          const proofUrl = imgRes?.data?.url;
-          if (proofUrl) {
-            await uploadPaymentProof(bookingData._id, { paymentProofUrl: proofUrl });
-            toast.success('Booking sent with payment proof! Tutor will review and confirm.');
-          } else {
-            toast.success('Booking sent! Upload your payment screenshot from the dashboard.');
-          }
-        } catch (uploadErr) {
-          toast.success('Booking created, but payment proof upload failed. You can re-upload from the dashboard.');
-        } finally {
-          setUploadingPayment(false);
+      // Step 2: upload payment proof if paid and file selected
+      if (!isFreeCheck && paymentFile && bookingId) {
+        const upRes = await uploadImage(paymentFile);
+        const proofUrl = upRes?.data?.url || upRes?.url || '';
+        if (proofUrl) {
+          await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
         }
-      } else if (!profile.isFree) {
-        toast.success('Booking request sent! Please upload payment proof from the dashboard.');
-      } else {
-        toast.success('Booking request sent successfully! The tutor will be notified.');
       }
-      router.push('/dashboard/student');
+
+      toast.success('Booking request sent! The tutor will review your payment and confirm.');
+      router.push('/tutoring');
     } catch (err) {
-      const status = err?.response?.status;
-      if (status === 409) {
-        toast.error('This time slot is already booked. Please choose another.');
-      } else if (status === 422) {
-        toast.error(err?.response?.data?.message || 'Invalid booking details. Please review and try again.');
-      } else {
-        toast.error(err?.message || 'Could not create booking. Please try again later.');
-      }
+      toast.error(err?.response?.data?.message || 'Booking failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* ---------- SKELETON ---------- */
-  if (!isReady || loading) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 920 }}>
-          <div style={{ marginBottom: 24 }}>
-            <div className={styles.skeleton} style={{ width: '45%', height: 24, marginBottom: 10 }} />
-            <div className={styles.skeleton} style={{ width: '30%', height: 14 }} />
-          </div>
-          <div className="row g-3">
-            <div className="col-12 col-lg-6">
-              <div className={styles.skeletonCard} style={{ minHeight: 320 }}>
-                <div className={styles.skeleton} style={{ width: '60%', height: 16, marginBottom: 14 }} />
-                <div className={styles.skeleton} style={{ width: '100%', height: 38, marginBottom: 14 }} />
-                <div className={styles.skeleton} style={{ width: '100%', height: 38, marginBottom: 14 }} />
-                <div className={styles.skeleton} style={{ width: '100%', height: 38 }} />
-              </div>
-            </div>
-            <div className="col-12 col-lg-6">
-              <div className={styles.skeletonCard} style={{ minHeight: 320 }}>
-                <div className={styles.skeleton} style={{ width: '50%', height: 16, marginBottom: 14 }} />
-                <div className={styles.skeleton} style={{ width: '70%', height: 14, marginBottom: 10 }} />
-                <div className={styles.skeleton} style={{ width: '55%', height: 14 }} />
-              </div>
-            </div>
-          </div>
-        </div>
+  if (loading) return (
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.skeleton} style={{ height: 260, marginBottom: '1rem' }} />
+        <div className={styles.skeleton} style={{ height: 200 }} />
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* ---------- ERROR ---------- */
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 920 }}>
-          <div className={styles.alertDanger}>{error}</div>
-          <Link href="/tutors" className={`${styles.btnSecondary} ${styles.btnSmall}`} style={{ marginTop: '0.75rem' }}>Back to tutors</Link>
-        </div>
+  if (!tutor) return (
+    <div className={styles.page}>
+      <div className={styles.container} style={{ textAlign: 'center', paddingTop: '4rem' }}>
+        <p style={{ color: '#6B6B6B', marginBottom: '1rem' }}>Tutor not found.</p>
+        <Link href="/tutors" className={styles.btnSecondary}><ArrowLeft size={14} /> Back to Tutors</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
-  /* ---------- NOT FOUND ---------- */
-  if (!profile) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 920 }}>
-          <div className={styles.emptyState}>
-            <div className={styles.emptyStateIcon}>👤</div>
-            <div className={styles.emptyStateTitle}>Tutor not found</div>
-            <div className={styles.emptyStateText}>This profile may have been removed or the link is invalid.</div>
-            <Link href="/tutors" className={`${styles.btnPrimary} ${styles.btnSmall}`}>Browse tutors</Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const slots    = tutor.availabilitySlots || [];
+  const subjects = tutor.subjects || tutor.courses || [];
+  const isFree   = tutor.isFree || tutor.hourlyRate === 0;
+  const totalCost = isFree ? 0 : Math.round((tutor.hourlyRate || 0) * duration / 60);
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 920 }}>
+      <div className={styles.container} style={{ maxWidth: 900 }}>
+        <Link href={'/tutors/' + id} className={styles.btnSecondary} style={{ marginBottom: '1.25rem', display: 'inline-flex' }}>
+          <ArrowLeft size={14} /> Back to Profile
+        </Link>
+
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.pageTitle}>Book a session</h1>
-            <p className={styles.pageSubtitle}>with {profile.user?.name || 'Tutor'} {!profile.isFree ? `· Rs ${profile.hourlyRate}/hr` : '· Free'}</p>
-          </div>
-          <div className={styles.actionRow}>
-            <Link href={`/tutors/${tutorId}`} className={styles.btnSecondary}>Back to profile</Link>
-            <Link href="/tutors" className={styles.btnSecondary}>Browse tutors</Link>
+            <h1 className={styles.pageTitle}>Book a Session</h1>
+            <p className={styles.pageSubtitle}>
+              with {tutor.user?.name || 'your tutor'} &mdash; {isFree ? 'Free' : 'PKR ' + tutor.hourlyRate + '/hr'}
+            </p>
           </div>
         </div>
 
-        <div className="row g-3">
-          {/* ---------- FORM ---------- */}
-          <div className="col-12 col-lg-6">
-            <form onSubmit={onSubmit} className={styles.surfaceCardStrong}>
-              <h5 style={{ fontWeight: 700, marginBottom: '1rem' }}>Session details</h5>
+        <div className={styles.bookingLayout}>
+          {/* ── Left: Form ── */}
+          <div>
+            {/* Availability Slots */}
+            {slots.length > 0 && (
+              <div className={styles.formSection}>
+                <p className={styles.formTitle}><Calendar size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />Select a Time Slot</p>
+                <div className={styles.slotGrid}>
+                  {slots.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={selectedSlot === i ? `${styles.slotPill} ${styles.pillActive}` : styles.slotPill}
+                      style={{ cursor: 'pointer', border: '1px solid', borderColor: selectedSlot === i ? '#1A1A1A' : '#E8E2D9', fontFamily: 'var(--font-inter)', fontSize: '0.78rem', background: selectedSlot === i ? '#1A1A1A' : '#F2EDE4', color: selectedSlot === i ? '#fff' : '#1A1A1A', padding: '0.35rem 0.75rem', borderRadius: 8 }}
+                      onClick={() => setSelectedSlot(i)}
+                    >
+                      {s.day} {s.startTime}–{s.endTime}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#9E9E9E', marginTop: '0.5rem' }}>
+                  Pick a slot then confirm your exact date below.
+                </p>
+              </div>
+            )}
 
-              {/* Course */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>
-                  Course <span className={styles.formRequired}>*</span>
-                </label>
-                <select
-                  className="form-select"
+            {/* Date / Time */}
+            <div className={styles.formSection}>
+              <p className={styles.formTitle}><Clock size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />Session Details</p>
+              <div className={styles.fieldGroup}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Date &amp; Time *</label>
+                  <input
+                    type="datetime-local"
+                    className={styles.fieldInput}
+                    value={scheduledAt}
+                    min={new Date().toISOString().slice(0, 16)}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Duration *</label>
+                  <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+                    {DURATIONS.map((d) => <option key={d} value={d}>{d} minutes</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className={styles.field} style={{ marginTop: '0.75rem' }}>
+                <label className={styles.fieldLabel}>Course / Subject *</label>
+                <input
+                  className={styles.fieldInput}
+                  placeholder="e.g. CS101, Calculus, Organic Chemistry"
                   value={course}
                   onChange={(e) => setCourse(e.target.value)}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-                  required
-                >
-                  <option value="">Select a course…</option>
-                  {(profile.courses || []).map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value="custom">Custom course (describe in message)</option>
-                </select>
-              </div>
-
-              {/* Date & time */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>
-                  Date & time <span className={styles.formRequired}>*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  className="form-control"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                  min={getMinDateTime()}
-                  max={getMaxDateTime()}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-                  required
                 />
-                <div className={styles.formHint}>
-                  At least {MIN_ADVANCE_MINUTES} min from now · Up to {MAX_BOOKING_DAYS_AHEAD} days ahead
-                </div>
-              </div>
-
-              {/* Duration */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>
-                  Duration <span className={styles.formRequired}>*</span>
-                </label>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    min={MIN_DURATION}
-                    max={MAX_DURATION}
-                    step="15"
-                    className="form-control"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(e.target.value)}
-                    style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', maxWidth: 120 }}
-                    required
-                  />
-                  <span style={{ fontSize: '0.88rem', color: '#8a7e78' }}>minutes</span>
-                </div>
-                <div className={styles.formHint}>
-                  {MIN_DURATION}–{MAX_DURATION} min (in 15-min steps)
-                  {endTime && (
-                    <span> · Ends at <strong>{endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></span>
-                  )}
-                </div>
-              </div>
-
-              {/* Payment info & proof upload */}
-              {!profile.isFree && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div className={styles.paymentSection}>
-                    <div className={styles.paymentLabel}>Payment information</div>
-                    {profile.paymentMethod || profile.paymentAccountNumber ? (
-                      <div style={{ background: '#fdfbf8', border: '1.5px solid #e5dfd7', borderRadius: 10, padding: '0.85rem 1rem', marginBottom: '0.75rem' }}>
-                        {profile.paymentMethod && (
-                          <div style={{ marginBottom: '0.35rem', fontSize: '0.9rem' }}>
-                            <strong>Method:</strong> {profile.paymentMethod}
-                          </div>
-                        )}
-                        {profile.paymentAccountNumber && (
-                          <div style={{ marginBottom: '0.35rem', fontSize: '0.9rem' }}>
-                            <strong>Account/Number:</strong> {profile.paymentAccountNumber}
-                          </div>
-                        )}
-                        {profile.paymentInstructions && (
-                          <div style={{ fontSize: '0.85rem', color: '#8a7e78', fontStyle: 'italic' }}>
-                            {profile.paymentInstructions}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className={styles.alertInfo} style={{ marginBottom: '0.75rem' }}>
-                        Tutor has not provided payment details yet. You can still book and upload proof later.
-                      </div>
-                    )}
-
-                    <label className={styles.formLabel}>
-                      Payment screenshot {profile.paymentAccountNumber ? <span className={styles.formRequired}>*</span> : '(optional)'}
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="form-control"
-                      style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast.error('Payment screenshot must be under 5MB.');
-                            e.target.value = '';
-                            return;
-                          }
-                          setPaymentFile(file);
-                          setPaymentPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                    />
-                    <div className={styles.formHint}>Upload a screenshot of your payment (max 5MB)</div>
-                    {paymentPreview && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={paymentPreview} alt="Payment proof preview" style={{ maxWidth: 200, maxHeight: 200, borderRadius: 8, border: '1px solid #e5dfd7' }} />
-                      </div>
-                    )}
+                {subjects.length > 0 && (
+                  <div className={styles.subjectList} style={{ marginTop: '0.4rem' }}>
+                    {subjects.map((s, i) => (
+                      <button key={i} type="button" className={styles.subjectPill} style={{ cursor: 'pointer' }} onClick={() => setCourse(s)}>{s}</button>
+                    ))}
                   </div>
-                </div>
-              )}
-
-              {/* Message */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label className={styles.formLabel}>
-                  Message {course === 'custom' ? <span className={styles.formRequired}>*</span> : '(optional)'}
-                </label>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE))}
-                  placeholder="What do you need help with? Anything the tutor should prepare?"
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-                />
-                <div className={styles.formHint} style={{ textAlign: 'right' }}>
-                  {message.length}/{MAX_MESSAGE}
-                </div>
+                )}
               </div>
+              <div className={styles.field} style={{ marginTop: '0.75rem' }}>
+                <label className={styles.fieldLabel}>Message (optional)</label>
+                <textarea
+                  className={`${styles.fieldInput} ${styles.fieldTextarea}`}
+                  placeholder="Describe what you need help with, specific topics, etc."
+                  value={message}
+                  rows={3}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </div>
+            </div>
 
-              <button className={`${styles.btnPrimary} w-100`} disabled={submitting || uploadingPayment} type="submit">
-                {uploadingPayment ? 'Uploading payment proof…' : submitting ? 'Sending request…' : 'Send booking request'}
-              </button>
-            </form>
+            {/* Payment Proof */}
+            {!isFree && (
+              <div className={styles.formSection}>
+                <p className={styles.formTitle}>Payment Instructions</p>
+                {/* Payment account info */}
+                <div style={{ background: '#FFF7ED', border: '1.5px solid #FDE68A', borderRadius: 10, padding: '0.9rem 1rem', marginBottom: '0.85rem' }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#92400E', marginBottom: '0.3rem' }}>Send payment before booking</p>
+                  {tutor.paymentMethod && (
+                    <p style={{ fontSize: '0.84rem', color: '#1A1A1A', margin: '0.15rem 0' }}>
+                      <strong>Method:</strong> {tutor.paymentMethod}
+                    </p>
+                  )}
+                  {tutor.paymentAccountNumber && (
+                    <p style={{ fontSize: '0.84rem', color: '#1A1A1A', margin: '0.15rem 0' }}>
+                      <strong>Account / Number:</strong> {tutor.paymentAccountNumber}
+                    </p>
+                  )}
+                  {tutor.paymentInstructions && (
+                    <p style={{ fontSize: '0.84rem', color: '#1A1A1A', margin: '0.15rem 0' }}>
+                      <strong>Instructions:</strong> {tutor.paymentInstructions}
+                    </p>
+                  )}
+                  <p style={{ fontSize: '0.78rem', color: '#92400E', marginTop: '0.4rem' }}>
+                    After sending payment, upload your screenshot below. The tutor will verify and confirm your booking.
+                  </p>
+                </div>
+                <p className={styles.formTitle} style={{ fontSize: '0.9rem' }}>Upload Payment Screenshot *</p>
+                <label className={styles.proofWrap} style={{ cursor: 'pointer' }}>
+                  {paymentPreview
+                    ? <img src={paymentPreview} alt="Payment proof" className={styles.proofPreview} />
+                    : <div style={{ padding: '1.5rem', color: '#9E9E9E', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                        <Upload size={28} />
+                        <span style={{ fontSize: '0.82rem' }}>Click to upload payment screenshot</span>
+                      </div>
+                  }
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePaymentFile} />
+                </label>
+              </div>
+            )}
           </div>
 
-          {/* ---------- SUMMARY ---------- */}
-          <div className="col-12 col-lg-6">
-            <div className={styles.surfaceCardStrong}>
-              <h5 style={{ fontWeight: 700, marginBottom: '1rem' }}>Session summary</h5>
-
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Hourly rate</div>
-                  <div className={styles.statValue}>{profile.isFree ? 'Free' : `Rs ${profile.hourlyRate}/hr`}</div>
+          {/* ── Right: Summary ── */}
+          <div>
+            <div className={styles.bookingCard}>
+              <p className={styles.bookingTitle}>Booking Summary</p>
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#F2EDE4', borderRadius: 10, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className={styles.tutorAvatar} style={{ width: 44, height: 44, fontSize: '0.9rem' }}>
+                  {tutor.user?.avatar
+                    ? <img src={tutor.user.avatar} alt={tutor.user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : initials(tutor.user?.name)
+                  }
                 </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Estimated cost</div>
-                  <div className={styles.statValue}>{profile.isFree ? 'Free' : `Rs ${estimatedCost.toFixed(0)}`}</div>
+                <div>
+                  <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1A1A1A', margin: 0, fontFamily: 'var(--font-playfair), Georgia, serif' }}>{tutor.user?.name}</p>
+                  {tutor.averageRating > 0 && <p style={{ fontSize: '0.74rem', color: '#9E9E9E', margin: 0 }}>★ {tutor.averageRating.toFixed(1)}</p>}
                 </div>
-                {!profile.isFree && (
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>Payment</div>
-                    <div className={styles.statValue}>{paymentFile ? '✓ Screenshot selected' : 'Not uploaded yet'}</div>
-                  </div>
-                )}
-                {scheduledAt && endTime && (
-                  <div className={styles.statCard}>
-                    <div className={styles.statLabel}>Session window</div>
-                    <div className={styles.statValue} style={{ fontSize: '0.95rem' }}>
-                      {new Date(scheduledAt).toLocaleDateString()} · {new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              <hr className={styles.divider} />
-
-              <h6 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Tutor availability</h6>
-              {!profile.availabilitySlots?.length ? (
-                <p style={{ color: '#8a7e78', fontSize: '0.88rem' }}>No availability slots provided by the tutor.</p>
-              ) : (
-                <div style={{ display: 'grid', gap: '0.4rem' }}>
-                  {profile.availabilitySlots.map((s, idx) => (
-                    <div
-                      key={`${s.day}-${s.startTime}-${idx}`}
-                      className={styles.tag}
-                      style={{ justifyContent: 'flex-start', fontSize: '0.82rem', padding: '0.3rem 0.65rem' }}
-                    >
-                      {dayLabel(s.day)} · {s.startTime} – {s.endTime}
-                    </div>
-                  ))}
+              <div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabel}>Duration</span>
+                  <span className={styles.summaryVal}>{duration} min</span>
                 </div>
-              )}
-
-              <hr className={styles.divider} />
-
-              <div className={styles.alertInfo}>
-                Tutors typically respond within 24 hours. You&apos;ll receive a notification when they accept or suggest a new time.
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabel}>Rate</span>
+                  <span className={styles.summaryVal}>{isFree ? 'Free' : 'PKR ' + tutor.hourlyRate + '/hr'}</span>
+                </div>
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabel}>Total</span>
+                  <span className={styles.summaryVal} style={{ fontSize: '1rem', color: isFree ? '#16A34A' : '#1A1A1A' }}>
+                    {isFree ? 'Free' : 'PKR ' + totalCost}
+                  </span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
+                disabled={submitting}
+                onClick={handleSubmit}
+              >
+                {submitting ? 'Sending…' : <>Confirm Booking <ArrowRight size={14} /></>}
+              </button>
             </div>
           </div>
         </div>

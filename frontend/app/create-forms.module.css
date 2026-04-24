@@ -1,9 +1,15 @@
+/* ==========================================
+   Shared Create Forms Helpers
+   ========================================== */
+
 .form-page-shell {
   max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .form-required-asterisk {
-  color: #dc2626;
+  color: #DC2626;
   margin-right: 0.2rem;
   font-weight: 700;
 }

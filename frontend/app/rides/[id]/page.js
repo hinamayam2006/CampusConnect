@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { ArrowRight, ChevronLeft, Clock, Car, Users, RotateCcw } from 'lucide-react';
 import api from '../../../lib/api';
 import { createRequest } from '../../../lib/apiRequests';
 import useStore from '../../../store/useStore';
+import styles from '../rides-pages.module.css';
 
 export default function RideDetailPage() {
   const { id } = useParams();
@@ -59,110 +61,170 @@ export default function RideDetailPage() {
     }
   };
 
-  if (loading) return <div className="container py-5">Loading…</div>;
-  if (!ride) return <div className="container py-5">Ride not found.</div>;
+  if (loading) {
+    return (
+      <div className={styles.detailPage}>
+        <div className={styles.detailGrid}>
+          <div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={styles.detailCard} style={{ marginBottom: '1rem' }}>
+                <div className={styles.skeletonLine} style={{ height: i === 1 ? 28 : 18, width: i === 1 ? '70%' : '50%' }} />
+              </div>
+            ))}
+          </div>
+          <div className={styles.actionCard}>
+            <div className={styles.skeletonLine} style={{ height: 20, width: '60%', marginBottom: 12 }} />
+            <div className={styles.skeletonLine} style={{ height: 36 }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ride) {
+    return (
+      <div className={styles.detailPage}>
+        <Link href="/rides/browse" className={styles.detailBackLink}><ChevronLeft size={15} /> Back to browse</Link>
+        <div className={styles.detailCard} style={{ textAlign: 'center', padding: '2.5rem' }}>
+          <Car size={36} style={{ opacity: 0.2, marginBottom: '0.75rem', display: 'block', margin: '0 auto 0.75rem' }} />
+          <p style={{ margin: 0, color: 'var(--text-muted)' }}>Ride not found or no longer available.</p>
+        </div>
+      </div>
+    );
+  }
 
   const driver = ride.driver;
+  const driverInitials = driver?.name ? driver.name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') : '?';
   const isDriver = user && String(user._id) === String(driver?._id || driver);
   const already = user && ride.passengers?.some((p) => String(p.user?._id || p.user) === String(user._id));
-  const mapSrc = `https://maps.google.com/maps?saddr=${encodeURIComponent(ride.originName)}&daddr=${encodeURIComponent(
-    ride.destName
-  )}&output=embed`;
+  const mapSrc = `https://maps.google.com/maps?saddr=${encodeURIComponent(ride.originName)}&daddr=${encodeURIComponent(ride.destName)}&output=embed`;
+  const canRequest = !isDriver && ride.status === 'scheduled' && !already && ride.seatsAvailable > 0 && !ride.hasRequested;
 
   return (
-    <div className="container py-4 py-md-5">
-      <Link href="/rides/browse" className="small">
-        ← Back to browse
+    <div className={styles.detailPage}>
+      <Link href="/rides/browse" className={styles.detailBackLink}>
+        <ChevronLeft size={15} /> Back to browse
       </Link>
 
-      <div className="row g-4 mt-2">
-        <div className="col-lg-6">
-          <span className="mc-badge">{ride.recurring?.enabled ? 'Recurring route' : 'One-time'}</span>
-          <h1 className="h2 mt-2">
-            {ride.originName} → {ride.destName}
+      <div className={styles.detailGrid}>
+        {/* ── Left column ── */}
+        <div className={styles.detailLeft}>
+          <span className={styles.detailTypeBadge}>
+            {ride.recurring?.enabled ? 'Recurring Route' : 'One-time Ride'}
+          </span>
+          <h1 className={styles.detailTitle}>
+            {ride.originName} <ArrowRight size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /> {ride.destName}
           </h1>
-          <p className="text-secondary mb-2">{new Date(ride.departureTime).toLocaleString()}</p>
-          <ul className="list-unstyled small">
-            <li>
-              <strong>Seats left:</strong> {ride.seatsAvailable}
-            </li>
-            <li>
-              <strong>Vehicle:</strong> {ride.vehicleInfo || '—'}
-            </li>
-            {ride.notes && (
-              <li>
-                <strong>Notes:</strong> {ride.notes}
-              </li>
-            )}
-            {ride.recurring?.enabled && ride.recurring.daysOfWeek?.length > 0 && (
-              <li>
-                <strong>Weekly:</strong> {ride.recurring.daysOfWeek.join(', ')}
-              </li>
-            )}
-          </ul>
+          <p className={styles.detailDeparture}>
+            <Clock size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+            {new Date(ride.departureTime).toLocaleString('en-PK', { dateStyle: 'long', timeStyle: 'short' })}
+          </p>
 
+          {/* Route details */}
+          <div className={styles.detailCard}>
+            <div className={styles.detailCardLabel}>Trip Details</div>
+            <ul className={styles.detailMetaList}>
+              <li><strong>Seats left</strong> {ride.seatsAvailable}</li>
+              <li><strong>Vehicle</strong> {ride.vehicleInfo || '—'}</li>
+              {ride.recurring?.enabled && ride.recurring.daysOfWeek?.length > 0 && (
+                <li>
+                  <strong>Weekly</strong>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <RotateCcw size={12} /> {ride.recurring.daysOfWeek.join(', ')}
+                  </span>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* Notes */}
+          {ride.notes && (
+            <div className={styles.detailCard}>
+              <div className={styles.detailCardLabel}>Driver&apos;s Note</div>
+              <p className={styles.detailNotes}>{ride.notes}</p>
+            </div>
+          )}
+
+          {/* Driver */}
           {driver && (
-            <div className="border rounded-3 p-3 mb-3">
-              <div className="small text-secondary">Driver</div>
-              <Link href={`/profile/${driver._id}`} className="fw-semibold">
-                {driver.name}
-              </Link>
-              <div className="small">
-                {driver.department}
+            <div className={styles.detailCard}>
+              <div className={styles.detailCardLabel}>Driver</div>
+              <div className={styles.driverCard}>
+                <div className={styles.driverAvatar}>
+                  {driver.avatar
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={driver.avatar} alt={driver.name} />
+                    : driverInitials}
+                </div>
+                <div className={styles.driverInfo}>
+                  <Link href={`/profile/${driver._id}`} className={styles.driverName}>{driver.name}</Link>
+                  {driver.department && <div className={styles.driverDept}>{driver.department}</div>}
+                </div>
               </div>
             </div>
           )}
 
-          {!isDriver && ride.status === 'scheduled' && !already && ride.seatsAvailable > 0 && (
-            <>
-              {ride.hasRequested ? (
-                <div className="alert alert-info py-2 px-3 mb-0 small">
-                  Your request was forwarded.
-                </div>
-              ) : (
-                <>
-                  <div className="mb-3">
-                    <label htmlFor="seatCount" className="form-label small text-secondary">
-                      Seats requested
-                    </label>
-                    <input
-                      id="seatCount"
-                      type="number"
-                      min={1}
-                      max={ride.seatsAvailable}
-                      value={seatsRequested}
-                      onChange={(e) => setSeatsRequested(Math.max(1, Math.min(ride.seatsAvailable, Number(e.target.value || 1))))}
-                      className="form-control form-control-sm"
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="rideMessage" className="form-label small text-secondary">
-                      Message for the driver (optional)
-                    </label>
-                    <textarea
-                      id="rideMessage"
-                      rows={3}
-                      className="form-control"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Hi, I would love to join your trip."
-                    />
-                  </div>
-                  <button type="button" className="btn btn-primary" onClick={join} disabled={requesting}>
-                    {requesting ? 'Requesting…' : 'Request ride approval'}
-                  </button>
-                </>
-              )}
-            </>
-          )}
-          {already && <p className="text-success small mb-0">You are confirmed on this ride.</p>}
-          {isDriver && <p className="text-secondary small mb-0">You are hosting this trip.</p>}
+          {/* Map */}
+          <div className={styles.detailCard} style={{ padding: 0, overflow: 'hidden' }}>
+            <div className={styles.mapWrap}>
+              <iframe title="Route map" src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+            </div>
+          </div>
         </div>
-        <div className="col-lg-6">
-          <h2 className="h5">Route preview</h2>
-          <p className="small text-secondary">Powered by Google Maps embed (no API key required for basic directions).</p>
-          <div className="mc-map-wrap">
-            <iframe title="Route map" src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+
+        {/* ── Right column (action card) ── */}
+        <div className={styles.detailRight}>
+          <div className={styles.actionCard}>
+            <div className={styles.actionCardTitle}>Book a Seat</div>
+            <p className={styles.actionSeatsLeft}>
+              <strong>{ride.seatsAvailable}</strong> seat{ride.seatsAvailable !== 1 ? 's' : ''} available
+            </p>
+
+            {ride.hasRequested ? (
+              <div className={styles.actionInfoBanner}>Your request is pending approval.</div>
+            ) : already ? (
+              <div className={styles.actionInfoBanner}>You are confirmed on this ride.</div>
+            ) : isDriver ? (
+              <div className={styles.actionInfoBanner}>You are hosting this trip.</div>
+            ) : ride.status !== 'scheduled' ? (
+              <div className={styles.actionWarnBanner}>This ride is no longer accepting requests.</div>
+            ) : ride.seatsAvailable < 1 ? (
+              <div className={styles.actionWarnBanner}>No seats left on this ride.</div>
+            ) : !user ? (
+              <div className={styles.actionWarnBanner}>
+                <Link href="/login">Log in</Link> to request this ride.
+              </div>
+            ) : canRequest ? (
+              <>
+                <label className={styles.actionLabel} htmlFor="seatCount">Seats requested</label>
+                <input
+                  id="seatCount"
+                  type="number"
+                  min={1}
+                  max={ride.seatsAvailable}
+                  value={seatsRequested}
+                  onChange={(e) => setSeatsRequested(Math.max(1, Math.min(ride.seatsAvailable, Number(e.target.value || 1))))}
+                  className={styles.actionInput}
+                />
+                <label className={styles.actionLabel} htmlFor="rideMessage">Message (optional)</label>
+                <textarea
+                  id="rideMessage"
+                  rows={3}
+                  className={`${styles.actionInput} ${styles.actionTextarea}`}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Hi, I would love to join your trip."
+                />
+                <button
+                  type="button"
+                  className={styles.actionBtnPrimary}
+                  onClick={join}
+                  disabled={requesting}
+                >
+                  {requesting ? 'Sending request…' : 'Request Ride Approval'}
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       </div>

@@ -222,7 +222,7 @@ export const createNoteSchema = z
 
 const availabilitySlotSchema = z
   .object({
-    day: z.number().min(0).max(6),
+    day: z.string().min(1).max(10),
     startTime: z.string().min(1).max(10),
     endTime: z.string().min(1).max(10),
   })

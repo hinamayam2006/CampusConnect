@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '../../../../lib/api';
+import styles from '../../auth.module.css';
 
 export default function VerifyEmailPage() {
   const params = useParams();
@@ -44,16 +45,16 @@ export default function VerifyEmailPage() {
 
   if (!token) {
     return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <div className="auth-header">
+      <div className={styles['auth-container']}>
+        <div className={styles['auth-card']}>
+          <div className={styles['auth-header']}>
             <h1>Email Verification</h1>
             <p>Verification token is missing.</p>
           </div>
 
-          <div className="auth-form">
-            <div className="auth-message error">Verification token is missing.</div>
-            <Link href="/login" className="auth-submit-btn d-inline-flex align-items-center justify-content-center text-decoration-none">
+          <div className={styles['auth-form']}>
+            <div className={`${styles['auth-message']} ${styles['auth-message--error']}`}>Verification token is missing.</div>
+            <Link href="/login" className={styles['auth-submit-btn']}>
               Back to Login
             </Link>
           </div>
@@ -63,27 +64,27 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
+    <div className={styles['auth-container']}>
+      <div className={styles['auth-card']}>
+        <div className={styles['auth-header']}>
           <h1>Email Verification</h1>
           <p>{message}</p>
         </div>
 
-        <div className="auth-form">
+        <div className={styles['auth-form']}>
           {status === 'verifying' ? (
-            <div className="auth-message">Please wait while we verify your account.</div>
+            <div className={styles['auth-message']}>Please wait while we verify your account.</div>
           ) : status === 'success' ? (
             <>
-              <div className="auth-message success">Your email is verified. You can log in now.</div>
-              <button type="button" className="auth-submit-btn" onClick={() => router.push('/login')}>
+              <div className={`${styles['auth-message']} ${styles['auth-message--success']}`}>Your email is verified. You can log in now.</div>
+              <button type="button" className={styles['auth-submit-btn']} onClick={() => router.push('/login')}>
                 Go to Login
               </button>
             </>
           ) : (
             <>
-              <div className="auth-message error">{message}</div>
-              <Link href="/login" className="auth-submit-btn d-inline-flex align-items-center justify-content-center text-decoration-none">
+              <div className={`${styles['auth-message']} ${styles['auth-message--error']}`}>{message}</div>
+              <Link href="/login" className={styles['auth-submit-btn']}>
                 Back to Login
               </Link>
             </>

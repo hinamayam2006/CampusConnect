@@ -1,8 +1,358 @@
+/* ══════════════════════════════════════
+   Ride Management — Cream Design System
+   ══════════════════════════════════════ */
+
 .container {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0 0 0.2rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #888;
+  font-size: 0.83rem;
+}
+
+/* ── Tabs ── */
+.segmentedTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #E8E2D9;
+}
+
+.segmentButton {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #888;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.segmentButtonActive {
+  color: #1A1A1A;
+  font-weight: 700;
+  border-bottom-color: #1A1A1A;
+}
+
+/* ── Cards ── */
+.cardList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rideCard {
+  background: #fff;
+  border: 1px solid #E8E2D9;
+  border-radius: 14px;
+  padding: 1.2rem 1.3rem;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.routeTitle {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1.3;
+}
+
+.routeMeta {
+  color: #888;
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+}
+
+/* ── Status Pills ── */
+.statusPill {
+  text-transform: capitalize;
+  border-radius: 99px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusscheduled {
+  background: #DBEAFE;
+  color: #1d4ed8;
+}
+
+.statusfull {
+  background: #FEF3C7;
+  color: #b45309;
+}
+
+.statuscompleted {
+  background: #DCFCE7;
+  color: #15803d;
+}
+
+.statuscancelled,
+.statusDefault {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+/* ── Seat meta row ── */
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  background: #FAFAF9;
+  border: 1px solid #F0EBE3;
+  border-radius: 10px;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.metaLabel {
+  color: #9E9E9E;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+/* ── Info Block ── */
+.infoBlock {
+  background: #FAFAF9;
+  border: 1px solid #F0EBE3;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.infoText {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.infoText:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Passengers ── */
+.passengerBlock {
+  background: #FAFAF9;
+  border: 1px solid #F0EBE3;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.sectionLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9E9E9E;
+  margin-bottom: 0.5rem;
+}
+
+.passengerList {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.passengerItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #1A1A1A;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #F0EBE3;
+}
+
+.passengerItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.passengerMeta {
+  color: #888;
+  font-size: 0.76rem;
+}
+
+/* ── Actions ── */
+.cardActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid #F0EBE3;
+}
+
+.btnView {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #1A1A1A;
+  color: #F2EDE4;
+  border: none;
+  border-radius: 7px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+
+.btnView:hover {
+  opacity: 0.82;
+  color: #F2EDE4;
+}
+
+.btnOutline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: #1A1A1A;
+  border: 1px solid #D4CCBF;
+  border-radius: 7px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.btnOutline:hover {
+  border-color: #1A1A1A;
+  background: #F7F4F0;
+  color: #1A1A1A;
+}
+
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+  border-radius: 7px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.btnDanger:hover {
+  background: #FEF2F2;
+  border-color: #EF4444;
+  color: #B91C1C;
+}
+
+.btnDanger:disabled,
+.btnOutline:disabled,
+.btnView:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Empty / Loading ── */
+.emptyState {
+  background: #fff;
+  border: 1px dashed #D4CCBF;
+  border-radius: 14px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: #9E9E9E;
+  font-size: 0.85rem;
+}
+
+/* ── Alerts ── */
+.alertError {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #B91C1C;
+  font-size: 0.82rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alertSuccess {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  color: #15803D;
+  font-size: 0.82rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alertClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  color: inherit;
+}
+
+.alertClose:hover {
+  opacity: 1;
+}
+
 
 .header {
   display: flex;

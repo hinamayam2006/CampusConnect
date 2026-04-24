@@ -1,17 +1,24 @@
+import { Inter, Playfair_Display } from 'next/font/google';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
-import './navbar.css';
-import './auth.css';
-import './landing.css';
-import './dashboard.css';
-import './marketplace-rides.css';
-import './notifications.css';
-import './create-forms.css';
-import Navbar from '../components/layout/Navbar';
+import AppShell from '../components/layout/AppShell';
 import SessionActivityGuard from '../components/layout/SessionActivityGuard';
 import { UserRoleProvider } from '../context/UserRoleContext';
 import { Toaster } from 'react-hot-toast';
 import BootstrapClient from '../components/BootstrapClient';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800'],
+});
 
 export const metadata = {
   title: 'CampusConnect',
@@ -20,15 +27,25 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body>
         <UserRoleProvider>
           <SessionActivityGuard />
-          <Navbar />
-          <main className="main-content">
-            {children}
-          </main>
-          <Toaster position="top-right" />
+          <AppShell>{children}</AppShell>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1A1A1A',
+                color: '#FFFFFF',
+                fontFamily: 'var(--font-playfair)',
+                borderRadius: '12px',
+                fontSize: '0.88rem',
+                fontWeight: '500',
+                padding: '0.85rem 1.25rem',
+              },
+            }}
+          />
           <BootstrapClient />
         </UserRoleProvider>
       </body>

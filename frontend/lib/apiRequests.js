@@ -4,12 +4,18 @@ import api from './api';
 // UPLOAD
 // ============================================
 
-export const uploadImage = async (file) => {
+export const uploadImage = async (file, onProgress) => {
   const formData = new FormData();
   formData.append('image', file);
   try {
     const response = await api.post('/upload/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // Do NOT set Content-Type manually — browser must auto-set multipart boundary
+      timeout: 120000,
+      onUploadProgress: onProgress
+        ? (e) => {
+            if (e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+          }
+        : undefined,
     });
     return response.data;
   } catch (error) {
@@ -286,6 +292,15 @@ export const uploadNotesFile = async (formData) => {
 export const fetchBorrowItems = async (params = {}) => {
   try {
     const response = await api.get('/borrow', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const fetchBorrowItemById = async (itemId) => {
+  try {
+    const response = await api.get(`/borrow/${itemId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: error.message };

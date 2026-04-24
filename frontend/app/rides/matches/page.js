@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '../../../lib/api';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import styles from '../../shared/marketplace-rides.module.css';
 
 export default function RideMatchesPage() {
   const { isReady } = useRequireAuth();
@@ -51,8 +52,8 @@ export default function RideMatchesPage() {
           {rides.map((ride) => (
             <div key={ride._id} className="col-md-6 col-lg-4">
               <Link href={`/rides/${ride._id}`} className="text-decoration-none text-reset">
-                <div className="mc-ride-card">
-                  <div className="mc-card-body">
+                <div className={styles['mc-ride-card']}>
+                  <div className={styles['mc-card-body']}>
                     <h3 className="h6 mb-1">
                       {ride.originName} → {ride.destName}
                     </h3>

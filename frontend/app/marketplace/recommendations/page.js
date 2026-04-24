@@ -5,19 +5,20 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '../../../lib/api';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import styles from '../../shared/marketplace-rides.module.css';
 
 function ListingCard({ item }) {
   const img = item.images?.[0];
   return (
-    <div className="mc-listing-card">
+    <div className={styles['mc-listing-card']}>
       {img ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt="" className="mc-img-ph" />
+        <img src={img} alt="" className={styles['mc-img-ph']} />
       ) : (
-        <div className="mc-img-ph" />
+        <div className={styles['mc-img-ph']} />
       )}
-      <div className="mc-card-body">
-        <span className="mc-badge mb-1">{item.category}</span>
+      <div className={styles['mc-card-body']}>
+        <span className={`${styles['mc-badge']} mb-1`}>{item.category}</span>
         <h3 className="h6 mb-1">{item.title}</h3>
         <p className="text-secondary small flex-grow-1">{item.department}</p>
         <Link href={`/marketplace/${item._id}`} className="btn btn-sm btn-outline-primary mt-2">

@@ -1,495 +1,250 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, ArrowRight, Plus, X, GraduationCap, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createTutorProfile, fetchMyTutorProfile, updateTutorProfile } from '../../../lib/apiRequests';
-import useRequireAuth from '../../../lib/useRequireAuth';
-import { dayLabel } from '../../../lib/uiHelpers';
 import styles from '../../tutoring/tutoring.module.css';
+import { createTutorProfile, updateTutorProfile, fetchMyTutorProfile } from '../../../lib/apiRequests';
+import useRequireAuth from '../../../lib/useRequireAuth';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const HOURS = Array.from({ length: 24 }, (_, i) => {
+  const h = i < 10 ? '0' + i : '' + i;
+  return h + ':00';
+});
+
+const PAYMENT_METHODS = ['EasyPaisa', 'JazzCash', 'Bank Transfer', 'Cash', 'Other'];
 
 function parseCourses(text) {
-  return String(text)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return text.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
 }
 
-const MAX_BIO = 800;
-const MAX_COURSES = 12;
-const MAX_HOURLY_RATE = 10000;
-const MAX_SLOTS = 20;
-
 export default function BecomeTutorPage() {
-  const { isReady } = useRequireAuth();
+  useRequireAuth();
   const router = useRouter();
 
-  const [bio, setBio] = useState('');
-  const [coursesText, setCoursesText] = useState('');
-  const [isFree, setIsFree] = useState(false);
-  const [hourlyRate, setHourlyRate] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [profileId, setProfileId] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [profileError, setProfileError] = useState('');
+  const [profileId, setProfileId] = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
 
-  const [slots, setSlots] = useState([]);
-  const [slotDay, setSlotDay] = useState('1');
-  const [slotStart, setSlotStart] = useState('09:00');
-  const [slotEnd, setSlotEnd] = useState('10:00');
-
-  const [paymentMethodField, setPaymentMethodField] = useState('');
-  const [paymentAccountNumber, setPaymentAccountNumber] = useState('');
+  const [bio, setBio]                       = useState('');
+  const [coursesText, setCoursesText]       = useState('');
+  const [isFree, setIsFree]                 = useState(false);
+  const [hourlyRate, setHourlyRate]         = useState('');
+  const [paymentMethod, setPaymentMethod]   = useState('');
   const [paymentInstructions, setPaymentInstructions] = useState('');
+  const [slots, setSlots]                   = useState([]);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  // new slot form
+  const [slotDay, setSlotDay]     = useState('Monday');
+  const [slotStart, setSlotStart] = useState('09:00');
+  const [slotEnd, setSlotEnd]     = useState('11:00');
 
   useEffect(() => {
-    if (!isReady) return undefined;
-    let cancelled = false;
-
     (async () => {
-      setLoadingProfile(true);
-      setProfileError('');
       try {
         const res = await fetchMyTutorProfile();
-        const profile = res?.data;
-        if (!cancelled && profile?._id) {
-          setProfileId(profile._id);
+        const profile = res?.data?.data || res?.data;
+        if (profile && profile._id) {
           setIsEditing(true);
+          setProfileId(profile._id);
           setBio(profile.bio || '');
           setCoursesText((profile.courses || []).join(', '));
-          setIsFree(Boolean(profile.isFree));
-          setHourlyRate(profile.isFree ? '' : String(profile.hourlyRate || ''));
-          setSlots(profile.availabilitySlots || []);
-          setIsActive(profile.isActive ?? true);
-          setPaymentMethodField(profile.paymentMethod || '');
-          setPaymentAccountNumber(profile.paymentAccountNumber || '');
+          setIsFree(profile.isFree || false);
+          setHourlyRate(profile.hourlyRate ? String(profile.hourlyRate) : '');
+          setPaymentMethod(profile.paymentMethod || '');
           setPaymentInstructions(profile.paymentInstructions || '');
-          setConfirming(false);
+          setSlots(profile.availabilitySlots || []);
         }
-      } catch (err) {
-        const msg = err?.message || err?.errors?.[0]?.message || 'Failed to load tutor profile';
-        const isNotFound = String(msg).toLowerCase().includes('not found');
-        if (!cancelled && !isNotFound) setProfileError(msg);
-      } finally {
-        if (!cancelled) setLoadingProfile(false);
-      }
+      } catch {}
+      finally { setLoading(false); }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isReady]);
+  }, []);
 
   const addSlot = () => {
-    if (slots.length >= MAX_SLOTS) {
-      toast.error(`Maximum ${MAX_SLOTS} availability slots allowed.`);
-      return;
-    }
-    if (slotStart >= slotEnd) {
-      toast.error('End time must be after start time.');
-      return;
-    }
-    const duplicate = slots.some(
-      (s) => s.day === Number(slotDay) && s.startTime === slotStart && s.endTime === slotEnd
-    );
-    if (duplicate) {
-      toast.error('This slot already exists.');
-      return;
-    }
-    setSlots((prev) => [
-      ...prev,
-      { day: Number(slotDay), startTime: slotStart, endTime: slotEnd },
-    ]);
-    toast.success('Slot added.');
+    if (slotEnd <= slotStart) return toast.error('End time must be after start time.');
+    const dup = slots.find((s) => s.day === slotDay && s.startTime === slotStart);
+    if (dup) return toast.error('This slot already exists.');
+    setSlots((p) => [...p, { day: slotDay, startTime: slotStart, endTime: slotEnd }]);
   };
 
-  const removeSlot = (idx) => {
-    setSlots((prev) => prev.filter((_, i) => i !== idx));
-  };
+  const removeSlot = (i) => setSlots((p) => p.filter((_, idx) => idx !== i));
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-
-    const courses = parseCourses(coursesText);
-    if (!bio.trim() || bio.length < 10) {
-      toast.error('Bio must be at least 10 characters.');
-      return;
-    }
-    if (bio.length > MAX_BIO) {
-      toast.error(`Bio must be ${MAX_BIO} characters or less.`);
-      return;
-    }
-    if (courses.length === 0) {
-      toast.error('Please add at least one course.');
-      return;
-    }
-    if (courses.length > MAX_COURSES) {
-      toast.error(`Maximum ${MAX_COURSES} courses allowed.`);
-      return;
-    }
-    if (!isFree) {
-      const rate = Number(hourlyRate || 0);
-      if (rate <= 0) {
-        toast.error('Please set an hourly rate greater than 0, or mark sessions as free.');
-        return;
-      }
-      if (rate > MAX_HOURLY_RATE) {
-        toast.error(`Maximum hourly rate is Rs ${MAX_HOURLY_RATE.toLocaleString()}.`);
-        return;
-      }
-    }
-
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
-
-    setSubmitting(true);
+  const handleSubmit = async () => {
+    if (!bio.trim()) return toast.error('Please write a short bio.');
+    if (!coursesText.trim()) return toast.error('Please list at least one subject.');
+    if (!isFree && !hourlyRate) return toast.error('Enter your hourly rate or mark as free.');
+    setSaving(true);
     try {
-      const body = {
-        bio,
-        courses,
+      const payload = {
+        bio: bio.trim(),
+        courses: parseCourses(coursesText),
         isFree,
-        hourlyRate: isFree ? 0 : Number(hourlyRate || 0),
+        hourlyRate: isFree ? 0 : Number(hourlyRate),
+        paymentMethod,
+        paymentInstructions,
         availabilitySlots: slots,
-        isActive,
-        paymentMethod: isFree ? '' : paymentMethodField,
-        paymentAccountNumber: isFree ? '' : paymentAccountNumber,
-        paymentInstructions: isFree ? '' : paymentInstructions,
       };
-
       let res;
       if (isEditing && profileId) {
-        res = await updateTutorProfile(profileId, body);
-        const updated = res?.data || res;
-        toast.success('Profile updated successfully! Students can see your changes now.');
-        router.push(`/tutors/${updated._id}`);
+        res = await updateTutorProfile(profileId, payload);
       } else {
-        res = await createTutorProfile(body);
-        const created = res?.data || res;
-        toast.success('Tutor profile created! You are now visible to students.');
-        router.push(`/tutors/${created._id}`);
+        res = await createTutorProfile(payload);
+      }
+      if (isEditing) {
+        toast.success('Profile updated!');
+        router.push('/tutors/' + profileId);
+      } else {
+        const created = res?.data?.data || res?.data;
+        toast.success('Tutor profile created! You can now be booked by students.');
+        router.push(created?._id ? '/tutors/' + created._id : '/tutors');
       }
     } catch (err) {
-      const status = err.response?.status;
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0]?.message ||
-        err.message ||
-        `Could not ${isEditing ? 'update' : 'create'} tutor profile`;
-
-      if (status === 409) {
-        toast.error('You already have a tutor profile. Loading it now…');
-        setConfirming(false);
-        // Reload profile
-        try {
-          const res = await fetchMyTutorProfile();
-          if (res?.data?._id) router.push(`/tutors/${res.data._id}`);
-        } catch { /* ignore */ }
-      } else {
-        toast.error(msg);
-      }
+      toast.error(err?.message || err?.response?.data?.message || 'Could not save profile.');
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
-  /* ---------- SKELETON ---------- */
-  if (!isReady || loadingProfile) {
-    return (
-      <div className={styles.page}>
-        <div className="container" style={{ maxWidth: 840 }}>
-          <div style={{ marginBottom: 24 }}>
-            <div className={styles.skeleton} style={{ width: '50%', height: 24, marginBottom: 10 }} />
-            <div className={styles.skeleton} style={{ width: '35%', height: 14 }} />
-          </div>
-          <div className={styles.skeletonCard} style={{ minHeight: 300 }}>
-            <div className={styles.skeleton} style={{ width: '100%', height: 80, marginBottom: 14 }} />
-            <div className={styles.skeleton} style={{ width: '100%', height: 38, marginBottom: 14 }} />
-            <div className={styles.skeleton} style={{ width: '60%', height: 38, marginBottom: 14 }} />
-            <div className={styles.skeleton} style={{ width: '40%', height: 38 }} />
-          </div>
-        </div>
+  if (loading) return (
+    <div className={styles.page}>
+      <div className={styles.container} style={{ maxWidth: 700 }}>
+        <div className={styles.skeleton} style={{ height: 260 }} />
       </div>
-    );
-  }
-
-  const courseCount = parseCourses(coursesText).length;
+    </div>
+  );
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 840 }}>
+      <div className={styles.container} style={{ maxWidth: 700 }}>
+        <Link href="/tutors" className={styles.btnSecondary} style={{ marginBottom: '1.25rem', display: 'inline-flex' }}>
+          <ArrowLeft size={14} /> Back to Tutors
+        </Link>
+
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.pageTitle}>{isEditing ? 'Update your tutor profile' : 'Become a tutor'}</h1>
-            <p className={styles.pageSubtitle}>
-              {isEditing ? 'Refine your expertise and availability.' : 'Share what you know and help classmates succeed.'}
-            </p>
-          </div>
-          <div className={styles.actionRow}>
-            <Link href="/tutors" className={`${styles.btnSecondary} ${styles.btnSmall}`}>Cancel</Link>
-            <Link href="/tutoring" className={`${styles.btnSecondary} ${styles.btnSmall}`}>Tutoring hub</Link>
+            <h1 className={styles.pageTitle}>{isEditing ? 'Edit Tutor Profile' : 'Become a Tutor'}</h1>
+            <p className={styles.pageSubtitle}>Share your knowledge and help fellow students succeed.</p>
           </div>
         </div>
 
-        {profileError && <div className={styles.alertWarning}>{profileError}</div>}
-
-        <form onSubmit={onSubmit} className={styles.surfaceCardStrong}>
-          {/* Summary stats */}
-          <div className={styles.statGrid} style={{ marginBottom: '1.5rem' }}>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Courses</div>
-              <div className={styles.statValue}>{courseCount}</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Slots</div>
-              <div className={styles.statValue}>{slots.length}</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Rate</div>
-              <div className={styles.statValue}>{isFree ? 'Free' : hourlyRate ? `Rs ${hourlyRate}/hr` : '—'}</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statLabel}>Status</div>
-              <div className={styles.statValue}>{isActive ? 'Active' : 'Hidden'}</div>
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div style={{ marginBottom: '1rem' }}>
-            <label className={styles.formLabel}>
-              Bio <span className={styles.formRequired}>*</span>
-            </label>
+        {/* Bio */}
+        <div className={styles.formSection}>
+          <p className={styles.formTitle}><GraduationCap size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />About You</p>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Bio *</label>
             <textarea
-              className="form-control"
-              rows={4}
+              className={`${styles.fieldInput} ${styles.fieldTextarea}`}
+              placeholder="Tell students about your experience, teaching style, and strengths…"
               value={bio}
-              onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
-              placeholder="Tell students about your experience, teaching style, and what you can help with…"
-              style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-              required
+              rows={4}
+              onChange={(e) => setBio(e.target.value)}
             />
-            <div className={styles.formHint} style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Min 10 characters</span>
-              <span>{bio.length}/{MAX_BIO}</span>
-            </div>
+            <p className={styles.charCount}>{bio.length} / 500 characters</p>
           </div>
-
-          {/* Courses */}
-          <div style={{ marginBottom: '1rem' }}>
-            <label className={styles.formLabel}>
-              Courses <span className={styles.formRequired}>*</span>
-            </label>
-            <input
-              className="form-control"
+          <div className={styles.field} style={{ marginTop: '0.75rem' }}>
+            <label className={styles.fieldLabel}>Subjects / Courses *</label>
+            <textarea
+              className={`${styles.fieldInput} ${styles.fieldTextarea}`}
+              placeholder="e.g. CS101, Calculus, Organic Chemistry — separate with commas or new lines"
               value={coursesText}
+              rows={2}
               onChange={(e) => setCoursesText(e.target.value)}
-              placeholder="DSA, Calculus, DBMS"
-              style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
-              required
             />
-            <div className={styles.formHint}>Comma separated · {courseCount}/{MAX_COURSES} courses</div>
           </div>
+        </div>
 
-          {/* Free / Active toggles */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '1rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                checked={isFree}
-                onChange={(e) => setIsFree(e.target.checked)}
-              />
-              Free sessions
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-              <input
-                type="checkbox"
-                className="form-check-input"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-              />
-              Visible to students
-            </label>
-          </div>
-
-          {/* Hourly rate */}
+        {/* Pricing */}
+        <div className={styles.formSection}>
+          <p className={styles.formTitle}>Pricing</p>
+          <label className={styles.toggle} style={{ marginBottom: '1rem' }}>
+            <input type="checkbox" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} />
+            <span className={styles.toggleSlider} />
+            <span className={styles.toggleLabel}>Offer free tutoring</span>
+          </label>
           {!isFree && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label className={styles.formLabel}>
-                Hourly rate (Rs) <span className={styles.formRequired}>*</span>
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <div className={styles.fieldGroup}>
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>Hourly Rate (PKR) *</label>
                 <input
-                  className="form-control"
                   type="number"
-                  min="1"
-                  max={MAX_HOURLY_RATE}
+                  min="0"
+                  className={styles.fieldInput}
+                  placeholder="e.g. 500"
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="200"
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', maxWidth: 160 }}
-                  required
                 />
-                <span style={{ fontSize: '0.88rem', color: '#8a7e78' }}>per hour</span>
               </div>
-              <div className={styles.formHint}>Max Rs {MAX_HOURLY_RATE.toLocaleString()}/hr</div>
-            </div>
-          )}
-
-          {/* Payment information for paid tutors */}
-          {!isFree && (
-            <>
-              <hr className={styles.divider} />
-              <h6 style={{ fontWeight: 700, marginBottom: '0.65rem' }}>Payment information</h6>
-              <p style={{ fontSize: '0.85rem', color: '#8a7e78', marginBottom: '0.75rem' }}>
-                Students will see this information when booking. They will send payment to this account and upload a screenshot as proof.
-              </p>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>Payment method</label>
-                <select
-                  className="form-select"
-                  value={paymentMethodField}
-                  onChange={(e) => setPaymentMethodField(e.target.value)}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', maxWidth: 220 }}
-                >
-                  <option value="">Select…</option>
-                  <option value="JazzCash">JazzCash</option>
-                  <option value="EasyPaisa">EasyPaisa</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Cash">Cash</option>
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>Payment Method</label>
+                <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                  <option value="">Select method</option>
+                  {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>Account / Phone number</label>
+              <div className={styles.field} style={{ gridColumn: '1 / -1' }}>
+                <label className={styles.fieldLabel}>Payment Details (e.g. account number)</label>
                 <input
-                  className="form-control"
-                  value={paymentAccountNumber}
-                  onChange={(e) => setPaymentAccountNumber(e.target.value.slice(0, 50))}
-                  placeholder="e.g. 03001234567"
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', maxWidth: 260 }}
-                />
-                <div className={styles.formHint}>Students will send payment to this number/account</div>
-              </div>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label className={styles.formLabel}>Payment instructions (optional)</label>
-                <textarea
-                  className="form-control"
-                  rows={2}
+                  className={styles.fieldInput}
+                  placeholder="e.g. 0300-1234567"
                   value={paymentInstructions}
-                  onChange={(e) => setPaymentInstructions(e.target.value.slice(0, 300))}
-                  placeholder="e.g. Send payment to this easypaisa/jazzcash number and upload screenshot"
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7' }}
+                  onChange={(e) => setPaymentInstructions(e.target.value)}
                 />
-                <div className={styles.formHint} style={{ textAlign: 'right' }}>
-                  {paymentInstructions.length}/300
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Availability */}
+        <div className={styles.formSection}>
+          <p className={styles.formTitle}>Availability</p>
+          {slots.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              {slots.map((s, i) => (
+                <div key={i} className={styles.slotRow}>
+                  <span className={styles.slotDayBadge}>{s.day.slice(0, 3)}</span>
+                  <span className={styles.slotTime}>{s.startTime} – {s.endTime}</span>
+                  <button type="button" className={styles.slotRemove} onClick={() => removeSlot(i)}>
+                    <X size={14} />
+                  </button>
                 </div>
-              </div>
-            </>
-          )}
-
-          <hr className={styles.divider} />
-
-          {/* Availability slots */}
-          <div style={{ marginBottom: '1rem' }}>
-            <h6 style={{ fontWeight: 700, marginBottom: '0.65rem' }}>Availability slots</h6>
-
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
-              <div>
-                <label className={styles.formLabel} style={{ marginBottom: '0.25rem' }}>Day</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={slotDay}
-                  onChange={(e) => setSlotDay(e.target.value)}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', width: 110 }}
-                >
-                  <option value="0">Sun</option>
-                  <option value="1">Mon</option>
-                  <option value="2">Tue</option>
-                  <option value="3">Wed</option>
-                  <option value="4">Thu</option>
-                  <option value="5">Fri</option>
-                  <option value="6">Sat</option>
-                </select>
-              </div>
-              <div>
-                <label className={styles.formLabel} style={{ marginBottom: '0.25rem' }}>Start</label>
-                <input
-                  type="time"
-                  className="form-control form-control-sm"
-                  value={slotStart}
-                  onChange={(e) => setSlotStart(e.target.value)}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', width: 120 }}
-                />
-              </div>
-              <div>
-                <label className={styles.formLabel} style={{ marginBottom: '0.25rem' }}>End</label>
-                <input
-                  type="time"
-                  className="form-control form-control-sm"
-                  value={slotEnd}
-                  onChange={(e) => setSlotEnd(e.target.value)}
-                  style={{ borderRadius: 8, border: '1.5px solid #e5dfd7', width: 120 }}
-                />
-              </div>
-              <button type="button" className={`${styles.btnPrimary} ${styles.btnSmall}`} onClick={addSlot}>
-                Add slot
-              </button>
-            </div>
-
-            <div className={styles.formHint} style={{ marginBottom: '0.5rem' }}>
-              {slots.length}/{MAX_SLOTS} slots · End must be after start
-            </div>
-
-            {slots.length > 0 ? (
-              <div style={{ display: 'grid', gap: '0.4rem' }}>
-                {slots.map((s, idx) => (
-                  <div
-                    key={`${s.day}-${s.startTime}-${idx}`}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #e5dfd7', background: '#fdfbf8' }}
-                  >
-                    <span className={styles.tag} style={{ background: 'transparent', padding: 0, fontSize: '0.88rem' }}>
-                      {dayLabel(s.day)} · {s.startTime} – {s.endTime}
-                    </span>
-                    <button type="button" className={`${styles.btnDanger} ${styles.btnSmall}`} style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => removeSlot(idx)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ color: '#8a7e78', fontSize: '0.88rem' }}>No slots added yet. Students will still be able to request sessions.</p>
-            )}
-          </div>
-
-          <hr className={styles.divider} />
-
-          {/* Confirmation */}
-          {confirming && (
-            <div className={styles.alertWarning} style={{ marginBottom: '1rem' }}>
-              Please review all details above before confirming. Your profile will be {isActive ? 'visible' : 'hidden'} to students{!isFree ? ` at Rs ${hourlyRate || 0}/hr` : ''}.
+              ))}
             </div>
           )}
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className={styles.btnPrimary} disabled={submitting} type="submit">
-              {submitting ? 'Saving…' : confirming ? `Confirm & ${isEditing ? 'update' : 'create'}` : 'Review details'}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className={styles.field} style={{ flex: '1 1 140px' }}>
+              <label className={styles.fieldLabel}>Day</label>
+              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={slotDay} onChange={(e) => setSlotDay(e.target.value)}>
+                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className={styles.field} style={{ flex: '1 1 110px' }}>
+              <label className={styles.fieldLabel}>From</label>
+              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={slotStart} onChange={(e) => setSlotStart(e.target.value)}>
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <div className={styles.field} style={{ flex: '1 1 110px' }}>
+              <label className={styles.fieldLabel}>To</label>
+              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={slotEnd} onChange={(e) => setSlotEnd(e.target.value)}>
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <button type="button" className={styles.btnSecondary} style={{ flexShrink: 0, marginBottom: '0.35rem' }} onClick={addSlot}>
+              <Plus size={14} /> Add Slot
             </button>
-            {confirming && (
-              <button type="button" className={styles.btnSecondary} onClick={() => setConfirming(false)}>
-                Go back
-              </button>
-            )}
           </div>
-        </form>
+        </div>
+
+        <div className={styles.formActions}>
+          <Link href="/tutors" className={styles.btnSecondary}>Cancel</Link>
+          <button type="button" className={styles.btnPrimary} disabled={saving} onClick={handleSubmit}>
+            {saving ? 'Saving…' : <>{isEditing ? 'Save Changes' : 'Apply to Tutor'} <ArrowRight size={14} /></>}
+          </button>
+        </div>
       </div>
     </div>
   );

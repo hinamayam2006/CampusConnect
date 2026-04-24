@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import useRequireAuth from '../../../lib/useRequireAuth';
 import { createLostnFoundItem, uploadImage } from '../../../lib/apiRequests';
+import styles from '../../create-forms.module.css';
 
 const LOST_FOUND_CATEGORIES = [
   'electronics',
@@ -22,7 +23,7 @@ const LOST_FOUND_CATEGORIES = [
 function RequiredLabel({ children }) {
   return (
     <span>
-      <span className="form-required-asterisk" aria-hidden="true">*</span>
+      <span className={styles['form-required-asterisk']} aria-hidden="true">*</span>
       {children}
     </span>
   );
@@ -40,6 +41,7 @@ export default function LostnFoundCreatePage() {
   const [contactInfo, setContactInfo] = useState('');
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   const onFiles = async (e) => {
@@ -53,11 +55,16 @@ export default function LostnFoundCreatePage() {
     }
 
     setUploading(true);
+    setUploadProgress(0);
 
     try {
       const urls = [];
-      for (const file of files.slice(0, remaining)) {
-        const res = await uploadImage(file);
+      const batch = files.slice(0, remaining);
+      for (let i = 0; i < batch.length; i++) {
+        const res = await uploadImage(batch[i], (pct) => {
+          const base = Math.round((i / batch.length) * 100);
+          setUploadProgress(base + Math.round(pct / batch.length));
+        });
         const url = res?.data?.url || '';
         if (url) urls.push(url);
       }
@@ -72,6 +79,7 @@ export default function LostnFoundCreatePage() {
       toast.error(err?.message || 'Image upload failed');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       e.target.value = '';
     }
   };
@@ -110,7 +118,7 @@ export default function LostnFoundCreatePage() {
   }
 
   return (
-    <div className="container py-4 py-md-5 form-page-shell">
+    <div className={`container py-4 py-md-5 ${styles['form-page-shell']}`}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">Post Lost &amp; Found</h1>
         <Link href="/lostnfound" className="btn btn-outline-secondary btn-sm">
@@ -185,14 +193,19 @@ export default function LostnFoundCreatePage() {
             disabled={uploading || images.length >= 6}
           />
           <div className="form-text">
-            {uploading ? 'Uploading image(s)...' : `${images.length}/6 image(s) selected`}
+            {uploading ? `Uploading... ${uploadProgress}%` : `${images.length}/6 image(s) selected`}
           </div>
+          {uploading && (
+            <div style={{ marginTop: '0.4rem', height: 4, background: '#E5E7EB', borderRadius: 9999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#166534', borderRadius: 9999, width: `${uploadProgress}%`, transition: 'width 0.2s ease' }} />
+            </div>
+          )}
           {images.length > 0 && (
             <div className="d-flex flex-wrap gap-2 mt-2">
               {images.map((url) => (
                 <div key={url} className="position-relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="Uploaded item" className="form-image-preview" />
+                  <img src={url} alt="Uploaded item" className={styles['form-image-preview']} />
                   <button
                     type="button"
                     className="btn btn-sm btn-danger position-absolute top-0 end-0 translate-middle p-0"

@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { CheckCircle2, ArrowRight, MapPin, Clock, Users, Car } from 'lucide-react';
 import api from '../../../lib/api';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import styles from '../../create-forms.module.css';
 
 const DAYS = [
   { v: 0, l: 'Sun' },
@@ -20,7 +22,7 @@ const DAYS = [
 function RequiredLabel({ children }) {
   return (
     <span>
-      <span className="form-required-asterisk" aria-hidden="true">*</span>
+      <span className={styles['form-required-asterisk']} aria-hidden="true">*</span>
       {children}
     </span>
   );
@@ -38,6 +40,9 @@ export default function CreateRidePage() {
   const [recurring, setRecurring] = useState(false);
   const [days, setDays] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [publishedRide, setPublishedRide] = useState(null);
+
+  const todayMin = new Date().toISOString().slice(0, 16);
 
   const toggleDay = (value) => {
     setDays((currentDays) =>
@@ -70,7 +75,7 @@ export default function CreateRidePage() {
       const res = await api.post('/rides', body);
       if (res.data?.success && res.data?.data?._id) {
         toast.success('Ride published');
-        router.push(`/rides/${res.data.data._id}`);
+        setPublishedRide({ ...body, _id: res.data.data._id });
       } else {
         toast.error(res.data?.message || 'Could not publish ride');
       }
@@ -92,8 +97,53 @@ export default function CreateRidePage() {
     return <div className="container py-5 text-secondary">Loading session...</div>;
   }
 
+  if (publishedRide) {
+    const depDate = new Date(publishedRide.departureTime);
+    const formattedDate = depDate.toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const formattedTime = depDate.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary, #F2EDE4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div style={{ background: '#fff', borderRadius: '1.25rem', padding: '2.5rem 2rem', maxWidth: 480, width: '100%', boxShadow: '0 4px 40px rgba(0,0,0,0.08)', textAlign: 'center' }}>
+          <CheckCircle2 size={56} style={{ color: '#166534', marginBottom: '1rem' }} />
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Ride Published!</h1>
+          <p style={{ color: '#6B7280', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Your ride is now live for passengers to discover.</p>
+          <div style={{ background: '#F9FAFB', borderRadius: '0.9rem', padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <MapPin size={16} style={{ color: '#166534', flexShrink: 0 }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{publishedRide.originName}</span>
+              <ArrowRight size={14} style={{ color: '#9CA3AF' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{publishedRide.destName}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Clock size={16} style={{ color: '#166534', flexShrink: 0 }} />
+              <span style={{ color: '#374151', fontSize: '0.9rem' }}>{formattedDate} &mdash; {formattedTime}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Users size={16} style={{ color: '#166534', flexShrink: 0 }} />
+              <span style={{ color: '#374151', fontSize: '0.9rem' }}>{publishedRide.seatsTotal} seat{publishedRide.seatsTotal !== 1 ? 's' : ''} available</span>
+            </div>
+            {publishedRide.vehicleInfo && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Car size={16} style={{ color: '#166534', flexShrink: 0 }} />
+                <span style={{ color: '#374151', fontSize: '0.9rem' }}>{publishedRide.vehicleInfo}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href={`/rides/${publishedRide._id}`} className="btn btn-success" style={{ background: '#166534', borderColor: '#166534' }}>
+              View Ride
+            </Link>
+            <Link href="/rides/browse" className="btn btn-outline-secondary">
+              Browse Rides
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container py-4 py-md-5 form-page-shell">
+    <div className={`container py-4 py-md-5 ${styles['form-page-shell']}`}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">Offer a ride</h1>
         <Link href="/rides" className="btn btn-outline-secondary btn-sm">
@@ -125,6 +175,7 @@ export default function CreateRidePage() {
             className="form-control"
             value={departureTime}
             onChange={(e) => setDepartureTime(e.target.value)}
+            min={todayMin}
             required
           />
         </div>
