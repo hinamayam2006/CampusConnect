@@ -11,6 +11,14 @@ export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect')
   const cloud = process.env.CLOUDINARY_CLOUD_NAME;
   const key = process.env.CLOUDINARY_API_KEY;
   const secret = process.env.CLOUDINARY_API_SECRET;
+  
+  console.log('[Cloudinary Debug] Config check:', {
+    cloudName: cloud ? 'SET' : 'MISSING',
+    apiKey: key ? 'SET' : 'MISSING',
+    apiSecret: secret ? 'SET' : 'MISSING',
+    folder
+  });
+  
   if (!cloud || !key || !secret) {
     throw new Error(
       'Cloudinary is not configured — set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in backend/.env'
@@ -25,13 +33,22 @@ export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect')
       { folder, resource_type: 'image', use_filename: true, unique_filename: true },
       (err, result) => {
         if (err) {
+          console.error('[Cloudinary Error]', {
+            message: err.message,
+            http_code: err.http_code,
+            name: err.name,
+            folder,
+            cloudName: cloud
+          });
           reject(err);
           return;
         }
         if (!result?.secure_url) {
+          console.error('[Cloudinary Error] No URL returned:', result);
           reject(new Error('Cloudinary returned no image URL'));
           return;
         }
+        console.log('[Cloudinary Success] Upload completed:', result.secure_url);
         resolve(result.secure_url);
       }
     );
