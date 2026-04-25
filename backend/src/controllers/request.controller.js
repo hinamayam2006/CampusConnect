@@ -42,6 +42,14 @@ export const createRequest = async (req, res) => {
       context = 'marketplace';
       resourceLabel = 'listing';
       link = `/marketplace/${refId}`;
+
+      if (resource && resource.status !== 'active') {
+        await session.abortTransaction();
+        return res.status(409).json({
+          success: false,
+          message: 'This listing is already reserved or sold.',
+        });
+      }
     } else if (refModel === 'Ride') {
       resource = await Ride.findById(refId).session(session);
       owner = resource?.driver;
@@ -65,6 +73,15 @@ export const createRequest = async (req, res) => {
     if (!resource) {
       await session.abortTransaction();
       return res.status(404).json({ success: false, message: `${refModel} not found` });
+    }
+
+    const ownerUser = await User.findById(owner).select('allowMessages').session(session);
+    if (ownerUser && ownerUser.allowMessages === false) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        success: false,
+        message: 'This user is not accepting new messages right now.',
+      });
     }
 
     // Prevent user from requesting their own resource
@@ -333,6 +350,32 @@ export const approveRequest = async (req, res) => {
       ride.seatsAvailable = Math.max(0, ride.seatsTotal - confirmed - seatsRequested);
       if (ride.seatsAvailable <= 0) ride.status = 'full';
       await ride.save({ session });
+    } else if (request.context === 'marketplace') {
+      const listing = await Listing.findById(request.refId).session(session);
+      if (!listing || listing.status === 'sold') {
+        await session.abortTransaction();
+        return res.status(400).json({ success: false, message: 'This listing is no longer available' });
+      }
+      listing.status = 'sold';
+      await listing.save({ session });
+
+      // Auto-cleanup: decline other pending requests for this listing
+      await Request.updateMany(
+        { refId: listing._id, status: 'pending', _id: { $ne: request._id } },
+        { status: 'declined', declineReason: 'Item has been reserved/sold to someone else' },
+        { session }
+      );
+    } else if (request.context === 'borrow') {
+      const item = await Borrowing.findById(request.refId).session(session);
+      if (item && item.status === 'available') {
+        item.status = 'borrowed';
+        item.borrower = request.requester;
+        item.returnedAt = null;
+        if (!item.dueAt && item.requestedUntil) {
+          item.dueAt = item.requestedUntil;
+        }
+        await item.save({ session });
+      }
     }
 
     request.status = 'approved';
@@ -820,7 +863,7 @@ export const getRequestsForResource = async (req, res) => {
       status: { $in: ['pending', 'approved'] },
     })
       .populate('requester', 'name avatar department')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: 1 });
 
     res.status(200).json({
       success: true,

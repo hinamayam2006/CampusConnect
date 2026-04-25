@@ -253,3 +253,73 @@ input, textarea, select {
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;
 }
+
+/* ── Guest Navbar ── */
+.guest-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--border-neutral);
+  z-index: 1000;
+}
+
+.guest-navbar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guest-navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1A1A1A;
+  text-decoration: none;
+}
+
+.guest-navbar__logo-icon {
+  width: 32px;
+  height: 32px;
+  background: #1A1A1A;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.guest-navbar__actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-btn.login {
+  color: #1A1A1A;
+}
+
+.nav-btn.register {
+  background: #1A1A1A;
+  color: #FFFFFF;
+}
+
+.nav-btn.register:hover {
+  background: #000;
+}

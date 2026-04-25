@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, Upload, Star, Download, Eye } from 'lucide-react';
+import { BookOpen, Upload, Star, Download, Eye, ChevronLeft } from 'lucide-react';
 import styles from '../notes.module.css';
 import { fetchBookmarkedNotes } from '../../../lib/apiRequests';
 import useRequireAuth from '../../../lib/useRequireAuth';
@@ -16,12 +16,13 @@ function initials(name) {
 }
 
 export default function SavedNotesPage() {
-  useRequireAuth();
+  const { isReady } = useRequireAuth();
   const [notes, setNotes]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
   useEffect(() => {
+    if (!isReady) return;
     (async () => {
       setLoading(true);
       try {
@@ -34,7 +35,7 @@ export default function SavedNotesPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [isReady]);
 
   const handleRemove = (id) => setNotes((p) => p.filter((n) => n._id !== id));
 
@@ -42,17 +43,23 @@ export default function SavedNotesPage() {
     <div key={i} className={styles.skeleton} style={{ height: 220 }} />
   ));
 
+  if (!isReady) return <div className={styles.page} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
+
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div className="container">
         <div className={styles.pageHeader}>
-          <div>
+          <div className={styles.headerLeft}>
             <h1 className={styles.pageTitle}>Saved Notes</h1>
             <p className={styles.pageSubtitle}>Notes you have bookmarked for later reference.</p>
           </div>
           <div className={styles.actionRow}>
-            <Link href="/notes" className={styles.btnSecondary}><BookOpen size={15} /> Browse All</Link>
-            <Link href="/notes/upload" className={styles.btnPrimary}><Upload size={15} /> Upload Notes</Link>
+            <Link href="/notes" className={styles.btnOutline}>
+              <ChevronLeft size={15} /> Notes Hub
+            </Link>
+            <Link href="/notes/upload" className={styles.btnPrimary}>
+              <Upload size={15} /> Upload Notes
+            </Link>
           </div>
         </div>
 
@@ -68,7 +75,7 @@ export default function SavedNotesPage() {
             <Link href="/notes" className={styles.btnPrimary}><BookOpen size={15} /> Browse Notes</Link>
           </div>
         ) : (
-          <div className={styles.grid}>
+          <div className={styles.grid} style={{ animation: 'fadeInUp 0.6s ease both' }}>
             {notes.map((note) => (
               <div key={note._id} className={styles.card}>
                 <div className={styles.cardTop}>

@@ -50,7 +50,11 @@ export default function RequestsManagement() {
   }, [role, filter]);
 
   useEffect(() => {
-    loadRequests();
+    const timer = setTimeout(() => {
+      void loadRequests();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [loadRequests]);
 
   const handleApprove = async (requestId) => {

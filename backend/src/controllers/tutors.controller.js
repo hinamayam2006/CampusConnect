@@ -1,6 +1,7 @@
 import TutorProfile from '../models/TutorProfile.model.js';
 import Booking from '../models/Booking.model.js';
 import Review from '../models/Review.model.js';
+import { buildTokenSearchQuery } from '../utils/search.js';
 
 export const createTutorProfile = async (req, res) => {
   try {
@@ -45,13 +46,9 @@ export const listTutors = async (req, res) => {
     const { q = '', page = '1', limit = '12' } = req.query;
 
     const query = { isActive: true };
-    const search = String(q).trim();
-    if (search) {
-      const safe = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.$or = [
-        { bio: new RegExp(safe, 'i') },
-        { courses: new RegExp(safe, 'i') },
-      ];
+    const searchQuery = buildTokenSearchQuery(q, ['bio', 'courses']);
+    if (searchQuery) {
+      query.$and = searchQuery.$and;
     }
 
     const lim = Math.min(48, Math.max(1, Number(limit)));
@@ -102,7 +99,7 @@ export const getMyTutorProfile = async (req, res) => {
     );
 
     if (!profile) {
-      return res.status(404).json({ success: false, message: 'Tutor profile not found' });
+      return res.status(200).json({ success: true, data: null });
     }
 
     res.status(200).json({ success: true, data: profile });

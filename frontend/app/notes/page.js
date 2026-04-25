@@ -150,14 +150,14 @@ export default function NotesPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div className="container">
         <div className={styles.pageHeader}>
           <div>
             <h1 className={styles.pageTitle}>Notes Library</h1>
             <p className={styles.pageSubtitle}>Browse and download study notes shared by fellow students.</p>
           </div>
           <div className={styles.actionRow}>
-            <Link href="/notes/saved" className={styles.btnSecondary}><BookOpen size={15} /> Saved Notes</Link>
+            <Link href="/notes/saved" className={styles.btnOutline}><BookOpen size={15} /> Saved Notes</Link>
             <Link href="/notes/upload" className={styles.btnPrimary}><Upload size={15} /> Upload Notes</Link>
           </div>
         </div>

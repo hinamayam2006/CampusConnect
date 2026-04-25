@@ -316,6 +316,42 @@ export const createBorrowItem = async (payload) => {
   }
 };
 
+export const deleteBorrowItem = async (itemId) => {
+  try {
+    const response = await api.delete(`/borrow/${itemId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const updateBorrowItem = async (itemId, payload) => {
+  try {
+    const response = await api.put(`/borrow/${itemId}`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const markBorrowItemAsBorrowed = async (itemId, payload = {}) => {
+  try {
+    const response = await api.patch(`/borrow/${itemId}/mark-borrowed`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const markBorrowItemAsReturned = async (itemId) => {
+  try {
+    const response = await api.patch(`/borrow/${itemId}/mark-returned`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
 // ============================================
 // LOST & FOUND
 // ============================================
@@ -341,6 +377,24 @@ export const fetchLostnFoundItemById = async (itemId) => {
 export const createLostnFoundItem = async (payload) => {
   try {
     const response = await api.post('/lostnfound', payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const updateLostnFoundItem = async (itemId, payload) => {
+  try {
+    const response = await api.patch(`/lostnfound/${itemId}`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const deleteLostnFoundItem = async (itemId) => {
+  try {
+    const response = await api.delete(`/lostnfound/${itemId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: error.message };

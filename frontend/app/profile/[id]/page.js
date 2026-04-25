@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   User, BookOpen, Car, ShoppingBag, Package,
   MapPin, Shield, Eye, EyeOff, Edit3,
-  FileText, Clock,
+  FileText, Clock, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../lib/api';
@@ -98,7 +98,7 @@ function PersonalInfoTab({ profile }) {
   };
 
   return (
-    <div className={styles.formSection}>
+    <div id="profile-info-card" className={styles.formSection}>
       <h2 className={styles.sectionTitle}>Personal Information</h2>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
         {avatarPreview
@@ -186,8 +186,16 @@ function ActivityTab({ items, loading }) {
   );
 }
 
-function SettingsTab() {
-  const [settings, setSettings] = useState({ profilePublic: true, showEmail: false, allowMessages: true, showActivity: true });
+function SettingsTab({ profile, onProfileUpdated, onAccountDeleted }) {
+  const [settings, setSettings] = useState({
+    profilePublic: profile?.profilePublic !== false,
+    showEmail: !!profile?.showEmail,
+    allowMessages: profile?.allowMessages !== false,
+    showActivity: profile?.showActivity !== false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const toggle = (key) => setSettings((p) => ({ ...p, [key]: !p[key] }));
   const SETTINGS_LIST = [
     { key: 'profilePublic', name: 'Public Profile',  desc: 'Other students can find and view your profile.' },
@@ -195,6 +203,38 @@ function SettingsTab() {
     { key: 'allowMessages', name: 'Allow Messages',   desc: 'Let other students contact you about listings.' },
     { key: 'showActivity',  name: 'Show Activity',    desc: 'Display your notes and listings on your profile.' },
   ];
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await api.put('/auth/profile', settings);
+      onProfileUpdated(settings);
+      toast.success('Privacy settings saved.');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Delete your account permanently? This action cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await api.delete('/auth/profile');
+      toast.success('Account deleted.');
+      onAccountDeleted();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not delete account');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className={styles.formSection}>
       <h2 className={styles.sectionTitle}>Privacy &amp; Preferences</h2>
@@ -212,9 +252,14 @@ function SettingsTab() {
           </div>
         ))}
       </div>
+      <div className={styles.formActions}>
+        <button type="button" className={styles.btnSave} disabled={saving} onClick={handleSaveSettings}>
+          {saving ? 'Saving...' : 'Save Preferences'}
+        </button>
+      </div>
       <div className={styles.dangerZone}>
         <p className={styles.dangerTitle}>Danger Zone</p>
-        <button type="button" className={styles.btnDanger} onClick={() => toast.error('Please contact support to delete your account.')}>
+        <button type="button" className={styles.btnDanger} onClick={handleDeleteAccount} disabled={deleting}>
           <Shield size={14} /> Delete Account
         </button>
       </div>
@@ -302,13 +347,31 @@ function OnboardingView({ me, onComplete }) {
 
 export default function ProfilePage() {
   const { id } = useParams();
-  const { user: me } = useStore();
+  const { user: me, logout } = useStore();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('info');
   const [publicView, setPublicView] = useState(false);
   const [activity, setActivity] = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
+
+  const openInfoEditor = () => {
+    setTab('info');
+    requestAnimationFrame(() => {
+      const node = document.getElementById('profile-info-card');
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  };
+
+  const togglePublicView = () => {
+    if (!publicView && profile?.profilePublic === false) {
+      toast.error('Public profile is disabled in Settings, so it is currently inaccessible to others.');
+      return;
+    }
+    setPublicView((v) => !v);
+  };
 
   const isSelf = me && String(me._id) === String(id);
 
@@ -321,29 +384,70 @@ export default function ProfilePage() {
     finally { setLoading(false); }
   }, [id]);
 
-  const loadActivity = useCallback(async () => {
-    if (!isSelf) return;
-    setActivityLoading(true);
-    try {
-      const [notes, rides, listings, borrowings] = await Promise.allSettled([
-        api.get('/notes?mine=true&limit=10'),
-        api.get('/rides?mine=true&limit=10'),
-        api.get('/marketplace/listings?mine=true&limit=10'),
-        api.get('/borrowings?mine=true&limit=10'),
-      ]);
-      const merged = [
-        ...(notes.status === 'fulfilled'      ? (notes.value.data?.data      || []).map((i) => ({ ...i, _activityType: 'note' }))      : []),
-        ...(rides.status === 'fulfilled'      ? (rides.value.data?.data      || []).map((i) => ({ ...i, _activityType: 'ride' }))      : []),
-        ...(listings.status === 'fulfilled'   ? (listings.value.data?.data   || []).map((i) => ({ ...i, _activityType: 'listing' }))   : []),
-        ...(borrowings.status === 'fulfilled' ? (borrowings.value.data?.data || []).map((i) => ({ ...i, _activityType: 'borrowing' })) : []),
-      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      setActivity(merged);
-    } catch { setActivity([]); }
-    finally { setActivityLoading(false); }
-  }, [isSelf]);
+  useEffect(() => {
+    let cancelled = false;
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
-  useEffect(() => { if (tab === 'activity') loadActivity(); }, [tab, loadActivity]);
+    const fetchProfile = async () => {
+      if (!id) return;
+      try {
+        const res = await api.get(`/users/${id}`);
+        if (!cancelled && res.data.success) setProfile(res.data.data);
+      } catch {
+        if (!cancelled) setProfile(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (tab !== 'activity' || !isSelf) return;
+    let cancelled = false;
+
+    const fetchActivity = async () => {
+      setActivityLoading(true);
+      try {
+        const [notes, rides, listings, borrowings] = await Promise.allSettled([
+          api.get('/notes/mine?limit=10'),
+          api.get('/rides/mine'),
+          api.get('/marketplace/listings/mine'),
+          api.get('/borrow/mine'),
+        ]);
+
+        const myRides = rides.status === 'fulfilled'
+          ? [
+              ...(rides.value.data?.data?.asDriver || []),
+              ...(rides.value.data?.data?.asPassenger || []),
+            ]
+          : [];
+
+        const merged = [
+          ...(notes.status === 'fulfilled'      ? (notes.value.data?.data?.items || []).map((i) => ({ ...i, _activityType: 'note' }))      : []),
+          ...myRides.map((i) => ({ ...i, _activityType: 'ride' })),
+          ...(listings.status === 'fulfilled'   ? (listings.value.data?.data   || []).map((i) => ({ ...i, _activityType: 'listing' }))   : []),
+          ...(borrowings.status === 'fulfilled' ? (borrowings.value.data?.data || []).map((i) => ({ ...i, _activityType: 'borrowing' })) : []),
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (!cancelled) setActivity(merged);
+      } catch {
+        if (!cancelled) setActivity([]);
+      } finally {
+        if (!cancelled) setActivityLoading(false);
+      }
+    };
+
+    fetchActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, isSelf]);
 
   if (loading) return (
     <div className={styles.page}>
@@ -381,39 +485,57 @@ export default function ProfilePage() {
               <div className={styles.identityBadges}>
                 {profile.department && <span className={styles.deptBadge}><MapPin size={11} /> {profile.department}</span>}
                 {profile.year && <span className={styles.deptBadge}><BookOpen size={11} /> {profile.year}{ordinal(profile.year)} Year</span>}
+                {profile.email && (!publicView || profile.showEmail) && <span className={styles.deptBadge}><User size={11} /> {profile.email}</span>}
                 {profile.role === 'admin' && <span className={styles.deptBadge}><Shield size={11} /> Admin</span>}
               </div>
               {profile.bio && <p className={styles.identityBio}>{profile.bio}</p>}
             </div>
             <div className={styles.identityActions}>
-              {isSelf && !publicView && <Link href="/profile/edit" className={styles.btnEdit}><Edit3 size={14} /> Edit Profile</Link>}
+              {isSelf && !publicView && (
+                <button type="button" className={styles.btnEdit} onClick={openInfoEditor}>
+                  <Edit3 size={14} /> Edit Profile
+                </button>
+              )}
               {isSelf && (
-                <button type="button" className={styles.btnOutline} onClick={() => setPublicView((v) => !v)}>
+                <button type="button" className={styles.btnOutline} onClick={togglePublicView}>
                   {publicView ? <EyeOff size={14} /> : <Eye size={14} />}
                   {publicView ? 'My View' : 'Public'}
                 </button>
               )}
+              {!isSelf && (
+                <Link 
+                  href={`/report-issue?targetId=${id}&targetType=User`}
+                  className={styles.btnDanger}
+                  style={{ textDecoration: 'none', gap: '0.4rem', padding: '0.6rem 1rem' }}
+                >
+                  <AlertTriangle size={14} /> Report User
+                </Link>
+              )}
             </div>
           </div>
           {publicView && <div className={styles.publicBanner}><Eye size={14} /> You are previewing your profile as other students see it.</div>}
-          <div className={styles.statsRow}>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{profile.notesCount ?? profile.stats?.notes ?? 0}</span>
-              <span className={styles.statLabel}>Notes Shared</span>
+          {(isSelf || profile.showActivity !== false) ? (
+            <div className={styles.statsRow}>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{profile.notesCount ?? profile.stats?.notes ?? 0}</span>
+                <span className={styles.statLabel}>Notes Shared</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{profile.studentsTutored ?? profile.stats?.tutored ?? 0}</span>
+                <span className={styles.statLabel}>Students Tutored</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{profile.reliabilityRating ? profile.reliabilityRating.toFixed(1) : '—'}</span>
+                <span className={styles.statLabel}>Reliability</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{profile.listingsCount ?? 0}</span>
+                <span className={styles.statLabel}>Listings</span>
+              </div>
             </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{profile.studentsTutored ?? profile.stats?.tutored ?? 0}</span>
-              <span className={styles.statLabel}>Students Tutored</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{profile.reliabilityRating ? profile.reliabilityRating.toFixed(1) : '—'}</span>
-              <span className={styles.statLabel}>Reliability</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{profile.listingsCount ?? 0}</span>
-              <span className={styles.statLabel}>Listings</span>
-            </div>
-          </div>
+          ) : (
+            <div className={styles.publicBanner}><EyeOff size={14} /> This user has hidden activity from their public profile.</div>
+          )}
         </div>
         {!publicView && isSelf && (
           <>
@@ -431,7 +553,17 @@ export default function ProfilePage() {
             <div className={styles.tabContent}>
               {tab === 'info'     && <PersonalInfoTab profile={profile} />}
               {tab === 'activity' && <ActivityTab items={activity} loading={activityLoading} />}
-              {tab === 'settings' && <SettingsTab />}
+              {tab === 'settings' && (
+                <SettingsTab
+                  key={`${profile._id || 'profile'}-${profile.profilePublic}-${profile.showEmail}-${profile.allowMessages}-${profile.showActivity}`}
+                  profile={profile}
+                  onProfileUpdated={(updates) => setProfile((prev) => ({ ...prev, ...updates }))}
+                  onAccountDeleted={() => {
+                    logout();
+                    window.location.href = '/login';
+                  }}
+                />
+              )}
             </div>
           </>
         )}

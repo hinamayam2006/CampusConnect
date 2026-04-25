@@ -173,9 +173,13 @@
 .hubPage {
   background: var(--bg-primary);
   min-height: 100vh;
-  padding: 2rem 2rem 4rem;
-  max-width: 920px;
+  padding: 2rem 0 4rem;
+}
+
+.container {
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .hubHero {
@@ -184,15 +188,28 @@
   align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.25rem;
+  animation: fadeInUp 0.45s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hubTitle {
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 0.3rem;
+  letter-spacing: -0.02em;
 }
 
 .hubSubtitle {
@@ -210,18 +227,42 @@
   background: #1A1A1A;
   color: #F2EDE4;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.55rem 1.1rem;
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.1s;
 }
 
 .hubBtnDark:hover {
-  opacity: 0.82;
+  opacity: 0.9;
   color: #F2EDE4;
+  transform: translateY(-1px);
+}
+
+.btnOutline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1.1rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid #E8E2D9;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnOutline:hover {
+  border-color: #D4CCBF;
+  background: #F8F5F0;
+  color: var(--text-primary);
 }
 
 .section {
@@ -387,8 +428,8 @@
 .detailPage {
   background: var(--bg-primary);
   min-height: 100vh;
-  padding: 1.75rem 2rem 4rem;
-  max-width: 1060px;
+  padding: 2rem 1rem 4rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 

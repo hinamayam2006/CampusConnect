@@ -1,0 +1,9 @@
+<svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left C -->
+  <path d="M45 30C41.5 26.5 36.5 24.5 31 24.5C20.2 24.5 11.5 33.2 11.5 44C11.5 54.8 20.2 63.5 31 63.5C36.5 63.5 41.5 61.5 45 58" 
+        stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+  
+  <!-- Right C -->
+  <path d="M55 30C58.5 26.5 63.5 24.5 69 24.5C79.8 24.5 88.5 33.2 88.5 44C88.5 54.8 79.8 63.5 69 63.5C63.5 63.5 58.5 61.5 55 58" 
+        stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+</svg>

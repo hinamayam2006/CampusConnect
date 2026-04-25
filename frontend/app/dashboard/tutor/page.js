@@ -140,28 +140,37 @@ export default function TutorDashboardPage() {
   useEffect(() => {
     if (!isReady) return;
 
-    Promise.allSettled([fetchTutorBookings(), fetchMyTutorProfile()])
-      .then(([bookingsResult, profileResult]) => {
-        if (bookingsResult.status === 'fulfilled') {
-          const items = bookingsResult.value?.data?.items || bookingsResult.value?.data || [];
-          setBookings(Array.isArray(items) ? items : []);
-        }
-        if (profileResult.status === 'fulfilled') {
-          const p = profileResult.value?.data || null;
-          setProfile(p);
-          if (p?.courses) setCourses(p.courses);
-        }
-      })
-      .catch(() => setError('Failed to load dashboard data.'))
-      .finally(() => setLoading(false));
+    const timer = setTimeout(() => {
+      Promise.allSettled([fetchTutorBookings(), fetchMyTutorProfile()])
+        .then(([bookingsResult, profileResult]) => {
+          if (bookingsResult.status === 'fulfilled') {
+            const items = bookingsResult.value?.data?.items || bookingsResult.value?.data || [];
+            setBookings(Array.isArray(items) ? items : []);
+          }
+          if (profileResult.status === 'fulfilled') {
+            const p = profileResult.value?.data || null;
+            setProfile(p);
+            if (p?.courses) setCourses(p.courses);
+          }
+        })
+        .catch(() => setError('Failed to load dashboard data.'))
+        .finally(() => setLoading(false));
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [isReady]);
 
   /* --- Fetch reviews when profile is ready --- */
   useEffect(() => {
     if (!profile?._id) return;
-    fetchTutorReviews(profile._id)
-      .then((res) => setReviews(res.data?.items || []))
-      .catch(() => {});
+
+    const timer = setTimeout(() => {
+      fetchTutorReviews(profile._id)
+        .then((res) => setReviews(res.data?.items || []))
+        .catch(() => {});
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [profile?._id]);
 
   /* --- Stats --- */

@@ -1,0 +1,14 @@
+{
+  "name": "campusconnect",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "node -e \"const { spawn } = require('child_process'); const children = [spawn('npm', ['--prefix', 'backend', 'run', 'dev'], { stdio: 'inherit', shell: true }), spawn('npm', ['--prefix', 'frontend', 'run', 'dev'], { stdio: 'inherit', shell: true })]; const shutdown = () => children.forEach((child) => child.kill()); process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown); Promise.all(children.map((child) => new Promise((resolve) => child.on('exit', resolve)))).then((codes) => process.exit(codes.some((code) => code && code !== 0) ? 1 : 0));\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  },
+  "devDependencies": {}
+}

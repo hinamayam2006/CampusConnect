@@ -55,7 +55,12 @@ export default function LoginPage() {
       setLoading(false);
       router.push('/');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Login failed. Please try again.' });
+      const apiMessage = err.response?.data?.message;
+      const suspended = err.response?.data?.suspended;
+      const text = suspended
+        ? `Your account is suspended: ${apiMessage || 'Please contact support.'}`
+        : apiMessage || 'Login failed. Please try again.';
+      setMessage({ type: 'error', text });
       setFormData((prev) => ({ ...prev, password: '' }));
       setLoading(false);
     }
@@ -69,7 +74,7 @@ export default function LoginPage() {
           <span className={styles['auth-logo__name']}>CampusConnect</span>
         </Link>
         <div className={styles['auth-tagline']}>
-          <p className={styles['auth-eyebrow']}>Student Platform · NUST</p>
+          <p className={styles['auth-eyebrow']}>Student Platform </p>
           <h1 className={styles['auth-headline']}>Your campus, <em>connected.</em></h1>
           <p className={styles['auth-subtext']}>
             Notes, rides, tutors, borrowing — everything your student life needs, all in one place.
@@ -100,7 +105,7 @@ export default function LoginPage() {
                 autoComplete="username"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@seecs.edu.pk"
+                placeholder="you@gmail.com"
                 required
                 className={styles['auth-input']}
               />

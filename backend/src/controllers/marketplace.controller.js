@@ -4,6 +4,7 @@ import ActivityEvent from '../models/ActivityEvent.model.js';
 import Request from '../models/Request.model.js';
 import { logActivity } from '../services/activity.service.js';
 import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
+import { buildTokenSearchQuery } from '../utils/search.js';
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -18,30 +19,55 @@ export const listListings = async (req, res) => {
       courseCode,
       listingType,
       search,
-      status = 'active',
+      showSold,
+      status,
       page = '1',
       limit = '12',
     } = req.query;
+    const searchQuery = String(search || '').trim();
 
-    const q = { status };
+    // Auto-cleanup expired reservations
+    await Listing.updateMany(
+      { status: 'reserved', reservationExpiresAt: { $lt: new Date() } },
+      { $set: { status: 'active', reservedFor: null, reservationExpiresAt: null } }
+    );
+
+    const q = {};
+    const andClauses = [];
+
+    if (status && status !== 'all') {
+      q.status = status;
+    } else if (showSold !== 'true') {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      andClauses.push({
+        $or: [
+          { status: { $in: ['active', 'reserved'] } },
+          { status: 'sold', updatedAt: { $gte: fortyEightHoursAgo } }
+        ]
+      });
+    }
     if (category) q.category = category;
     if (department) q.department = department;
     if (semester !== undefined && semester !== '') q.semester = Number(semester);
     if (courseCode) q.courseCode = new RegExp(escapeRegex(String(courseCode)), 'i');
     if (listingType) q.listingType = listingType;
-    if (search && String(search).trim()) {
-      q.$text = { $search: String(search).trim() };
+
+    // Use tokenized partial matching so short queries like "calc" match "calculator".
+    const searchClause = buildTokenSearchQuery(searchQuery, ['title', 'description', 'courseCode']);
+    if (searchClause) {
+      andClauses.push(...searchClause.$and);
+    }
+
+    if (andClauses.length > 0) {
+      q.$and = andClauses;
     }
 
     const skip = (Math.max(1, Number(page)) - 1) * Math.min(48, Math.max(1, Number(limit)));
     const lim = Math.min(48, Math.max(1, Number(limit)));
 
-    let listQ = Listing.find(q).populate('seller', 'name department avatar year');
-    if (search && String(search).trim()) {
-      listQ = listQ.select({ score: { $meta: 'textScore' } }).sort({ score: { $meta: 'textScore' } });
-    } else {
-      listQ = listQ.sort({ createdAt: -1 });
-    }
+    const listQ = Listing.find(q)
+      .populate('seller', 'name department avatar year')
+      .sort({ createdAt: -1 });
 
     const [items, total] = await Promise.all([listQ.skip(skip).limit(lim), Listing.countDocuments(q)]);
 
@@ -173,13 +199,20 @@ export const expressInterest = async (req, res) => {
   const emailQueue = [];
   try {
     const listing = await Listing.findById(req.params.id).populate('seller');
-    if (!listing || listing.status !== 'active') {
+    if (!listing || listing.status === 'sold') {
       await session.abortTransaction();
-      return res.status(404).json({ success: false, message: 'Listing not available' });
+      return res.status(404).json({ success: false, message: 'Listing not available or already sold' });
     }
     if (listing.seller._id.equals(req.user._id)) {
       await session.abortTransaction();
       return res.status(400).json({ success: false, message: 'You own this listing' });
+    }
+
+    if (!listing.reservedFor) {
+      listing.status = 'reserved';
+      listing.reservedFor = req.user._id;
+      listing.reservationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await listing.save({ session });
     }
 
     const [request] = await Request.create(
@@ -299,7 +332,16 @@ export const getMarketplaceRecommendations = async (req, res) => {
 
 export const getMyListings = async (req, res) => {
   try {
-    const items = await Listing.find({ seller: req.user._id })
+    const { status } = req.query;
+    const q = { seller: req.user._id };
+    
+    if (status === 'active') {
+      q.status = { $in: ['active', 'reserved'] };
+    } else if (status === 'past') {
+      q.status = 'sold';
+    }
+
+    const items = await Listing.find(q)
       .sort({ createdAt: -1 })
       .limit(100);
     res.status(200).json({ success: true, data: items });
@@ -327,6 +369,11 @@ export const markListingCompleted = async (req, res) => {
     if (!listing.seller.equals(req.user._id)) {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: 'Only seller can mark their listing as completed' });
+    }
+
+    if (listing.status === 'sold') {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Listing is already sold' });
     }
 
     listing.status = 'sold';

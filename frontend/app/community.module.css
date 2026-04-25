@@ -29,7 +29,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 2.25rem;
   animation: fadeInUp 0.45s ease both;
 }
 
@@ -41,7 +41,7 @@
 
 .pageTitle {
   font-family: var(--font-serif);
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -181,6 +181,7 @@
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -282,6 +283,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  -webkit-backdrop-filter: blur(6px); 
   backdrop-filter: blur(6px);
   border: 1px solid var(--border-light);
   text-transform: capitalize;

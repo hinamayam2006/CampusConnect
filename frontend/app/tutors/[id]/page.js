@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, BookOpen, Clock, Star, ArrowRight } from 'lucide-react';
+import { ArrowLeft, MapPin, BookOpen, Clock, Star, ArrowRight, AlertTriangle } from 'lucide-react';
 import styles from '../../tutoring/tutoring.module.css';
 import { fetchTutorById, fetchTutorReviews } from '../../../lib/apiRequests';
 import useRequireAuth from '../../../lib/useRequireAuth';
@@ -220,11 +220,30 @@ export default function TutorDetailPage() {
                   )}
 
                   <Link
-                    href={'/tutors/' + tutor._id + '/book'}
+                    href={`/tutors/${id}/book`}
                     className={styles.btnPrimary}
-                    style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}
+                    style={{ width: '100%', justifyContent: 'center' }}
                   >
                     Book Session <ArrowRight size={14} />
+                  </Link>
+                  <Link 
+                    href={`/report-issue?targetId=${id}&targetType=TutorProfile`}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '0.4rem', 
+                      fontSize: '0.75rem', 
+                      color: '#DC2626', 
+                      textDecoration: 'none', 
+                      padding: '0.5rem', 
+                      marginTop: '1rem',
+                      border: '1px solid #FECACA', 
+                      borderRadius: '8px',
+                      background: '#FEF2F2'
+                    }}
+                  >
+                    <AlertTriangle size={12} /> Report this tutor
                   </Link>
                 </>
               )}

@@ -9,7 +9,7 @@ export const optionalAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select('-password -notifications');
-    if (user) req.user = user;
+    if (user && user.isVerified && !user.isSuspended) req.user = user;
   } catch {
     // invalid token — treat as anonymous
   }
@@ -51,6 +51,23 @@ const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'User no longer exists.',
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before accessing this resource.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
+    // SUSPENSION KILL-SWITCH: even with a valid token, suspended accounts are blocked
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: `Your account has been suspended. Reason: ${user.suspensionReason || 'Violation of community guidelines'}. Please contact support if you believe this is an error.`,
+        suspended: true,
       });
     }
 

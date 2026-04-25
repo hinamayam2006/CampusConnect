@@ -23,6 +23,10 @@ const playfair = Playfair_Display({
 export const metadata = {
   title: 'CampusConnect',
   description: 'All-in-one student campus platform',
+  icons: {
+    icon: '/icon.jpg',
+    shortcut: '/icon.jpg',
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -30,8 +34,9 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body>
         <UserRoleProvider>
-          <SessionActivityGuard />
-          <AppShell>{children}</AppShell>
+    <SessionActivityGuard>
+        <AppShell>{children}</AppShell>
+    </SessionActivityGuard>
           <Toaster
             position="top-right"
             toastOptions={{

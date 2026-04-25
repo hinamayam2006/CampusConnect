@@ -242,11 +242,12 @@
 /* ── Tab System ── */
 .tabBar {
   display: flex;
+  flex-wrap: wrap;
   gap: 0;
   border-bottom: 1.5px solid var(--border-light);
   margin-bottom: 1.75rem;
   animation: fadeInUp 0.5s 0.1s ease both;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .tab {

@@ -53,6 +53,8 @@ api.interceptors.response.use(
 
     const url = originalRequest.url || '';
     const status = error.response?.status;
+    const errorCode = error.response?.data?.code;
+    const errorMessage = error.response?.data?.message || '';
 
     // Wrong password / registration errors — do not attempt token refresh
     const isAuthCall =
@@ -66,7 +68,21 @@ api.interceptors.response.use(
 
     const store = useStore.getState();
 
+    if (
+      status === 403 &&
+      (errorCode === 'EMAIL_NOT_VERIFIED' || /verify your email/i.test(errorMessage))
+    ) {
+      store.logout();
+      return Promise.reject(error);
+    }
+
     if (status === 401 && !originalRequest._retry) {
+      // No refresh token means session is not recoverable; avoid refresh loop/noisy 401s.
+      if (!store.refreshToken) {
+        store.logout();
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

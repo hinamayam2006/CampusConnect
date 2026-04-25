@@ -122,7 +122,7 @@ export async function sendNotificationEmail({ to, recipientName, message }) {
 }
 
 export async function sendVerificationEmail({ to, name, token }) {
-  const clientUrl = String(process.env.CLIENT_URL || 'http://localhost:3000').split(',')[0].trim();
+  const clientUrl = String(process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
   const url = `${clientUrl}/verify-email/${token}`;
   const html = `
     <p>Hi ${name || 'there'},</p>
@@ -141,7 +141,7 @@ export async function sendVerificationEmail({ to, name, token }) {
 }
 
 export async function sendPasswordResetEmail({ to, name, token }) {
-  const clientUrl = String(process.env.CLIENT_URL || 'http://localhost:3000').split(',')[0].trim();
+  const clientUrl = String(process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
   const url = `${clientUrl}/reset-password/${token}`;
   const html = `
     <p>Hi ${name || 'there'},</p>

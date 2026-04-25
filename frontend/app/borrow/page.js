@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -17,21 +17,28 @@ import {
   MessageCircle,
   X,
   Send,
+  Trash2,
+  Calculator,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useStore from '../../store/useStore';
-import { createRequest, fetchBorrowItems } from '../../lib/apiRequests';
+import { createRequest, fetchBorrowItems, deleteBorrowItem } from '../../lib/apiRequests';
 import styles from '../community.module.css';
 
 const CATEGORIES = [
-  { label: 'All',         value: '',            icon: LayoutGrid },
-  { label: 'Books',       value: 'books',       icon: BookOpen },
-  { label: 'Electronics', value: 'electronics', icon: Monitor },
-  { label: 'Furniture',   value: 'furniture',   icon: Sofa },
-  { label: 'Clothing',    value: 'clothing',    icon: Shirt },
-  { label: 'Kitchen',     value: 'kitchen',     icon: UtensilsCrossed },
-  { label: 'Other',       value: 'other',       icon: Package },
+  { label: 'All',           value: '',            icon: LayoutGrid },
+  { label: 'Academic',      value: 'academic',    icon: BookOpen },
+  { label: 'Electronics',   value: 'electronics', icon: Monitor },
+  { label: 'Home & Living', value: 'home',        icon: Sofa },
+  { label: 'Other',         value: 'other',       icon: Package },
 ];
+
+const STATUS_LABELS = {
+  available: 'Seeking Help',
+  requested: 'Offer Received',
+  borrowed: 'Borrowed',
+  returned: 'Returned',
+};
 
 function getInitials(name) {
   if (!name) return '';
@@ -92,6 +99,17 @@ export default function BorrowPage() {
       toast.error(err?.message || 'Could not send borrow request');
     } finally {
       setRequestingForId('');
+    }
+  };
+
+  const handleDelete = async (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      await deleteBorrowItem(itemId);
+      toast.success('Post deleted');
+      setItems((prev) => prev.filter((i) => i._id !== itemId));
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete post');
     }
   };
 
@@ -249,7 +267,7 @@ export default function BorrowPage() {
                     <div className={styles.feedFooter}>
                       <span className={styles.feedLocation}>
                         <Package size={13} />
-                        {item.status === 'available' ? 'Open request' : item.status}
+                        {STATUS_LABELS[item.status] || item.status || 'Seeking Help'}
                       </span>
                       <div className={styles.feedActions}>
                         {user && !isOwn && !composerOpen && (
@@ -267,7 +285,20 @@ export default function BorrowPage() {
                             Log in to respond
                           </Link>
                         )}
-                        {isOwn && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your post</span>}
+                        {isOwn && (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your post</span>
+                            <button
+                              type="button"
+                              className={styles.cardBtnOutline}
+                              style={{ padding: '0.5rem', color: '#dc3545', borderColor: 'transparent' }}
+                              onClick={() => handleDelete(item._id)}
+                              title="Delete post"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
                         <Link href={'/borrow/' + item._id} className={styles.cardBtnOutline} style={{ padding: '0.5rem 0.9rem', fontSize: '0.84rem' }}>
                           <ArrowRight size={14} />
                         </Link>

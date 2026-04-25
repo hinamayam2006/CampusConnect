@@ -6,6 +6,8 @@ import Link from 'next/link';
 import api from '../../../../lib/api';
 import styles from '../../auth.module.css';
 
+const verifyRequestCache = new Map();
+
 export default function VerifyEmailPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,7 +27,13 @@ export default function VerifyEmailPage() {
 
     const verify = async () => {
       try {
-        const { data } = await api.get(`/auth/verify-email/${token}`);
+        let requestPromise = verifyRequestCache.get(token);
+        if (!requestPromise) {
+          requestPromise = api.get(`/auth/verify-email/${token}`);
+          verifyRequestCache.set(token, requestPromise);
+        }
+
+        const { data } = await requestPromise;
         if (!active) return;
         setStatus('success');
         setMessage(data?.message || 'Email verified successfully.');
@@ -33,6 +41,8 @@ export default function VerifyEmailPage() {
         if (!active) return;
         setStatus('error');
         setMessage(err.response?.data?.message || 'Verification failed.');
+      } finally {
+        verifyRequestCache.delete(token);
       }
     };
 

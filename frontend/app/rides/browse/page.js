@@ -1,4 +1,4 @@
-﻿// rides/browse/page.js
+// rides/browse/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -95,6 +95,7 @@ export default function RidesBrowsePage() {
             <p className={styles.pageSubtitle}>Find a ride or offer one — community-powered carpooling.</p>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <Link href="/rides" className={styles.btnOutline}>Rides Hub</Link>
             <Link href="/rides/my-rides" className={styles.btnOutline}>My Rides</Link>
             {user && (
               <Link href="/rides/create" className={styles.btnPrimary}>

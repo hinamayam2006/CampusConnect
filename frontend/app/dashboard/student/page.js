@@ -180,7 +180,7 @@ export default function StudentDashboardPage() {
         <div className={styles.ctaBanner}>
           <div className={styles.ctaBannerText}>
             <p className={styles.ctaBannerTitle}>Find a Peer Tutor</p>
-            <p className={styles.ctaBannerSub}>Browse verified NUST tutors across all departments.</p>
+            <p className={styles.ctaBannerSub}>Browse verified tutors across all departments.</p>
           </div>
           <Link href="/tutors" className={styles.ctaBannerBtn}>
             <GraduationCap size={14} />

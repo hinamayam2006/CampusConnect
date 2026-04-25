@@ -38,15 +38,56 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    bio: {
+      type: String,
+      default: '',
+      maxlength: [500, 'Bio cannot exceed 500 characters'],
+    },
+    profilePublic: {
+      type: Boolean,
+      default: true,
+    },
+    showEmail: {
+      type: Boolean,
+      default: false,
+    },
+    allowMessages: {
+      type: Boolean,
+      default: true,
+    },
+    showActivity: {
+      type: Boolean,
+      default: true,
+    },
     // Application-level access control (analogous to DB roles in SQL systems)
     role: {
       type: String,
-      enum: ['student', 'moderator'],
+      enum: ['student', 'moderator', 'admin'],
       default: 'student',
+    },
+    // Suspension — admin can lock account with a reason (checked on every auth request)
+    isSuspended: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    suspensionReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     isVerified: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     verificationToken: {
       type: String,

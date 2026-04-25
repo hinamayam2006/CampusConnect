@@ -11,6 +11,28 @@ import useStore from '../store/useStore';
  * ChatWindow
  * Real-time chat component using Socket.io
  */
+function formatChatDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const timeStr = date.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false 
+  });
+
+  if (isToday) return timeStr;
+  if (isYesterday) return `Yesterday, ${timeStr}`;
+  
+  return `${date.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${timeStr}`;
+}
+
 export default function ChatWindow({
   request,
   isOpen,
@@ -226,7 +248,7 @@ export default function ChatWindow({
                 <div className={styles.bubbleContent}>
                   <p>{message.content}</p>
                   <span className={styles.timestamp}>
-                    {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatChatDate(message.createdAt)}
                   </span>
                 </div>
               </div>

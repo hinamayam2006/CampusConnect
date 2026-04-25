@@ -16,13 +16,15 @@ import tutorsRoutes from './routes/tutors.routes.js';
 import bookingsRoutes from './routes/bookings.routes.js';
 import borrowRoutes from './routes/borrow.routes.js';
 import lostnFoundRoutes from './routes/lostnfound.routes.js';
+import ticketsRoutes from './routes/tickets.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 const app = express();
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // Parse allowed origins from environment variable and include local dev ports
 const allowedOrigins = new Set([
-  ...(process.env.CLIENT_URL || '').split(',').map(o => o.trim()),
+  ...(process.env.FRONTEND_URL || '').split(',').map(o => o.trim()),
   'http://localhost:3000',
   'http://localhost:3001',
 ].filter(Boolean));
@@ -80,6 +82,8 @@ app.use('/api/tutors', tutorsRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/borrow', borrowRoutes);
 app.use('/api/lostnfound', lostnFoundRoutes);
+app.use('/api/tickets', ticketsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler — for unknown routes
 app.use((req, res) => {

@@ -5,21 +5,23 @@ import ActivityEvent from '../models/ActivityEvent.model.js';
 import User from '../models/User.model.js';
 import { logActivity } from '../services/activity.service.js';
 import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
-
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { buildTokenSearchQuery } from '../utils/search.js';
 
 export const listRides = async (req, res) => {
   try {
-    const { originName, destName, after } = req.query;
+    const { originName, destName, after, q: search } = req.query;
     const from =
       after && !Number.isNaN(new Date(after).getTime()) ? new Date(after) : new Date();
-    const q = { status: { $in: ['scheduled', 'full'] }, departureTime: { $gte: from } };
-    if (originName) q.originName = new RegExp(escapeRegex(String(originName)), 'i');
-    if (destName) q.destName = new RegExp(escapeRegex(String(destName)), 'i');
+    const query = { status: { $in: ['scheduled', 'full'] }, departureTime: { $gte: from } };
+    if (originName) query.originName = new RegExp(String(originName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (destName) query.destName = new RegExp(String(destName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
-    const rides = await Ride.find(q)
+    const searchQuery = buildTokenSearchQuery(search, ['originName', 'destName']);
+    if (searchQuery) {
+      query.$and = searchQuery.$and;
+    }
+
+    const rides = await Ride.find(query)
       .sort({ departureTime: 1 })
       .limit(60)
       .populate('driver', 'name department avatar year');

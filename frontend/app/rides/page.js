@@ -25,19 +25,27 @@ export default function RidesHubPage() {
 
   return (
     <div className={styles.hubPage}>
-      {/* Hero */}
-      <div className={styles.hubHero}>
+      <div className="container">
+        {/* Hero */}
+        <div className={styles.hubHero}>
         <div>
           <h1 className={styles.hubTitle}>Carpooling</h1>
           <p className={styles.hubSubtitle}>
-            Share rides, save on fuel, and connect with campus commuters going your way.
+            Share rides, save on fuel, and connect with campus commuters.
           </p>
         </div>
-        {user && (
-          <Link href="/rides/create" className={styles.hubBtnDark}>
-            <PlusCircle size={16} /> Offer a Ride
-          </Link>
-        )}
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Link href="/rides/browse" className={styles.btnOutline}>Find a Ride</Link>
+          <Link href="/rides/matches" className={styles.btnOutline}>Matches</Link>
+          <Link href="/rides/my-rides" className={styles.btnOutline}>My Rides</Link>
+          <Link href="/rides/my-requests" className={styles.btnOutline}>Requests</Link>
+          <Link href="/rides/how-it-works" className={styles.btnOutline}>How It Works</Link>
+          {user && (
+            <Link href="/rides/create" className={styles.hubBtnDark}>
+              <PlusCircle size={16} /> Offer a Ride
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Active Rides */}
@@ -93,19 +101,8 @@ export default function RidesHubPage() {
         )}
       </section>
 
-      {/* Quick Nav */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <span className={styles.sectionTitle}>Quick Links</span>
-        </div>
-        <div className={styles.navTiles}>
-          <Link href="/rides/browse" className={styles.navTile}>Find a Ride</Link>
-          <Link href="/rides/matches" className={styles.navTile}>Suggested Matches</Link>
-          <Link href="/rides/my-rides" className={styles.navTile}>My Rides</Link>
-          <Link href="/rides/my-requests" className={styles.navTile}>My Requests</Link>
-          <Link href="/rides/how-it-works" className={styles.navTile}>How It Works</Link>
-        </div>
-      </section>
+
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const noteSchema = new mongoose.Schema(
 	{
 		title: { type: String, required: true, trim: true, maxlength: 150 },
-		description: { type: String, required: true, trim: true, maxlength: 2000 },
+		description: { type: String, trim: true, maxlength: 2000, default: '' },
 		course: { type: String, required: true, trim: true, maxlength: 120 },
 		subject: { type: String, required: true, trim: true, maxlength: 80 },
 		tags: [{ type: String, trim: true, maxlength: 40 }],

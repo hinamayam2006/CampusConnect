@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '../../../lib/api';
 import useRequireAuth from '../../../lib/useRequireAuth';
 import styles from '../../shared/marketplace-rides.module.css';
+import hubStyles from '../../community.module.css';
 
 function ListingCard({ item }) {
   const img = item.images?.[0];
@@ -19,9 +20,9 @@ function ListingCard({ item }) {
       )}
       <div className={styles['mc-card-body']}>
         <span className={`${styles['mc-badge']} mb-1`}>{item.category}</span>
-        <h3 className="h6 mb-1">{item.title}</h3>
-        <p className="text-secondary small flex-grow-1">{item.department}</p>
-        <Link href={`/marketplace/${item._id}`} className="btn btn-sm btn-outline-primary mt-2">
+        <h3 className={hubStyles.cardTitle} style={{ marginTop: '0.35rem' }}>{item.title}</h3>
+        <p className={hubStyles.cardCategory} style={{ textTransform: 'none', letterSpacing: 0 }}>{item.department}</p>
+        <Link href={`/marketplace/${item._id}`} className={hubStyles.btnOutline} style={{ marginTop: '0.5rem' }}>
           View
         </Link>
       </div>
@@ -37,7 +38,6 @@ export default function MarketplaceRecommendationsPage() {
   useEffect(() => {
     if (!isReady) return;
     let cancelled = false;
-    setLoading(true);
     (async () => {
       try {
         const res = await api.get('/marketplace/recommendations');
@@ -54,11 +54,19 @@ export default function MarketplaceRecommendationsPage() {
   }, [isReady]);
 
   return (
-    <div className="container py-4 py-md-5">
-      <h1 className="mb-2">Recommended for you</h1>
-      <p className="text-secondary mb-4">
-        Pulled from your marketplace views and searches, then blended with trending listings.
-      </p>
+    <div className={hubStyles.page}>
+      <div className="container">
+      <div className={hubStyles.pageHeader}>
+        <div className={hubStyles.headerLeft}>
+          <h1 className={hubStyles.pageTitle}>Recommended for you</h1>
+          <p className={hubStyles.pageSubtitle}>
+            Based on your marketplace views and searches, then blended with trending listings.
+          </p>
+        </div>
+        <Link href="/marketplace" className={hubStyles.btnOutline}>
+          Marketplace hub
+        </Link>
+      </div>
       {!isReady || loading ? (
         <p>Loading…</p>
       ) : items.length === 0 ? (
@@ -72,9 +80,7 @@ export default function MarketplaceRecommendationsPage() {
           ))}
         </div>
       )}
-      <Link href="/marketplace" className="btn btn-link mt-3">
-        ← Back to marketplace hub
-      </Link>
+      </div>
     </div>
   );
 }

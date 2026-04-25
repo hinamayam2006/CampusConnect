@@ -45,6 +45,15 @@ const listingSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    reservedFor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reservationExpiresAt: {
+      type: Date,
+      default: null,
+    },
     views: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }

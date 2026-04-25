@@ -34,6 +34,31 @@ const SECTION_META = {
 
 const FILTER_OPTIONS = ['all', 'marketplace', 'rides', 'borrow', 'lost & found', 'tutoring', 'general'];
 
+function formatRelativeTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const deltaSeconds = Math.round((date.getTime() - Date.now()) / 1000);
+  const deltaAbs = Math.abs(deltaSeconds);
+  const units = [
+    ['year', 60 * 60 * 24 * 365],
+    ['month', 60 * 60 * 24 * 30],
+    ['day', 60 * 60 * 24],
+    ['hour', 60 * 60],
+    ['minute', 60],
+  ];
+
+  for (const [unit, seconds] of units) {
+    if (deltaAbs >= seconds || unit === 'minute') {
+      const valueInUnits = Math.round(deltaSeconds / seconds);
+      const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+      return rtf.format(valueInUnits, unit);
+    }
+  }
+
+  return 'just now';
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const { isReady } = useRequireAuth();
@@ -66,7 +91,11 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [isReady, load]);
 
   const getRequestId = (n) => n.requestId || n.meta?.requestId;
@@ -206,28 +235,21 @@ export default function NotificationsPage() {
 
   const filteredItems = useMemo(() => {
     const trimmed = search.trim().toLowerCase();
-    return items.filter((n) => {
+    return [...items]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .filter((n) => {
       const section = getNotificationSection(n).toLowerCase();
       if (sectionFilter !== 'all' && section !== sectionFilter) return false;
       if (!trimmed) return true;
       return String(n.message || '').toLowerCase().includes(trimmed);
-    });
+      });
   }, [items, search, sectionFilter]);
-
-  const filteredGroups = useMemo(() => {
-    return filteredItems.reduce((acc, n) => {
-      const section = getNotificationSection(n);
-      acc[section] = acc[section] || [];
-      acc[section].push(n);
-      return acc;
-    }, {});
-  }, [filteredItems]);
 
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div className="container" style={{ maxWidth: '800px' }}>
 
         {/* Header */}
         <div className={styles.pageHeader}>
@@ -292,77 +314,74 @@ export default function NotificationsPage() {
             <p className={styles.emptyText}>You are all caught up. New alerts will appear here.</p>
           </div>
         ) : (
-          ['Marketplace', 'Rides', 'Borrow', 'Lost & Found', 'Tutoring', 'General'].map((section) => {
-            const sectionItems = filteredGroups[section] || [];
-            if (!sectionItems.length) return null;
-            const { Icon, colorClass } = SECTION_META[section];
-            return (
-              <div key={section}>
-                <div className={styles.sectionHeader}>
-                  <div className={`${styles.sectionIconWrap} ${styles[colorClass]}`}>
-                    <Icon size={14} />
-                  </div>
-                  <span className={styles.sectionTitle}>{section}</span>
-                </div>
-                {sectionItems.map((n) => (
-                  <div key={n._id} className={`${styles.notifCard}${!n.read ? ' ' + styles.notifUnread : ''}`}>
-                    <div className={styles.notifTop}>
-                      {!n.read
-                        ? <span className={styles.unreadDot} />
-                        : <span className={styles.readDot} />
-                      }
-                      <div className={styles.notifBody}>
-                        <p className={styles.notifMessage}>{n.message}</p>
-                        {n.meta?.message && (
-                          <div className={styles.notifQuoteWrap}>
-                            <p className={styles.notifQuote}>{n.meta.message}</p>
-                          </div>
-                        )}
-                        <div className={styles.notifMeta}>
-                          <span className={styles.notifTime}>{new Date(n.createdAt).toLocaleString()}</span>
-                        </div>
-                      </div>
-                      <button type="button" className={styles.dismissBtn} onClick={() => hideOne(n._id)} aria-label="Dismiss">
-                        <X size={14} />
-                      </button>
-                    </div>
+          filteredItems.map((n) => {
+            const section = getNotificationSection(n);
+            const sectionMeta = SECTION_META[section];
+            const { Icon, colorClass } = sectionMeta;
 
-                    {(isPendingRequestNotification(n) || isPendingRequestSentNotification(n) || isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized) || n.link || !n.read) && (
-                      <div className={styles.cardActions}>
-                        {isPendingRequestNotification(n) && (
-                          <>
-                            <button type="button" className={`${styles.btnAction} ${styles.btnApprove}`} onClick={() => handleApprove(n)} disabled={actionLoading}>
-                              <Check size={12} /> Approve
-                            </button>
-                            <button type="button" className={`${styles.btnAction} ${styles.btnDecline}`} onClick={() => handleDecline(n)} disabled={actionLoading}>
-                              <X size={12} /> Decline
-                            </button>
-                          </>
-                        )}
-                        {isPendingRequestSentNotification(n) && (
-                          <button type="button" className={`${styles.btnAction} ${styles.btnWithdraw}`} onClick={() => handleWithdraw(n)} disabled={actionLoading}>
-                            <X size={12} /> Withdraw
-                          </button>
-                        )}
-                        {(isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized)) && (
-                          <button type="button" className={`${styles.btnAction} ${styles.btnChat}`} onClick={() => handleChat(n)} disabled={actionLoading}>
-                            <MessageCircle size={12} /> Chat
-                          </button>
-                        )}
-                        {n.link && (
-                          <button type="button" className={`${styles.btnAction} ${styles.btnView}`} onClick={() => handleOpenNotification(n)} disabled={openingNotificationId === n._id}>
-                            <ExternalLink size={12} /> {openingNotificationId === n._id ? 'Opening...' : 'View'}
-                          </button>
-                        )}
-                        {!n.read && (
-                          <button type="button" className={`${styles.btnAction} ${styles.btnMarkRead}`} onClick={() => markOne(n._id)}>
-                            <Check size={12} /> Mark read
-                          </button>
-                        )}
+            return (
+              <div key={n._id} className={`${styles.notifCard}${!n.read ? ' ' + styles.notifUnread : ''}`}>
+                <div className={styles.notifTop}>
+                  {!n.read
+                    ? <span className={styles.unreadDot} />
+                    : <span className={styles.readDot} />
+                  }
+                  <div className={styles.notifBody}>
+                    <div className={styles.notifSectionRow}>
+                      <div className={`${styles.sectionIconWrap} ${styles[colorClass]}`}>
+                        <Icon size={12} />
+                      </div>
+                      <span className={styles.notifSection}>{section}</span>
+                    </div>
+                    <p className={styles.notifMessage}>{n.message}</p>
+                    {n.meta?.message && (
+                      <div className={styles.notifQuoteWrap}>
+                        <p className={styles.notifQuote}>{n.meta.message}</p>
                       </div>
                     )}
+                    <div className={styles.notifMeta}>
+                      <span className={styles.notifTime}>{formatRelativeTime(n.createdAt)}</span>
+                    </div>
                   </div>
-                ))}
+                  <button type="button" className={styles.dismissBtn} onClick={() => hideOne(n._id)} aria-label="Dismiss">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {(isPendingRequestNotification(n) || isPendingRequestSentNotification(n) || isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized) || n.link || !n.read) && (
+                  <div className={styles.cardActions}>
+                    {isPendingRequestNotification(n) && (
+                      <>
+                        <button type="button" className={`${styles.btnAction} ${styles.btnApprove}`} onClick={() => handleApprove(n)} disabled={actionLoading}>
+                          <Check size={12} /> Approve
+                        </button>
+                        <button type="button" className={`${styles.btnAction} ${styles.btnDecline}`} onClick={() => handleDecline(n)} disabled={actionLoading}>
+                          <X size={12} /> Decline
+                        </button>
+                      </>
+                    )}
+                    {isPendingRequestSentNotification(n) && (
+                      <button type="button" className={`${styles.btnAction} ${styles.btnWithdraw}`} onClick={() => handleWithdraw(n)} disabled={actionLoading}>
+                        <X size={12} /> Withdraw
+                      </button>
+                    )}
+                    {(isChatReadyNotification(n) || (n.type === 'request_approved_by_owner' && n.meta?.chatInitialized)) && (
+                      <button type="button" className={`${styles.btnAction} ${styles.btnChat}`} onClick={() => handleChat(n)} disabled={actionLoading}>
+                        <MessageCircle size={12} /> Chat
+                      </button>
+                    )}
+                    {n.link && (
+                      <button type="button" className={`${styles.btnAction} ${styles.btnView}`} onClick={() => handleOpenNotification(n)} disabled={openingNotificationId === n._id}>
+                        <ExternalLink size={12} /> {openingNotificationId === n._id ? 'Opening...' : 'View'}
+                      </button>
+                    )}
+                    {!n.read && (
+                      <button type="button" className={`${styles.btnAction} ${styles.btnMarkRead}`} onClick={() => markOne(n._id)}>
+                        <Check size={12} /> Mark read
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })

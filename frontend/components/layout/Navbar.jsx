@@ -40,7 +40,7 @@ export default function Navbar() {
       <div className="guest-navbar__inner">
         <Link href="/" className="guest-navbar__brand">
           <span className="guest-navbar__logo-icon" aria-hidden="true">
-            <LayoutGrid size={17} strokeWidth={2} />
+            <img src="/logo.png" alt="CC" width="22" height="22" style={{ filter: 'brightness(0) invert(100%)', objectFit: 'contain', transform: 'translateX(1px)' }} />
           </span>
           CampusConnect
         </Link>

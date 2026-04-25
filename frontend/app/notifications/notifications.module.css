@@ -2,12 +2,13 @@
 .page {
   background: var(--bg-primary);
   min-height: 100vh;
-  padding: 2rem 1rem 4rem;
+  padding: 2rem 0 4rem;
 }
 
 .container {
-  max-width: 760px;
+  max-width: 800px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 /* ── Page Header ── */
@@ -16,14 +17,25 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2.25rem;
+  flex-wrap: wrap;
+  animation: fadeInUp 0.45s ease both;
 }
 
-.headerLeft {}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .pageTitle {
   font-family: var(--font-serif);
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 0.25rem;
@@ -233,6 +245,21 @@
   flex-wrap: wrap;
 }
 
+.notifSectionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.notifSection {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
 .notifTime {
   font-size: 0.76rem;
   color: var(--text-muted);
@@ -375,9 +402,9 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 1rem;
-  border-radius: 99px;
-  border: 1px solid var(--border-medium);
-  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #E8E2D9;
+  background: transparent;
   font-size: 0.82rem;
   font-family: var(--font-sans);
   color: var(--text-secondary);
@@ -387,7 +414,8 @@
 }
 
 .btnMarkAll:hover {
-  border-color: var(--text-primary);
+  border-color: #D4CCBF;
+  background: #F8F5F0;
   color: var(--text-primary);
 }
 
@@ -409,6 +437,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.45);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;

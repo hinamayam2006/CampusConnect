@@ -28,7 +28,7 @@ const STRENGTH_RULES = [
 
 const STEPS = [
   { title: 'Create your profile', desc: 'Name, department & year' },
-  { title: 'Verify your email',   desc: 'NUST email required' },
+  { title: 'Verify your email',   desc: 'email required' },
   { title: 'Start connecting',    desc: 'Access all features' },
 ];
 
@@ -93,10 +93,10 @@ export default function RegisterPage() {
           <span className={styles['auth-logo__name']}>CampusConnect</span>
         </Link>
         <div className={styles['auth-tagline']}>
-          <p className={styles['auth-eyebrow']}>Student Platform · NUST</p>
+          <p className={styles['auth-eyebrow']}>Student Platform </p>
           <h1 className={styles['auth-headline']}>Join your<br /><em>campus community.</em></h1>
           <p className={styles['auth-subtext']}>
-            Connect with thousands of NUST students — share notes, find rides, borrow gear, get tutored.
+            Connect with thousands of students across campus — share notes, find rides, borrow gear, get tutored.
           </p>
           <ol className={styles['auth-steps']}>
             {STEPS.map((s, i) => (
@@ -158,7 +158,7 @@ export default function RegisterPage() {
                 autoComplete="username"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@seecs.edu.pk"
+                placeholder="you@gmail.com"
                 required
                 className={`${styles['auth-input']}${fieldErrors.email ? ` ${styles['auth-input--error']}` : ''}`}
               />
@@ -242,7 +242,7 @@ export default function RegisterPage() {
           </form>
 
           <p className={`${styles['auth-card__footer']} ${styles['auth-card__footer--terms']}`}>
-            By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+            By creating an account you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
           </p>
           <p className={styles['auth-card__footer']}>
             Already have an account? <Link href="/login">Sign in</Link>

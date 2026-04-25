@@ -32,7 +32,7 @@ export const getDashboardSummary = async (req, res) => {
     }
 
     const unreadNotifications = user.notifications
-      ? user.notifications.filter((n) => !n.read).length
+      ? user.notifications.filter((n) => !n.read && !n.hidden).length
       : 0;
 
     const uid = req.user._id;

@@ -41,13 +41,19 @@
 .sidebar-logo__icon {
   width: 32px;
   height: 32px;
-  background-color: var(--text-primary);
+  background-color: #1A1A1A;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
   flex-shrink: 0;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.sidebar-logo:hover .sidebar-logo__icon {
+  transform: scale(1.05);
+  background-color: #000;
 }
 
 .sidebar-logo__text {
@@ -81,6 +87,7 @@
   padding: 14px 8px 5px;
   text-transform: uppercase;
   font-family: var(--font-sans);
+  -webkit-user-select: none;
   user-select: none;
 }
 

@@ -77,6 +77,11 @@ export const updateProfileSchema = z.object({
     .optional()
     .or(z.literal('')),
 
+  bio: z
+    .string()
+    .max(500, 'Bio cannot exceed 500 characters')
+    .optional(),
+
   department: z
     .enum(
       ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
@@ -97,15 +102,18 @@ export const updateProfileSchema = z.object({
     .array(
       z.string().min(1, 'Subject cannot be empty')
     )
-    .optional()
-    .default([]),
+    .optional(),
 
   needsTutoring: z
     .array(
       z.string().min(1, 'Subject cannot be empty')
     )
-    .optional()
-    .default([]),
+    .optional(),
+
+  profilePublic: z.boolean().optional(),
+  showEmail: z.boolean().optional(),
+  allowMessages: z.boolean().optional(),
+  showActivity: z.boolean().optional(),
 });
 
 const deptEnum = z.enum(
@@ -205,7 +213,7 @@ export const rideSearchLogSchema = z.object({
 export const createNoteSchema = z
   .object({
     title: z.string().min(1, 'Title is required').max(150),
-    description: z.string().min(1, 'Description is required').max(2000),
+    description: z.string().max(2000).optional().default(''),
     course: z.string().min(1, 'Course is required').max(120),
     subject: z.string().min(1, 'Subject is required').max(80),
     tags: z.array(z.string().min(1).max(40)).optional().default([]),
@@ -355,3 +363,28 @@ export const updateLostnFoundSchema = z
     resolvedAt: z.coerce.date().optional().nullable(),
   })
   .strict();
+
+// ============================================
+// SUPPORT & TICKETS
+// ============================================
+
+export const submitFeedbackSchema = z
+  .object({
+    category: z.enum(['UI/UX', 'Performance', 'New Feature Idea', 'General', 'Other']),
+    title: z.string().max(150).optional().default(''),
+    description: z.string().min(10, 'Description must be at least 10 characters').max(4000),
+    rating: z.coerce.number().int().min(1).max(5).optional(),
+  })
+  .strict();
+
+export const submitIssueReportSchema = z
+  .object({
+    category: z.enum(['Bug', 'Harassment', 'Technical Issue', 'Scam/Fraud', 'Inappropriate Content', 'Other']),
+    title: z.string().max(150).optional().default(''),
+    description: z.string().min(10, 'Description must be at least 10 characters').max(4000),
+    targetId: z.string().optional().default(''),
+    targetType: z.enum(['User', 'Listing', 'Note', 'Request', 'Review', 'Ride', 'TutorProfile', 'Borrowing', 'LostnFound', 'other', 'user', 'listing', 'note', 'request', 'review', 'ride', 'tutorprofile', 'borrowing', 'lostnfound', '']).optional().default(''),
+    images: z.array(z.string().url()).max(5).optional().default([]),
+  })
+  .strict();
+

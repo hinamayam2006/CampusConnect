@@ -118,7 +118,7 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
             {booking.durationMinutes && <span><Clock size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {booking.durationMinutes} min</span>}
           </div>
           {booking.studentMessage && (
-            <p style={{ fontSize: '0.8rem', color: '#6B6B6B', marginTop: '0.25rem', fontStyle: 'italic' }}>"{booking.studentMessage}"</p>
+            <p style={{ fontSize: '0.8rem', color: '#6B6B6B', marginTop: '0.25rem', fontStyle: 'italic' }}>&quot;{booking.studentMessage}&quot;</p>
           )}
         </div>
         <span style={{ background: sc.bg, color: sc.color, borderRadius: 99, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{sc.label}</span>
@@ -219,17 +219,21 @@ export default function TutoringPage() {
   const [actionId, setActionId]           = useState(null);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await api.get('/bookings/mine?limit=50');
-        setBookings(res?.data?.data?.items || res?.data?.data || []);
-      } catch {
-        setError('Could not load your bookings.');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    const timer = setTimeout(() => {
+      (async () => {
+        setLoading(true);
+        try {
+          const res = await api.get('/bookings/mine?limit=50');
+          setBookings(res?.data?.data?.items || res?.data?.data || []);
+        } catch {
+          setError('Could not load your bookings.');
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const loadTutorBookings = useCallback(async () => {
@@ -241,18 +245,22 @@ export default function TutoringPage() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      setTutorLoading(true);
-      try {
-        const res = await fetchMyTutorProfile();
-        const profile = res?.data?.data || res?.data;
-        if (profile?._id) {
-          setTutorProfile(profile);
-          await loadTutorBookings();
-        }
-      } catch { /* no tutor profile */ }
-      finally { setTutorLoading(false); }
-    })();
+    const timer = setTimeout(() => {
+      (async () => {
+        setTutorLoading(true);
+        try {
+          const res = await fetchMyTutorProfile();
+          const profile = res?.data?.data || res?.data;
+          if (profile?._id) {
+            setTutorProfile(profile);
+            await loadTutorBookings();
+          }
+        } catch { /* no tutor profile */ }
+        finally { setTutorLoading(false); }
+      })();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [loadTutorBookings]);
 
   const handleAccept = async (bookingId) => {

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ArrowRight, ChevronLeft, Clock, Car, Users, RotateCcw } from 'lucide-react';
+import { ArrowRight, ChevronLeft, Clock, Car, Users, RotateCcw, AlertTriangle } from 'lucide-react';
 import api from '../../../lib/api';
 import { createRequest } from '../../../lib/apiRequests';
 import useStore from '../../../store/useStore';
@@ -149,7 +149,7 @@ export default function RideDetailPage() {
           {driver && (
             <div className={styles.detailCard}>
               <div className={styles.detailCardLabel}>Driver</div>
-              <div className={styles.driverCard}>
+              <div className={styles.driverCard} style={{ marginBottom: isDriver ? 0 : '1rem' }}>
                 <div className={styles.driverAvatar}>
                   {driver.avatar
                     // eslint-disable-next-line @next/next/no-img-element
@@ -161,6 +161,26 @@ export default function RideDetailPage() {
                   {driver.department && <div className={styles.driverDept}>{driver.department}</div>}
                 </div>
               </div>
+              {!isDriver && (
+                <Link 
+                  href={`/report-issue?targetId=${id}&targetType=Ride`}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '0.4rem', 
+                    fontSize: '0.75rem', 
+                    color: '#DC2626', 
+                    textDecoration: 'none', 
+                    padding: '0.5rem', 
+                    border: '1px solid #FECACA', 
+                    borderRadius: '8px',
+                    background: '#FEF2F2'
+                  }}
+                >
+                  <AlertTriangle size={12} /> Report this ride
+                </Link>
+              )}
             </div>
           )}
 

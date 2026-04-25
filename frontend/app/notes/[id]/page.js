@@ -20,6 +20,7 @@ import FileTypeBadge from '../../../components/FileTypeBadge';
 import RelativeTime from '../../../components/RelativeTime';
 import ReviewsList from '../../../components/ReviewsList';
 import { formatFileSize } from '../../../lib/uiHelpers';
+import { AlertTriangle } from 'lucide-react';
 import styles from '../notes.module.css';
 
 export default function NoteDetailPage() {
@@ -157,7 +158,7 @@ export default function NoteDetailPage() {
 
   return (
     <div className={styles.page}>
-      <div className={`container ${styles.container}`} style={{ maxWidth: 1000 }}>
+      <div className={styles.container}>
         {/* Header */}
         <div className={styles.pageHeader}>
           <div>
@@ -242,13 +243,21 @@ export default function NoteDetailPage() {
                   <Link href="/login" style={{ fontWeight: 600 }}>Log in</Link> to download or review.
                 </div>
               )}
-              <button
-                type="button"
-                style={{ background: 'none', border: 'none', color: '#9E9E9E', fontSize: '0.75rem', cursor: 'pointer', marginTop: '0.75rem', padding: 0 }}
-                onClick={() => setReportOpen(true)}
+              <Link
+                href={`/report-issue?targetId=${note._id}&targetType=Note`}
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.4rem', 
+                  color: '#9E9E9E', 
+                  fontSize: '0.75rem', 
+                  cursor: 'pointer', 
+                  marginTop: '0.75rem', 
+                  textDecoration: 'none' 
+                }}
               >
-                Report this note
-              </button>
+                <AlertTriangle size={12} /> Report this note
+              </Link>
             </div>
 
             {/* Uploader Info */}

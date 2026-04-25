@@ -9,13 +9,9 @@ import { createBorrowItem, uploadImage } from '../../../lib/apiRequests';
 import styles from '../../create-forms.module.css';
 
 const BORROW_CATEGORIES = [
-  'general',
+  'academic',
   'electronics',
-  'books-notes',
-  'lab-tools',
-  'sports',
-  'calculator',
-  'accessory',
+  'home',
   'other',
 ];
 

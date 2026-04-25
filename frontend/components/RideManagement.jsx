@@ -62,7 +62,11 @@ export default function RideManagement({ showHeader = true }) {
   };
 
   useEffect(() => {
-    loadRides();
+    const timer = setTimeout(() => {
+      void loadRides();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const openEditModal = (ride) => {

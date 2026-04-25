@@ -1,19 +1,17 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './listing-management.module.css';
 import { markListingCompleted } from '../lib/apiRequests';
 import api from '../lib/api';
-import useStore from '../store/useStore';
 
 /**
  * ListingManagement
  * Component for managing user's marketplace listings
  * Allows edit, delete, and mark as completed
  */
-export default function ListingManagement({ showHeader = true }) {
-  const store = useStore();
+export default function ListingManagement({ showHeader = true, statusFilter = 'all' }) {
   const [listings, setListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedListing, setSelectedListing] = useState(null);
@@ -22,10 +20,6 @@ export default function ListingManagement({ showHeader = true }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  useEffect(() => {
-    loadListings();
-  }, []);
 
   const loadListings = async () => {
     try {
@@ -40,6 +34,44 @@ export default function ListingManagement({ showHeader = true }) {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchListings = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await api.get('/marketplace/listings/mine');
+
+        if (!cancelled) {
+          setListings(response.data.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load listings');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchListings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visibleListings = useMemo(() => {
+    if (statusFilter === 'active') return listings.filter((listing) => listing.status === 'active');
+    if (statusFilter === 'reserved') return listings.filter((listing) => listing.status === 'reserved');
+    if (statusFilter === 'past') return listings.filter((listing) => listing.status === 'sold');
+    return listings;
+  }, [listings, statusFilter]);
 
   const handleEditClick = (listing) => {
     setSelectedListing(listing);
@@ -86,7 +118,7 @@ export default function ListingManagement({ showHeader = true }) {
   };
 
   const handleMarkCompleted = async (listingId) => {
-    if (!confirm('This will mark the listing as sold. Continue?')) return;
+    if (!confirm('This will mark the listing as sold and move it to past listings. Continue?')) return;
 
     try {
       setActionLoading(true);
@@ -144,9 +176,13 @@ export default function ListingManagement({ showHeader = true }) {
         <div className={styles.emptyState}>
           <p>{"You don't have any listings yet"}</p>
         </div>
+      ) : visibleListings.length === 0 ? (
+        <div className={styles.emptyState}>
+          <p>No listings in this section yet.</p>
+        </div>
       ) : (
         <div className={styles.listingGrid}>
-          {listings.map((listing) => (
+          {visibleListings.map((listing) => (
             <div key={listing._id} className={styles.listingCard}>
               {listing.images && listing.images[0] && (
                 <Image
@@ -182,7 +218,7 @@ export default function ListingManagement({ showHeader = true }) {
                 )}
 
                 <div className={styles.cardActions}>
-                  {listing.status === 'active' && (
+                  {listing.status !== 'sold' && (
                     <>
                       <button
                         className="btn btn-sm btn-outline-primary"
@@ -196,17 +232,19 @@ export default function ListingManagement({ showHeader = true }) {
                         onClick={() => handleMarkCompleted(listing._id)}
                         disabled={actionLoading}
                       >
-                        Mark Complete
+                        Mark Sold
                       </button>
                     </>
                   )}
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(listing._id)}
-                    disabled={actionLoading}
-                  >
-                    Delete
-                  </button>
+                  {listing.status === 'active' && (
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => handleDelete(listing._id)}
+                      disabled={actionLoading}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

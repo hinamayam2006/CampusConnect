@@ -15,6 +15,12 @@ import {
   User,
   Bell,
   LogOut,
+  MessageSquare,
+  AlertTriangle,
+  Shield,
+  Users,
+  Ticket,
+  ArrowLeft,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import styles from './Sidebar.module.css';
@@ -24,25 +30,32 @@ const NAV_SECTIONS = [
   {
     label: 'MAIN',
     items: [
-      { label: 'Dashboard',      href: '/',            icon: LayoutGrid,   exact: true },
-      { label: 'Marketplace',    href: '/marketplace', icon: ShoppingBag              },
-      { label: 'Notes & Papers', href: '/notes',       icon: FileText                 },
-      { label: 'Rides',          href: '/rides',       icon: Car                      },
+      { label: 'Dashboard', href: '/', icon: LayoutGrid, exact: true },
+      { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
+      { label: 'Notes & Papers', href: '/notes', icon: FileText },
+      { label: 'Rides', href: '/rides', icon: Car },
     ],
   },
   {
     label: 'COMMUNITY',
     items: [
-      { label: 'Borrow',        href: '/borrow',     icon: Repeat        },
-      { label: 'Lost & Found',  href: '/needboard',  icon: Search },
-      { label: 'Tutoring',      href: '/tutoring',   icon: GraduationCap },
+      { label: 'Borrow', href: '/borrow', icon: Repeat },
+      { label: 'Lost & Found', href: '/lostnfound', icon: Search },
+      { label: 'Tutoring', href: '/tutoring', icon: GraduationCap },
     ],
   },
   {
     label: 'ACCOUNT',
     items: [
-      { label: 'My Profile',     href: null,              icon: User, isDynamic: true  },
-      { label: 'Notifications',  href: '/notifications',  icon: Bell, hasBadge: true   },
+      { label: 'My Profile', href: null, icon: User, isDynamic: true },
+      { label: 'Notifications', href: '/notifications', icon: Bell, hasBadge: true },
+    ],
+  },
+  {
+    label: 'HELP & SUPPORT',
+    items: [
+      { label: 'Submit Feedback', href: '/feedback', icon: MessageSquare },
+      { label: 'Report Issue', href: '/report-issue', icon: AlertTriangle },
     ],
   },
 ];
@@ -71,6 +84,7 @@ export default function Sidebar() {
   const { user, logout, unreadCount } = useStore();
   const pathname = usePathname();
   const router = useRouter();
+  const isAdminRoute = pathname?.startsWith('/admin');
 
   const handleLogout = useCallback(() => {
     logout();
@@ -94,19 +108,34 @@ export default function Sidebar() {
     return item.href;
   };
 
+  const adminSections = [
+    {
+      label: 'ADMIN VIEW',
+      items: [
+        { label: 'Command Center', href: '/admin', icon: Shield, exact: true },
+        { label: 'User Management', href: '/admin/users', icon: Users },
+        { label: 'Ticket Center', href: '/admin/tickets', icon: Ticket },
+      ],
+    },
+  ];
+
+  const sections = user?.role === 'admin'
+    ? [...NAV_SECTIONS, ...adminSections]
+    : NAV_SECTIONS;
+
   return (
     <aside className={styles.sidebar}>
       {/* Logo */}
       <Link href="/" className={styles['sidebar-logo']}>
         <span className={styles['sidebar-logo__icon']}>
-          <LayoutGrid size={17} strokeWidth={2} />
+          <img src="/logo.png" alt="CC" width="25" height="25" style={{ filter: 'brightness(0) invert(100%)', objectFit: 'contain', transform: 'translateX(1px)', transform: 'translateX(1px)' }} />
         </span>
         <span className={styles['sidebar-logo__text']}>CampusConnect</span>
       </Link>
 
       {/* Navigation */}
       <nav className={styles['sidebar-nav']} aria-label="Main navigation">
-        {NAV_SECTIONS.map(({ label, items }) => (
+        {sections.map(({ label, items }) => (
           <div key={label} className={styles['sidebar-section']}>
             <span className={styles['sidebar-section__label']}>{label}</span>
 
@@ -136,6 +165,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      
       {/* Logout */}
       <button className={styles['sidebar-logout']} onClick={handleLogout} type="button">
         <LogOut size={15} strokeWidth={1.9} aria-hidden="true" />

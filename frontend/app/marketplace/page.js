@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   PlusCircle,
@@ -11,26 +12,11 @@ import {
   ArrowRight,
   Package,
   BookOpen,
-  Monitor,
-  Sofa,
-  Shirt,
-  UtensilsCrossed,
-  LayoutGrid,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import useStore from '../../store/useStore';
 import styles from '../community.module.css';
-
-const CATEGORIES = [
-  { label: 'All',         value: '',            icon: LayoutGrid },
-  { label: 'Books',       value: 'books',       icon: BookOpen },
-  { label: 'Electronics', value: 'electronics', icon: Monitor },
-  { label: 'Furniture',   value: 'furniture',   icon: Sofa },
-  { label: 'Clothing',    value: 'clothing',    icon: Shirt },
-  { label: 'Kitchen',     value: 'kitchen',     icon: UtensilsCrossed },
-  { label: 'Other',       value: 'other',       icon: Package },
-];
 
 const TYPES = [
   { label: 'All Types', value: '' },
@@ -60,17 +46,14 @@ function getInitials(name = '') {
 
 function getCategoryFallback(category, styles) {
   const map = {
-    books: styles.imgFallbackBooks,
-    electronics: styles.imgFallbackElec,
-    furniture: styles.imgFallbackFurniture,
-    clothing: styles.imgFallbackClothing,
-    kitchen: styles.imgFallbackKitchen,
+    textbook: styles.imgFallbackBooks,
+    general: styles.imgFallbackDefault,
   };
   return map[(category || '').toLowerCase()] || styles.imgFallbackDefault;
 }
 
 function getCategoryIcon(category) {
-  const map = { books: BookOpen, electronics: Monitor, furniture: Sofa, clothing: Shirt, kitchen: UtensilsCrossed };
+  const map = { textbook: BookOpen, general: Package };
   const Icon = map[(category || '').toLowerCase()] || Package;
   return <Icon size={28} />;
 }
@@ -94,20 +77,28 @@ function SkeletonCards() {
 }
 
 export default function MarketplacePage() {
+  const router = useRouter();
   const { user, accessToken } = useStore();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
   const [listingType, setListingType] = useState('');
+  const [showSold, setShowSold] = useState(false);
+  const isLoggedIn = Boolean(user && accessToken);
+
+  const requireLoginBeforeNavigate = (e, targetPath, featureLabel) => {
+    if (isLoggedIn) return;
+    e.preventDefault();
+    toast.error(`Please log in to view ${featureLabel}.`);
+    router.push(`/login?redirect=${encodeURIComponent(targetPath)}`);
+  };
 
   const fetchListings = async () => {
-    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (search)      params.set('search', search);
-      if (category)    params.set('category', category);
       if (listingType) params.set('listingType', listingType);
+      if (showSold)    params.set('showSold', 'true');
       const res = await api.get(`/marketplace/listings?${params}`);
       if (res.data.success) setItems(res.data.data?.items || res.data.data || []);
     } catch {
@@ -119,9 +110,40 @@ export default function MarketplacePage() {
   };
 
   useEffect(() => {
-    fetchListings();
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (listingType) params.set('listingType', listingType);
+        if (showSold) params.set('showSold', 'true');
+
+        const res = await api.get(`/marketplace/listings?${params}`);
+        if (cancelled) return;
+
+        if (res.data.success) {
+          setItems(res.data.data?.items || res.data.data || []);
+        } else {
+          setItems([]);
+        }
+      } catch {
+        if (!cancelled) {
+          toast.error('Could not load listings. Please try again.');
+          setItems([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, listingType]);
+  }, [listingType, showSold]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -134,10 +156,11 @@ export default function MarketplacePage() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    setLoading(true);
     await fetchListings();
     if (accessToken) {
       try {
-        await api.post('/marketplace/search-log', { search, category });
+        await api.post('/marketplace/search-log', { search });
       } catch { /* optional */ }
     }
   };
@@ -154,7 +177,31 @@ export default function MarketplacePage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <Link href="/marketplace/my-listings" className={styles.btnOutline}>
+            <Link href="/marketplace/general" className={styles.btnOutline}>
+              General items
+            </Link>
+            <Link href="/marketplace/textbooks" className={styles.btnOutline}>
+              <BookOpen size={15} /> Textbooks
+            </Link>
+            <Link
+              href="/marketplace/my-requests"
+              className={styles.btnOutline}
+              onClick={(e) => requireLoginBeforeNavigate(e, '/marketplace/my-requests', 'My Requests')}
+            >
+              My Requests
+            </Link>
+            <Link
+              href="/marketplace/recommendations"
+              className={styles.btnOutline}
+              onClick={(e) => requireLoginBeforeNavigate(e, '/marketplace/recommendations', 'Recommendations for You')}
+            >
+              Recommended
+            </Link>
+            <Link
+              href="/marketplace/my-listings"
+              className={styles.btnOutline}
+              onClick={(e) => requireLoginBeforeNavigate(e, '/marketplace/my-listings', 'My Listings')}
+            >
               My Listings
             </Link>
             {user && (
@@ -174,7 +221,7 @@ export default function MarketplacePage() {
                 <input
                   type="text"
                   className={styles.searchInput}
-                  placeholder="Search listings, electronics, books..."
+                  placeholder="Search general items or textbooks..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -185,30 +232,34 @@ export default function MarketplacePage() {
             </div>
           </form>
 
-          {/* Category Pills */}
-          <div className={styles.pillGroup} style={{ marginTop: '0.75rem' }}>
-            {CATEGORIES.map(({ label, value, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                className={`${styles.pill} ${category === value ? styles.pillActive : ''}`}
-                onClick={() => { setCategory(value); }}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            ))}
-            <div className={styles.filterDivider} />
-            {TYPES.map(({ label, value }) => (
-              <button
-                key={value}
-                type="button"
-                className={`${styles.pill} ${listingType === value ? styles.pillActive : ''}`}
-                onClick={() => setListingType(value)}
-              >
-                {label}
-              </button>
-            ))}
+          {/* Listing type filters for current hub view */}
+          <div className={styles.pillGroup} style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              {TYPES.map(({ label, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`${styles.pill} ${listingType === value ? styles.pillActive : ''}`}
+                  onClick={() => {
+                    setLoading(true);
+                    setListingType(value);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showSold} 
+                onChange={(e) => {
+                  setLoading(true);
+                  setShowSold(e.target.checked);
+                }} 
+              />
+              Show Sold Items
+            </label>
           </div>
         </div>
 
@@ -216,7 +267,7 @@ export default function MarketplacePage() {
         {!loading && (
           <p className={styles.resultsCount}>
             {filtered.length} listing{filtered.length !== 1 ? 's' : ''} found
-            {(category || listingType) ? ` · filtered` : ''}
+            {listingType ? ` · filtered` : ''}
           </p>
         )}
 
@@ -260,6 +311,16 @@ export default function MarketplacePage() {
                       <span className={`${styles.cardBadge} ${priceBadgeClass}`}>
                         <Tag size={10} /> {item.listingType || 'Sale'}
                       </span>
+                      {item.status === 'sold' && (
+                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'inherit', zIndex: 10 }}>
+                          <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.4rem 1.2rem', fontWeight: 'bold', letterSpacing: '2px', borderRadius: '6px', transform: 'rotate(-10deg)', fontSize: '1.2rem', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>SOLD</span>
+                        </div>
+                      )}
+                      {item.status === 'reserved' && (
+                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'inherit', zIndex: 10 }}>
+                          <span style={{ backgroundColor: '#f59e0b', color: 'white', padding: '0.4rem 1rem', fontWeight: 'bold', letterSpacing: '1px', borderRadius: '6px', fontSize: '1rem', border: '2px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>RESERVED</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className={styles.cardBody}>
@@ -291,20 +352,6 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {/* Quick Links */}
-        {!loading && (
-          <div style={{ marginTop: '2.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <Link href="/marketplace/textbooks" className={styles.btnOutline}>
-              <BookOpen size={15} /> Textbooks
-            </Link>
-            <Link href="/marketplace/my-requests" className={styles.btnOutline}>
-              My Requests
-            </Link>
-            <Link href="/marketplace/recommendations" className={styles.btnOutline}>
-              Recommended for You
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );

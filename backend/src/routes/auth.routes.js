@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, getMe, updateProfile, refresh, verifyEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+import { register, login, getMe, updateProfile, deleteAccount, refresh, verifyEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
 import protect from '../middleware/auth.middleware.js';
 import validate from '../middleware/validate.middleware.js';
 import { loginLimiter, registerLimiter } from '../middleware/authRateLimiter.js';
@@ -24,5 +24,6 @@ router.post('/refresh', refresh);
 // Protected routes — must be logged in
 router.get('/me', protect, getMe);
 router.put('/profile', protect, validate(updateProfileSchema), updateProfile);
+router.delete('/profile', protect, deleteAccount);
 
 export default router;

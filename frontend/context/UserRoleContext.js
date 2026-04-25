@@ -13,34 +13,41 @@ const UserRoleContext = createContext();
  */
 export const UserRoleProvider = ({ children }) => {
   const { user } = useStore();
-  const [hasTutorProfile, setHasTutorProfile] = useState(false);
+  const [tutorStatusByUserId, setTutorStatusByUserId] = useState({});
   const [tutorLoading, setTutorLoading] = useState(false);
+
+  const hasTutorProfile = user?._id ? Boolean(tutorStatusByUserId[user._id]) : false;
 
   // Check if user has a tutor profile
   useEffect(() => {
-    if (!user?._id) {
-      setHasTutorProfile(false);
-      return;
-    }
+    if (!user?._id) return;
 
     let isMounted = true;
+    const userId = user._id;
 
     const checkTutorStatus = async () => {
       setTutorLoading(true);
       try {
         await fetchMyTutorProfile();
-        if (isMounted) setHasTutorProfile(true);
+        if (isMounted) {
+          setTutorStatusByUserId((prev) => ({ ...prev, [userId]: true }));
+        }
       } catch {
-        if (isMounted) setHasTutorProfile(false);
+        if (isMounted) {
+          setTutorStatusByUserId((prev) => ({ ...prev, [userId]: false }));
+        }
       } finally {
         if (isMounted) setTutorLoading(false);
       }
     };
 
-    checkTutorStatus();
+    const timer = setTimeout(() => {
+      void checkTutorStatus();
+    }, 0);
 
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [user?._id]);
 

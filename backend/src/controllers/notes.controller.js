@@ -5,6 +5,7 @@ import Review from '../models/Review.model.js';
 import { buildDownloadUrl } from '../services/cloudinary.service.js';
 import { logActivity } from '../services/activity.service.js';
 import { pushNotification } from '../services/notification.service.js';
+import { buildTokenSearchQuery } from '../utils/search.js';
 
 function attachDownloadUrl(noteDoc) {
   const data = noteDoc.toObject();
@@ -57,14 +58,9 @@ export const listNotes = async (req, res) => {
     const { q = '', page = '1', limit = '12' } = req.query;
 
     const query = { status: 'active' };
-    const search = String(q).trim();
-    if (search) {
-      query.$or = [
-        { title: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-        { description: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-        { course: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-        { subject: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
-      ];
+    const searchQuery = buildTokenSearchQuery(q, ['title', 'description', 'course', 'subject']);
+    if (searchQuery) {
+      query.$and = searchQuery.$and;
     }
 
     const lim = Math.min(48, Math.max(1, Number(limit)));
@@ -130,8 +126,9 @@ export const searchNotes = async (req, res) => {
     }
 
     const search = String(q).trim();
-    if (search) {
-      query.$text = { $search: search };
+    const searchQuery = buildTokenSearchQuery(search, ['title', 'description', 'course', 'subject']);
+    if (searchQuery) {
+      query.$and = [...(query.$and || []), ...searchQuery.$and];
     }
 
     const lim = Math.min(48, Math.max(1, Number(limit)));
@@ -147,12 +144,6 @@ export const searchNotes = async (req, res) => {
       .skip(skip)
       .limit(lim)
       .sort(sortOrder);
-
-    if (search && sort === 'newest') {
-      findQuery = findQuery
-        .select({ score: { $meta: 'textScore' } })
-        .sort({ score: { $meta: 'textScore' }, createdAt: -1 });
-    }
 
     const [items, total, user] = await Promise.all([
       findQuery,

@@ -127,6 +127,14 @@ export const login = async (req, res, next) => {
       });
     }
 
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: `Your account has been suspended. Reason: ${user.suspensionReason || 'Violation of community guidelines'}. Please contact support if you believe this is an error.`,
+        suspended: true,
+      });
+    }
+
     // 5. Successful login — clear any previous failed attempts
     clearAttempts(email);
 
@@ -280,15 +288,32 @@ export const getMe = async (req, res, next) => {
 // ─── UPDATE PROFILE ──────────────────────────────────────
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, department, year, canTeach, needsTutoring, avatar } = req.body;
+    const {
+      name,
+      department,
+      year,
+      canTeach,
+      needsTutoring,
+      avatar,
+      bio,
+      profilePublic,
+      showEmail,
+      allowMessages,
+      showActivity,
+    } = req.body;
 
     const updates = {
       ...(typeof name === 'string' ? { name } : {}),
       ...(typeof department === 'string' ? { department } : {}),
       ...(typeof year !== 'undefined' ? { year } : {}),
       ...(typeof avatar === 'string' ? { avatar } : {}),
+      ...(typeof bio === 'string' ? { bio } : {}),
       ...(Array.isArray(canTeach) ? { canTeach } : {}),
       ...(Array.isArray(needsTutoring) ? { needsTutoring } : {}),
+      ...(typeof profilePublic === 'boolean' ? { profilePublic } : {}),
+      ...(typeof showEmail === 'boolean' ? { showEmail } : {}),
+      ...(typeof allowMessages === 'boolean' ? { allowMessages } : {}),
+      ...(typeof showActivity === 'boolean' ? { showActivity } : {}),
     };
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -303,6 +328,19 @@ export const updateProfile = async (req, res, next) => {
       data: { user: updatedUser },
     });
 
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteAccount = async (req, res, next) => {
+  try {
+    await User.findByIdAndDelete(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
   } catch (err) {
     next(err);
   }
@@ -351,6 +389,22 @@ export const refresh = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'User not found or refresh token revoked.',
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: `Your account has been suspended. Reason: ${user.suspensionReason || 'Violation of community guidelines'}. Please contact support if you believe this is an error.`,
+        suspended: true,
       });
     }
 

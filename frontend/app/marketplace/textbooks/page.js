@@ -7,6 +7,7 @@ import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useStore from '../../../store/useStore';
 import styles from '../../shared/marketplace-rides.module.css';
+import hubStyles from '../../community.module.css';
 
 function formatPrice(listing) {
   if (listing.listingType === 'exchange') return 'Exchange';
@@ -44,7 +45,37 @@ export default function TextbooksMarketplacePage() {
   };
 
   useEffect(() => {
-    fetchList();
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const params = new URLSearchParams({ category: 'textbook' });
+        if (search) params.set('search', search);
+        if (department) params.set('department', department);
+        if (semester) params.set('semester', semester);
+        if (courseCode) params.set('courseCode', courseCode);
+        if (listingType) params.set('listingType', listingType);
+
+        const res = await api.get(`/marketplace/listings?${params}`);
+        if (cancelled) return;
+
+        if (res.data.success) {
+          setItems(res.data.data.items || []);
+        } else {
+          setItems([]);
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,21 +97,27 @@ export default function TextbooksMarketplacePage() {
   };
 
   return (
-    <div className="container py-4 py-md-5">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
-        <div>
-          <h1 className="mb-1">Textbooks &amp; study material</h1>
-          <p className="text-secondary mb-0">Narrow down by course code, semester, and department.</p>
+    <div className={hubStyles.page}>
+      <div className="container">
+      <div className={hubStyles.pageHeader}>
+        <div className={hubStyles.headerLeft}>
+          <h1 className={hubStyles.pageTitle}>Textbooks &amp; study material</h1>
+          <p className={hubStyles.pageSubtitle}>Narrow down by course code, semester, and department.</p>
         </div>
-        <Link href="/marketplace" className="btn btn-outline-secondary btn-sm">
-          Hub
-        </Link>
+        <div className="d-flex gap-2 flex-wrap">
+          <Link href="/marketplace" className={hubStyles.btnOutline}>
+            Marketplace hub
+          </Link>
+          <Link href="/marketplace/general" className={hubStyles.btnOutline}>
+            General items
+          </Link>
+        </div>
       </div>
 
       <form className={styles['mc-filters']} onSubmit={onSubmit}>
         <div className="row g-2 align-items-end">
           <div className="col-md-3">
-            <label className="form-label small">Search</label>
+            <label className="form-label">Search</label>
             <input
               className="form-control"
               value={search}
@@ -89,7 +126,7 @@ export default function TextbooksMarketplacePage() {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label small">Course code</label>
+            <label className="form-label">Course code</label>
             <input
               className="form-control text-uppercase"
               value={courseCode}
@@ -98,7 +135,7 @@ export default function TextbooksMarketplacePage() {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label small">Semester</label>
+            <label className="form-label">Semester</label>
             <select className="form-select" value={semester} onChange={(e) => setSemester(e.target.value)}>
               <option value="">Any</option>
               {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -109,7 +146,7 @@ export default function TextbooksMarketplacePage() {
             </select>
           </div>
           <div className="col-md-2">
-            <label className="form-label small">Department</label>
+            <label className="form-label">Department</label>
             <select className="form-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">Any</option>
               {DEPARTMENTS.map((d) => (
@@ -120,7 +157,7 @@ export default function TextbooksMarketplacePage() {
             </select>
           </div>
           <div className="col-md-2">
-            <label className="form-label small">Type</label>
+            <label className="form-label">Type</label>
             <select className="form-select" value={listingType} onChange={(e) => setListingType(e.target.value)}>
               <option value="">Any</option>
               <option value="sale">Sale</option>
@@ -129,7 +166,7 @@ export default function TextbooksMarketplacePage() {
             </select>
           </div>
           <div className="col-md-1">
-            <button type="submit" className="btn btn-primary w-100">
+            <button type="submit" className={hubStyles.btnPrimary} style={{ width: '100%', justifyContent: 'center' }}>
               Go
             </button>
           </div>
@@ -146,16 +183,28 @@ export default function TextbooksMarketplacePage() {
               <div key={item._id} className="col-6 col-lg-3">
                 <Link href={`/marketplace/${item._id}`} className="text-decoration-none text-reset">
                   <div className={styles['mc-listing-card']}>
-                    {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} alt="" />
-                    ) : (
-                      <div className={styles['mc-img-ph']} />
-                    )}
+                    <div style={{ position: 'relative' }}>
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" style={{ display: 'block', width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
+                      ) : (
+                        <div className={styles['mc-img-ph']} />
+                      )}
+                      {item.status === 'sold' && (
+                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'inherit', zIndex: 10 }}>
+                          <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '0.4rem 1.2rem', fontWeight: 'bold', letterSpacing: '2px', borderRadius: '6px', transform: 'rotate(-10deg)', fontSize: '1.2rem', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>SOLD</span>
+                        </div>
+                      )}
+                      {item.status === 'reserved' && (
+                        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'inherit', zIndex: 10 }}>
+                          <span style={{ backgroundColor: '#f59e0b', color: 'white', padding: '0.4rem 1rem', fontWeight: 'bold', letterSpacing: '1px', borderRadius: '6px', fontSize: '1rem', border: '2px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>RESERVED</span>
+                        </div>
+                      )}
+                    </div>
                     <div className={styles['mc-card-body']}>
                       <span className={styles['mc-badge']}>{item.courseCode || 'Course'}</span>
-                      <h3 className="h6 mt-1 mb-1">{item.title}</h3>
-                      <p className="small text-secondary mb-1">
+                      <h3 className={hubStyles.cardTitle} style={{ marginTop: '0.35rem' }}>{item.title}</h3>
+                      <p className={hubStyles.cardCategory} style={{ textTransform: 'none', letterSpacing: 0 }}>
                         {item.department}
                         {item.semester ? ` · Sem ${item.semester}` : ''}
                       </p>
@@ -169,6 +218,7 @@ export default function TextbooksMarketplacePage() {
         </div>
       )}
       {!loading && items.length === 0 && <p className="text-secondary">No textbooks match these filters.</p>}
+      </div>
     </div>
   );
 }
