@@ -51,12 +51,12 @@ export const loginLimiter = rateLimit({
 
 /**
  * Strict rate limiter for registration attempts
- * Limits to 3 accounts per 15 minutes per IP
- * Prevents account enumeration/abuse of registration endpoint
+ * Limits to 100 accounts per 15 minutes per IP
+ * Prevents account enumeration/abuse of registration endpoint while accommodating university campus networks
  */
 export const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minute window
-  max: 3, // 3 registration attempts per window
+  max: 100, // 100 registration attempts per window (accommodates university campus networks)
   message: {
     success: false,
     message: 'Too many registration attempts. Please try again later.',
