@@ -15,23 +15,22 @@
   z-index: 200;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Hide scrollbar for modern browsers */
-  scrollbar-width: none;
-  /* Hide scrollbar for WebKit browsers */
+  /* Hide scrollbar for IE/Edge (supported) */
   -ms-overflow-style: none;
 }
 
+/* Hide scrollbar for Chrome, Safari, and all WebKit browsers */
 .sidebar::-webkit-scrollbar {
   display: none;
 }
 
-/* Fallback for older browsers that don't support scrollbar-width */
-@supports not (scrollbar-width: none) {
-  .sidebar {
-    /* Use a very thin scrollbar as fallback */
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
+/* Additional fallback - make scrollbar invisible in all browsers */
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
 /* ── Logo block ── */
