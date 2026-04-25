@@ -10,7 +10,7 @@
  *
  * Industry Standard:
  * - Login endpoint: 5 attempts per 15 minutes per IP (much stricter than global)
- * - Register endpoint: 3 attempts per 15 minutes per IP (prevents account enumeration)
+ * - Register endpoint: 100 attempts per 15 minutes per IP (prevents account enumeration)
  * - Global limit kept at 100 req/15min for normal operations
  *
  * This uses in-memory store (express-rate-limit default Store).
@@ -26,7 +26,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
  */
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minute window
-  max: 5, // 5 attempts per window (much stricter than global 100)
+  max: 10, // 10 attempts per window
   message: {
     success: false,
     message: 'Too many login attempts. Please try again later.',
