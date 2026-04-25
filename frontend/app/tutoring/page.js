@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { GraduationCap, Search, ArrowRight, Clock, Calendar, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styles from './tutoring.module.css';
@@ -54,7 +55,7 @@ function SessionCard({ booking }) {
     <div className={styles.sessionCard}>
       <div className={styles.sessionAvatar}>
         {tutor.avatar
-          ? <img src={tutor.avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <Image src={tutor.avatar} alt={name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : initials(name)
         }
       </div>
@@ -104,7 +105,7 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
         <div className={styles.sessionAvatar}>
           {student.avatar
-            ? <img src={student.avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            ? <Image src={student.avatar} alt={name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
             : name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
           }
         </div>
@@ -142,9 +143,11 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
       {/* Payment proof image */}
       {showProof && booking.paymentProofUrl && (
         <div style={{ width: '100%' }}>
-          <img
+          <Image
             src={booking.paymentProofUrl}
             alt="Payment receipt"
+            width={400}
+            height={320}
             style={{ maxWidth: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 10, border: '1px solid #E8E3DE', display: 'block' }}
           />
         </div>

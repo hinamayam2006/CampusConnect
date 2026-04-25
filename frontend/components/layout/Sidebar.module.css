@@ -15,11 +15,23 @@
   z-index: 200;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Hide scrollbar for modern browsers */
   scrollbar-width: none;
+  /* Hide scrollbar for WebKit browsers */
+  -ms-overflow-style: none;
 }
 
 .sidebar::-webkit-scrollbar {
   display: none;
+}
+
+/* Fallback for older browsers that don't support scrollbar-width */
+@supports not (scrollbar-width: none) {
+  .sidebar {
+    /* Use a very thin scrollbar as fallback */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
 }
 
 /* ── Logo block ── */
