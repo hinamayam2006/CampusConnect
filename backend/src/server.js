@@ -25,12 +25,22 @@ if (!mongoUri) {
 
 // Create HTTP server and Socket.io instance
 const server = createServer(app);
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL || '').split(',').map((o) => o.trim()),
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: (process.env.FRONTEND_URL || '')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    origin: (origin, callback) => {
+      // Allow requests with no origin or matching our allowed list
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   },
 });

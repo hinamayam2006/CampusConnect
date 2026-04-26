@@ -3,29 +3,24 @@ import { v2 as cloudinary } from 'cloudinary';
 
 
 
-export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect') {
-  cloudinary.config({
+cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-  // Add this line right here to force a refresh of the config with current ENV values
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+
+export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect') {
   const cloud = process.env.CLOUDINARY_CLOUD_NAME;
   const key = process.env.CLOUDINARY_API_KEY;
   const secret = process.env.CLOUDINARY_API_SECRET;
-  
+
   console.log('[Cloudinary Debug] Config check:', {
     cloudName: cloud ? 'SET' : 'MISSING',
     apiKey: key ? 'SET' : 'MISSING',
     apiSecret: secret ? 'SET' : 'MISSING',
     folder
   });
-  
+
   if (!cloud || !key || !secret) {
     throw new Error(
       'Cloudinary is not configured — set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in backend/.env'
@@ -49,7 +44,7 @@ export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect')
             apiKey: key?.substring(0, 8) + '...',
             fullError: err
           });
-          
+
           // Specific 403 error handling
           if (err.http_code === 403) {
             console.error('[Cloudinary 403] Authentication/Permission Issue - Check:');
@@ -59,7 +54,7 @@ export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect')
             console.error('4. Account is not suspended');
             console.error('5. API key is not restricted');
           }
-          
+
           reject(err);
           return;
         }
