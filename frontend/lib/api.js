@@ -68,6 +68,12 @@ api.interceptors.response.use(
 
     const store = useStore.getState();
 
+    // Handle suspension errors
+    if (status === 403 && error.response?.data?.suspended) {
+      // Don't logout, let the component handle the suspension modal
+      return Promise.reject(error);
+    }
+
     if (
       status === 403 &&
       (errorCode === 'EMAIL_NOT_VERIFIED' || /verify your email/i.test(errorMessage))

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Settings,
   Calendar,
+  Bell,
 } from 'lucide-react';
 import {
   fetchTutorBookings,
@@ -24,7 +25,12 @@ import {
   completeBooking,
   updateTutorProfile,
 } from '@/lib/apiRequests';
+import api from '@/lib/api'; // H-3 FIX: use axios instance (attaches JWT) instead of raw fetch()
 import useRequireAuth from '@/lib/useRequireAuth';
+import BookingStatusBadge from '@/components/BookingStatusBadge'; // L-5 FIX: reuse shared component
+import StarRating from '@/components/StarRating'; // L-4 FIX: reuse shared component
+import SessionCompletionPrompt from '@/components/SessionCompletionPrompt'; // L-6 FIX: extracted shared component
+import { formatDate } from '@/lib/utils'; // L-3 FIX: use shared util
 import styles from './tutor-dashboard.module.css';
 
 /* --- Helpers ----------------------------------- */
@@ -32,43 +38,38 @@ function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map((s) => s[0]).join('').toUpperCase() || '?';
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '--';
-  const d = new Date(dateStr);
-  return d.toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  });
-}
-
-/* --- Star display ------------------------------- */
+/* --- Star display — L-4 FIX: wraps StarRating for read-only display.
+   StarRating doesn't accept 'size', so we keep a thin wrapper that renders
+   sized SVG stars for the dashboard context. StarRating is still used
+   for interactive rating inputs elsewhere. */
 function StarRow({ rating, size = 14 }) {
   return (
-    <div className={styles.ratingStars}>
+    <div style={{ display: 'flex', gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star
+        <svg
           key={i}
-          size={size}
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
           fill={i <= Math.round(rating) ? '#F59E0B' : 'none'}
-          color={i <= Math.round(rating) ? '#F59E0B' : '#4B5563'}
-          strokeWidth={1.5}
-        />
+          stroke={i <= Math.round(rating) ? '#F59E0B' : '#4B5563'}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
       ))}
     </div>
   );
 }
 
-/* --- Badge -------------------------------------- */
+/* --- Badge — L-5 FIX: StatusBadge removed; BookingStatusBadge imported above ---
+   Left as a thin alias so no JSX changes are needed below (component is used as <StatusBadge>) */
 function StatusBadge({ status }) {
-  const map = {
-    pending: [styles.badgePending, 'Pending'],
-    confirmed: [styles.badgeConfirmed, 'Confirmed'],
-    completed: [styles.badgeCompleted, 'Completed'],
-    cancelled: [styles.badgeCancelled, 'Cancelled'],
-  };
-  const [cls, label] = map[status] || [styles.badgePending, status];
-  return <span className={`${styles.badge} ${cls}`}>{label}</span>;
+  return <BookingStatusBadge status={status} />;
 }
+
 
 /* --- Session item (for tabs) -------------------- */
 function SessionItem({ booking, onComplete }) {
@@ -122,6 +123,10 @@ export default function TutorDashboardPage() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  /* --- Completion Prompt --- */
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [pendingCompletion, setPendingCompletion] = useState(null);
 
   /* --- Action loading maps --- */
   const [acceptingId, setAcceptingId] = useState(null);
@@ -148,6 +153,7 @@ export default function TutorDashboardPage() {
             setBookings(Array.isArray(items) ? items : []);
           }
           if (profileResult.status === 'fulfilled') {
+            // profileResult.value = { success, data: tutorProfileDoc }
             const p = profileResult.value?.data || null;
             setProfile(p);
             if (p?.courses) setCourses(p.courses);
@@ -166,12 +172,50 @@ export default function TutorDashboardPage() {
 
     const timer = setTimeout(() => {
       fetchTutorReviews(profile._id)
-        .then((res) => setReviews(res.data?.items || []))
+        // M-4 FIX: backend returns { success, data: { items: [...] } }
+        .then((res) => setReviews(res.data?.items || res.data || []))
         .catch(() => {});
     }, 0);
 
     return () => clearTimeout(timer);
   }, [profile?._id]);
+
+  /* --- Check for sessions needing completion prompts --- */
+  useEffect(() => {
+    if (!bookings.length) return;
+
+    const checkSessionsNeedingCompletion = () => {
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+
+      // Find sessions that ended 5-30 minutes ago and haven't been prompted
+      const sessionsNeedingPrompt = bookings.filter(booking => {
+        const sessionTime = new Date(booking.scheduledAt);
+        const sessionEndTime = new Date(sessionTime.getTime() + booking.durationMinutes * 60 * 1000);
+        
+        return (
+          booking.status === 'confirmed' &&
+          booking.attendanceStatus === 'pending' &&
+          sessionEndTime >= thirtyMinutesAgo &&
+          sessionEndTime <= fiveMinutesAgo &&
+          !booking.completionPromptSent
+        );
+      });
+
+      // Show prompt for the first session that needs attention
+      if (sessionsNeedingPrompt.length > 0 && !pendingCompletion) {
+        setPendingCompletion(sessionsNeedingPrompt[0]);
+        setShowPrompt(true);
+      }
+    };
+
+    // Check immediately and then every 2 minutes
+    checkSessionsNeedingCompletion();
+    const interval = setInterval(checkSessionsNeedingCompletion, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [bookings, pendingCompletion]);
 
   /* --- Stats --- */
   const pending = bookings.filter((b) => b.status === 'pending');
@@ -261,6 +305,53 @@ export default function TutorDashboardPage() {
     }
   };
 
+  /* --- Completion prompt handlers --- */
+  const handleMarkCompleted = async (bookingId) => {
+    try {
+      // H-3 FIX: was raw fetch() without Authorization header — always returned 401
+      const res = await api.post(`/bookings/${bookingId}/confirm-attendance`, {
+        attendanceStatus: 'attended',
+      });
+      if (res.data?.success) {
+        setBookings((prev) =>
+          prev.map((b) =>
+            b._id === bookingId
+              ? { ...b, status: 'completed', attendanceStatus: 'attended', tutorConfirmedAttendance: true }
+              : b
+          )
+        );
+      } else {
+        throw new Error('Failed to mark as completed');
+      }
+    } catch (error) {
+      console.error('Error marking session as completed:', error);
+      throw error;
+    }
+  };
+
+  const handleMarkNoShow = async (bookingId) => {
+    try {
+      // H-3 FIX: was raw fetch() without Authorization header — always returned 401
+      const res = await api.post(`/bookings/${bookingId}/confirm-attendance`, {
+        attendanceStatus: 'no_show',
+      });
+      if (res.data?.success) {
+        setBookings((prev) =>
+          prev.map((b) =>
+            b._id === bookingId
+              ? { ...b, attendanceStatus: 'no_show', tutorConfirmedAttendance: true }
+              : b
+          )
+        );
+      } else {
+        throw new Error('Failed to mark as no-show');
+      }
+    } catch (error) {
+      console.error('Error marking session as no-show:', error);
+      throw error;
+    }
+  };
+
   /* --- Rating distribution --- */
   const distribData = [5, 4, 3, 2, 1].map((star) => ({
     star,
@@ -289,7 +380,8 @@ export default function TutorDashboardPage() {
           <div className={styles.headerLeft}>
             <h1 className={styles.pageTitle}>Tutor Dashboard</h1>
             <p className={styles.pageSub}>
-              {profile ? `${profile.name || 'Your'} tutoring overview` : 'Manage your sessions and profile'}
+              {/* M-5 FIX: TutorProfile has no 'name' field; show generic label */}
+              {profile ? 'Your tutoring overview' : 'Manage your sessions and profile'}
             </p>
           </div>
           <div className={styles.headerActions}>
@@ -297,7 +389,8 @@ export default function TutorDashboardPage() {
               <Settings size={13} />
               Edit Profile
             </Link>
-            <Link href="/tutors/become" className={[styles.headerBtn, styles.headerBtnDark].join(' ')}>
+            {/* M-7 FIX: Both buttons previously linked to /tutors/become — now distinct */}
+            <Link href="/tutors/become#availability" className={[styles.headerBtn, styles.headerBtnDark].join(' ')}>
               <Calendar size={13} />
               Set Availability
             </Link>
@@ -385,7 +478,7 @@ export default function TutorDashboardPage() {
                             {formatDate(booking.scheduledAt)}
                           </div>
                           {booking.studentMessage && (
-                            <span className={styles.reqMessage}>"{booking.studentMessage}"</span>
+                            <span className={styles.reqMessage}>&quot;{booking.studentMessage}&quot;</span>
                           )}
                           <div className={styles.reqActions}>
                             <button
@@ -625,6 +718,16 @@ export default function TutorDashboardPage() {
           </aside>
         </div>
       </div>
+      
+      {/* Completion Prompt Popup */}
+      {showPrompt && pendingCompletion && (
+        <SessionCompletionPrompt
+          booking={pendingCompletion}
+          onDismiss={() => setShowPrompt(false)}
+          onMarkCompleted={handleMarkCompleted}
+          onMarkNoShow={handleMarkNoShow}
+        />
+      )}
     </div>
   );
 }

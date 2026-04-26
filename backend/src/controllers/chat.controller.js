@@ -151,19 +151,31 @@ export const getMessages = async (req, res) => {
 
 /**
  * Mark a message as read
+ * C-3 FIX: Only the intended receiver may update read state
  */
 export const markMessageAsRead = async (req, res) => {
   try {
     const { messageId } = req.params;
+    const userId = req.user._id;
 
-    const message = await Message.findByIdAndUpdate(
-      messageId,
-      { readAt: new Date() },
-      { new: true }
-    );
-
+    // Fetch first to enforce ownership
+    const message = await Message.findById(messageId);
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Only the receiver of the message may mark it as read
+    if (!message.receiver.equals(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to mark this message as read',
+      });
+    }
+
+    // Idempotent — only write if not already read
+    if (!message.readAt) {
+      message.readAt = new Date();
+      await message.save();
     }
 
     res.status(200).json({

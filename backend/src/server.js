@@ -2,10 +2,13 @@ import './loadEnv.js';
 
 import mongoose from 'mongoose';
 import cron from 'node-cron';
+import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import app from './app.js';
+import User from './models/User.model.js';
 import { sendRideReminders, autoCloseExpiredRides } from './controllers/rides.controller.js';
+import { sendSessionReminders, checkSessionCompletion } from './services/reminder.service.js';
 import Message from './models/Message.model.js';
 import Request from './models/Request.model.js';
 
@@ -40,19 +43,67 @@ const userConnections = new Map();
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Register user connection
-  socket.on('register_user', (userId) => {
-    userConnections.set(userId, socket.id);
-    socket.userId = userId;
-    socket.join(`user_${userId}`);
-    console.log(`User ${userId} registered with socket ${socket.id}`);
+  // Register user connection — must be authenticated via JWT
+  socket.on('register_user', async (userId, token) => {
+    try {
+      // Verify JWT token matches userId to prevent spoofing
+      if (!token) {
+        socket.emit('error', 'Authentication token required');
+        return;
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.userId !== userId) {
+        socket.emit('error', 'Token does not match user ID');
+        return;
+      }
+
+      // Verify user still exists and is not suspended
+      const user = await User.findById(userId);
+      if (!user) {
+        socket.emit('error', 'User not found');
+        return;
+      }
+
+      if (user.isSuspended) {
+        socket.emit('error', 'Account suspended');
+        return;
+      }
+
+      userConnections.set(userId, socket.id);
+      socket.userId = userId;
+      socket.join(`user_${userId}`);
+      console.log(`User ${userId} authenticated and registered with socket ${socket.id}`);
+    } catch (err) {
+      console.error('Socket authentication error:', err.message);
+      socket.emit('error', 'Authentication failed');
+    }
   });
 
   // Join request-specific room for real-time updates
-  socket.on('join_request_chat', (requestId) => {
-    const room = `request_${requestId}`;
-    socket.join(room);
-    console.log(`User ${socket.userId} joined chat room: ${room}`);
+  // C-1 FIX: Verify the socket user is requester or owner before allowing room join
+  socket.on('join_request_chat', async (requestId) => {
+    if (!socket.userId) {
+      socket.emit('error', 'Not authenticated');
+      return;
+    }
+    try {
+      const request = await Request.findById(requestId).select('requester owner');
+      if (!request) {
+        socket.emit('error', 'Request not found');
+        return;
+      }
+      if (!request.requester.equals(socket.userId) && !request.owner.equals(socket.userId)) {
+        socket.emit('error', 'Not authorized to join this chat room');
+        return;
+      }
+      const room = `request_${requestId}`;
+      socket.join(room);
+      console.log(`User ${socket.userId} joined chat room: ${room}`);
+    } catch (err) {
+      console.error('Error joining request chat:', err.message);
+      socket.emit('error', 'Failed to join chat room');
+    }
   });
 
   // Handle incoming messages
@@ -113,25 +164,41 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle typing indicator
+  // Handle typing indicator — L-10 FIX: guard against unregistered sockets
   socket.on('typing', (data) => {
+    if (!socket.userId) return;
     const { requestId } = data;
     const room = `request_${requestId}`;
     socket.to(room).emit('user_typing', { userId: socket.userId });
   });
 
-  // Handle stop typing
+  // Handle stop typing — L-10 FIX: guard against unregistered sockets
   socket.on('stop_typing', (data) => {
+    if (!socket.userId) return;
     const { requestId } = data;
     const room = `request_${requestId}`;
     socket.to(room).emit('user_stop_typing', { userId: socket.userId });
   });
 
   // Mark message as read
+  // C-2 FIX: Only the message receiver can mark it as read
   socket.on('mark_read', async (data) => {
     try {
       const { messageId } = data;
-      await Message.findByIdAndUpdate(messageId, { readAt: new Date() });
+      if (!socket.userId) return;
+
+      const message = await Message.findById(messageId).select('receiver readAt');
+      if (!message) return;
+
+      // Ownership check — only the intended receiver can mark as read
+      if (!message.receiver.equals(socket.userId)) {
+        socket.emit('error', 'Not authorized to mark this message as read');
+        return;
+      }
+
+      if (!message.readAt) {
+        await Message.findByIdAndUpdate(messageId, { readAt: new Date() });
+      }
       socket.emit('read_confirmed', { messageId });
     } catch (err) {
       console.error('Error marking message as read:', err);
@@ -168,6 +235,16 @@ mongoose.connect(mongoUri)
     // Auto-close expired rides — runs every 10 minutes
     cron.schedule('*/10 * * * *', () => {
       autoCloseExpiredRides().catch((e) => console.error('Auto-close rides:', e.message));
+    });
+
+    // Send tutoring session reminders — runs every 5 minutes
+    cron.schedule('*/5 * * * *', () => {
+      sendSessionReminders().catch((e) => console.error('Session reminders:', e.message));
+    });
+
+    // Check for session completion prompts — runs every 10 minutes
+    cron.schedule('*/10 * * * *', () => {
+      checkSessionCompletion().catch((e) => console.error('Session completion checks:', e.message));
     });
 
     console.log('Cron jobs scheduled');

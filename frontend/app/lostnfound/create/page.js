@@ -64,7 +64,7 @@ export default function LostnFoundCreatePage() {
         const res = await uploadImage(batch[i], (pct) => {
           const base = Math.round((i / batch.length) * 100);
           setUploadProgress(base + Math.round(pct / batch.length));
-        });
+        }, 'lost-found');
         const url = res?.data?.url || '';
         if (url) urls.push(url);
       }
@@ -203,15 +203,31 @@ export default function LostnFoundCreatePage() {
           {images.length > 0 && (
             <div className="d-flex flex-wrap gap-2 mt-2">
               {images.map((url) => (
-                <div key={url} className="position-relative">
+                <div key={url} className={styles['form-image-preview-wrapper']} style={{ position: 'relative' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="Uploaded item" className={styles['form-image-preview']} />
                   <button
                     type="button"
-                    className="btn btn-sm btn-danger position-absolute top-0 end-0 translate-middle p-0"
-                    style={{ width: 24, height: 24, lineHeight: '20px', borderRadius: '999px' }}
                     onClick={() => removeImage(url)}
-                    aria-label="Remove image"
+                    className={styles['form-image-remove-btn']}
+                    style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      background: '#DC2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1
+                    }}
+                    title="Remove image"
                   >
                     ×
                   </button>

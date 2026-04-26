@@ -6,6 +6,7 @@ import { buildDownloadUrl } from '../services/cloudinary.service.js';
 import { logActivity } from '../services/activity.service.js';
 import { pushNotification } from '../services/notification.service.js';
 import { buildTokenSearchQuery } from '../utils/search.js';
+import moderationService from '../services/moderation.service.js';
 
 function attachDownloadUrl(noteDoc) {
   const data = noteDoc.toObject();
@@ -214,18 +215,32 @@ export const listMyNoteStats = async (req, res) => {
 export const reportNote = async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
-    if (!note) {
-      return res.status(404).json({ success: false, message: 'Note not found' });
-    }
+    if (!note) return res.status(404).json({ success: false, message: 'Note not found' });
 
-    if (note.status === 'removed') {
-      return res.status(400).json({ success: false, message: 'Note already removed' });
-    }
+    const { reason, comment } = req.body;
+    
+    // Delegate to unified moderation service
+    const result = await moderationService.processReport({
+      targetModel: 'Note',
+      targetId: note._id,
+      reportedBy: req.user._id,
+      reason,
+      comment: comment || ''
+    });
 
-    note.status = 'flagged';
-    await note.save();
-
-    res.status(200).json({ success: true, message: 'Note reported for review' });
+    res.status(200).json({ 
+      success: true, 
+      message: 'Report submitted successfully',
+      data: {
+        reportCount: result.reportCount,
+        status:
+          result.autoAction === 'flagged' || result.autoAction === 'shadow_banned' || result.autoAction === 'hidden'
+            ? 'flagged'
+            : 'active',
+        wasAutoFlagged: result.wasAutoActioned,
+        sensitivity: result.report.sensitivity
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -256,16 +271,15 @@ export const getNoteById = async (req, res) => {
 export const deleteNote = async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
-    if (!note) {
-      return res.status(404).json({ success: false, message: 'Note not found' });
+    if (!note) return res.status(404).json({ success: false, message: 'Note not found' });
+
+    // Only owner can delete
+    if (String(note.uploadedBy) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    if (!note.uploadedBy.equals(req.user._id)) {
-      return res.status(403).json({ success: false, message: 'Not allowed' });
-    }
-
-    await note.deleteOne();
-    res.status(200).json({ success: true, message: 'Note removed' });
+    await Note.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'Note deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -492,6 +506,83 @@ export const reviewNote = async (req, res) => {
     await Note.findByIdAndUpdate(note._id, { averageRating: avg });
 
     res.status(201).json({ success: true, data: review });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getFlaggedNotes = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const flaggedNotes = await Note.find({ status: 'flagged' })
+      .populate('uploadedBy', 'name email')
+      .populate('reports.reportedBy', 'name email')
+      .sort({ autoFlaggedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Note.countDocuments({ status: 'flagged' });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        items: flaggedNotes,
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const adminReviewNote = async (req, res) => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note) return res.status(404).json({ success: false, message: 'Note not found' });
+
+    const { action, adminNote } = req.body; // action: 'approve' | 'remove'
+
+    note.adminReviewedAt = new Date();
+    note.adminReviewedBy = req.user._id;
+
+    if (action === 'approve') {
+      note.status = 'active';
+      note.reportCount = 0;
+      note.reports = [];
+    } else if (action === 'remove') {
+      note.status = 'removed';
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+
+    await note.save();
+
+    // Log admin action
+    try {
+      await logActivity({
+        userId: req.user._id,
+        type: `note_admin_${action}`,
+        refModel: 'Note',
+        refId: note._id,
+        meta: { 
+          originalStatus: note.status,
+          adminNote: adminNote || '',
+          reportCount: note.reportCount 
+        },
+      });
+    } catch (logErr) {
+      console.warn('Activity log failed:', logErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Note ${action}d successfully`,
+      data: note
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

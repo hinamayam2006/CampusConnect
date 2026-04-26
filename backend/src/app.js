@@ -18,6 +18,9 @@ import borrowRoutes from './routes/borrow.routes.js';
 import lostnFoundRoutes from './routes/lostnfound.routes.js';
 import ticketsRoutes from './routes/tickets.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import moderationRoutes from './routes/moderation.routes.js';
+import appealRoutes from './routes/appeal.routes.js';
+import errorHandler from './middleware/error.middleware.js'; // M-6 FIX: was 0-byte stub
 
 const app = express();
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -84,21 +87,16 @@ app.use('/api/borrow', borrowRoutes);
 app.use('/api/lostnfound', lostnFoundRoutes);
 app.use('/api/tickets', ticketsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/appeal', appealRoutes);
 
 // 404 handler — for unknown routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// Global error handler - must be last
-app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    errors: err.errors || [],
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-  });
-});
+// Global error handler — must be last, after all routes.
+// M-6 FIX: replaced inline 4-line stub with full errorHandler (handles Mongoose, JWT, etc.)
+app.use(errorHandler);
 
 export default app;

@@ -41,7 +41,7 @@ const listingSchema = new mongoose.Schema(
     images: [{ type: String }],
     status: {
       type: String,
-      enum: ['active', 'reserved', 'sold'],
+      enum: ['active', 'reserved', 'sold', 'flagged', 'removed'],
       default: 'active',
       index: true,
     },
@@ -55,6 +55,17 @@ const listingSchema = new mongoose.Schema(
       default: null,
     },
     views: { type: Number, default: 0, min: 0 },
+    // Moderation fields
+    reportCount: { type: Number, default: 0, min: 0 },
+    reports: [{
+      reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      reason: { type: String, required: true, enum: ['spam', 'inappropriate', 'copyright', 'low_quality', 'other'] },
+      comment: { type: String, maxlength: 500 },
+      reportedAt: { type: Date, default: Date.now },
+    }],
+    autoFlaggedAt: { type: Date },
+    adminReviewedAt: { type: Date },
+    adminReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );

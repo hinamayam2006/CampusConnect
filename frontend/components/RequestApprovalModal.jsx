@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import styles from '../request-approval.module.css';
+import styles from '../app/request-approval.module.css'; // H-7 FIX: was '../request-approval.module.css' (wrong dir)
 
 export default function RequestApprovalModal({
   request,

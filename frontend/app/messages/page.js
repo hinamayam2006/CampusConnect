@@ -79,14 +79,17 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!isReady) return;
-    void loadChats();
+    const timer = setTimeout(() => {
+      void loadChats();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [isReady, loadChats]);
 
   useEffect(() => {
     if (!isReady || !user?._id || !accessToken) return undefined;
 
     const socket = initializeSocket(accessToken);
-    registerUser(user._id);
+    registerUser(user._id, accessToken);
 
     const refreshChats = () => {
       void loadChats(true);
@@ -121,38 +124,42 @@ export default function MessagesPage() {
     });
   }, [chats, search, user?._id]);
 
-  useEffect(() => {
+  const autoSelectedRequest = useMemo(() => {
+    if (!filteredChats.length) return null;
+
     const targetRequestId = searchParams.get('requestId');
     const targetUserId = searchParams.get('with');
 
-    if (!filteredChats.length) {
-      setSelectedRequest(null);
-      return;
-    }
-
     if (targetRequestId) {
-      const foundByRequest = filteredChats.find(({ request }) => String(request._id) === String(targetRequestId));
-      if (foundByRequest) {
-        setSelectedRequest(foundByRequest.request);
-        return;
-      }
+      return filteredChats.find(({ request }) => String(request._id) === String(targetRequestId))?.request || null;
     }
 
     if (targetUserId) {
-      const foundByUser = filteredChats.find(({ request }) => {
-        const otherParty = getOtherParty(request, user?._id);
-        return String(otherParty?._id || otherParty) === String(targetUserId);
-      });
-      if (foundByUser) {
-        setSelectedRequest(foundByUser.request);
-        return;
-      }
+      return (
+        filteredChats.find(({ request }) => {
+          const otherParty = getOtherParty(request, user?._id);
+          return String(otherParty?._id || otherParty) === String(targetUserId);
+        })?.request || null
+      );
     }
 
-    if (!targetRequestId && !targetUserId && !selectedRequest) {
-      setSelectedRequest(filteredChats[0].request);
+    if (!selectedRequest) {
+      return filteredChats[0].request;
     }
-  }, [filteredChats, searchParams, selectedRequest, user?._id]);
+
+    return null;
+  }, [filteredChats, searchParams, user?._id, selectedRequest]);
+
+  useEffect(() => {
+    if (!autoSelectedRequest) return;
+    if (String(selectedRequest?._id) === String(autoSelectedRequest._id)) return;
+
+    const timer = setTimeout(() => {
+      setSelectedRequest(autoSelectedRequest);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [autoSelectedRequest, selectedRequest]);
 
   const selectedChat = chats.find(({ request }) => String(request._id) === String(selectedRequest?._id));
 

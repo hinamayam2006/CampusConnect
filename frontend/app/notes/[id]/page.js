@@ -9,10 +9,8 @@ import useRequireAuth from '../../../lib/useRequireAuth';
 import DownloadButton from '../../../components/DownloadButton';
 import BookmarkButton from '../../../components/BookmarkButton';
 import ReviewForm from '../../../components/ReviewForm';
-import ReportModal from '../../../components/ReportModal';
 import {
   submitNoteReview,
-  reportNote,
   fetchNoteReviews,
 } from '../../../lib/apiRequests';
 import StarRating from '../../../components/StarRating';
@@ -21,6 +19,7 @@ import RelativeTime from '../../../components/RelativeTime';
 import ReviewsList from '../../../components/ReviewsList';
 import { formatFileSize } from '../../../lib/uiHelpers';
 import { AlertTriangle } from 'lucide-react';
+import UnifiedReportModal from '../../../components/UnifiedReportModal';
 import styles from '../notes.module.css';
 
 export default function NoteDetailPage() {
@@ -33,7 +32,7 @@ export default function NoteDetailPage() {
   const [note, setNote] = useState(null);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
@@ -91,15 +90,6 @@ export default function NoteDetailPage() {
       setReviews(reviewRes?.data?.items || []);
     } catch (err) {
       toast.error(err?.message || 'Could not submit your review. Please try again.');
-    }
-  };
-
-  const handleReport = async ({ reason, comment }) => {
-    try {
-      await reportNote(noteId, { reason, comment });
-      toast.success('Report submitted. Our team will review it shortly.');
-    } catch (err) {
-      toast.error(err?.message || 'Could not submit your report. Please try again later.');
     }
   };
 
@@ -243,8 +233,8 @@ export default function NoteDetailPage() {
                   <Link href="/login" style={{ fontWeight: 600 }}>Log in</Link> to download or review.
                 </div>
               )}
-              <Link
-                href={`/report-issue?targetId=${note._id}&targetType=Note`}
+              <button
+                onClick={() => setReportModalOpen(true)}
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
@@ -253,11 +243,14 @@ export default function NoteDetailPage() {
                   fontSize: '0.75rem', 
                   cursor: 'pointer', 
                   marginTop: '0.75rem', 
-                  textDecoration: 'none' 
+                  textDecoration: 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0
                 }}
               >
                 <AlertTriangle size={12} /> Report this note
-              </Link>
+              </button>
             </div>
 
             {/* Uploader Info */}
@@ -329,7 +322,14 @@ export default function NoteDetailPage() {
         </div>
 
         {/* Report modal */}
-        <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} onSubmit={handleReport} />
+        <UnifiedReportModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          targetModel="Note"
+          targetId={note._id}
+          targetTitle={note.title}
+          targetDescription={note.description}
+        />
 
         {/* Reviews section */}
         <div className={styles.surfaceCardStrong} style={{ marginTop: '1.25rem' }}>

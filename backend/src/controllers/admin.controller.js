@@ -22,6 +22,7 @@ import Ride from '../models/Ride.model.js';
 import LostnFound from '../models/LostnFound.model.js';
 import Borrowing from '../models/Borrowing.model.js';
 import Note from '../models/Note.model.js';
+import { sendEmail } from '../utils/email.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -159,6 +160,105 @@ export const suspendUser = async (req, res) => {
       reason,
       by: req.user.name,
     });
+
+    // Send suspension email to user
+    try {
+      const suspensionEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Account Suspended - CampusConnect</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa;">
+          <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 40px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">CampusConnect</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Account Suspension Notice</p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 40px;">
+              <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                  <span style="font-size: 24px; margin-right: 10px;">⚠️</span>
+                  <h2 style="margin: 0; color: #dc2626; font-size: 20px;">Your Account Has Been Suspended</h2>
+                </div>
+                <p style="margin: 10px 0 0; color: #991b1b; line-height: 1.6;">
+                  Your CampusConnect account has been temporarily suspended due to a violation of our community guidelines.
+                </p>
+              </div>
+
+              <div style="margin-bottom: 30px;">
+                <h3 style="margin: 0 0 15px; color: #374151; font-size: 18px;">Suspension Details:</h3>
+                <div style="background: #f3f4f6; border-radius: 6px; padding: 20px;">
+                  <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Reason:</strong></p>
+                  <p style="margin: 0 0 20px; color: #111827; font-size: 16px; font-weight: 500;">${reason}</p>
+                  <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Date:</strong></p>
+                  <p style="margin: 0; color: #111827; font-size: 16px;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 30px;">
+                <h3 style="margin: 0 0 15px; color: #374151; font-size: 18px;">What This Means:</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8;">
+                  <li>You cannot log in to your account</li>
+                  <li>Your existing content remains visible to others</li>
+                  <li>You cannot create new content or interact with the platform</li>
+                  <li>This suspension is permanent until reviewed by an administrator</li>
+                </ul>
+              </div>
+
+              <div style="margin-bottom: 30px;">
+                <h3 style="margin: 0 0 15px; color: #374151; font-size: 18px;">Appeal Process:</h3>
+                <p style="margin: 0 0 20px; color: #4b5563; line-height: 1.6;">
+                  If you believe this suspension is an error or would like to provide additional context, please respond to this email with:
+                </p>
+                <div style="background: #eff6ff; border: 1px solid #dbeafe; border-radius: 6px; padding: 20px;">
+                  <ol style="margin: 0; padding-left: 20px; color: #1e40af; line-height: 1.8;">
+                    <li>Your full name and email address</li>
+                    <li>Detailed explanation of the situation</li>
+                    <li>Any evidence or context you'd like to share</li>
+                    <li>Why you believe the suspension should be reviewed</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px;">
+                <p style="margin: 0; color: #92400e; line-height: 1.6; font-size: 14px;">
+                  <strong>Important:</strong> Please respond directly to this email. Your appeal will be reviewed by our administration team, and we'll get back to you within 24-48 hours.
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;">
+                This is an automated message from CampusConnect Administration
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                © ${new Date().getFullYear()} CampusConnect. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail({
+        to: user.email,
+        subject: `Account Suspended - CampusConnect`,
+        html: suspensionEmailHtml
+      });
+
+      console.log(`Suspension email sent to ${user.email}`);
+    } catch (emailError) {
+      console.warn('Failed to send suspension email:', emailError.message);
+      // Don't fail the suspension if email fails
+    }
 
     return res.status(200).json({ success: true, message: `User ${user.name} suspended.`, data: { isSuspended: true } });
   } catch (err) {

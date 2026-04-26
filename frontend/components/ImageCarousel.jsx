@@ -16,7 +16,10 @@ export default function ImageCarousel({
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    setActiveIndex(0);
+    const timer = setTimeout(() => {
+      setActiveIndex(0);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [validImages.length]);
 
   if (!validImages.length) {

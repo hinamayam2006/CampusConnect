@@ -225,7 +225,7 @@ export default function UploadNotePage() {
                   Note Uploaded!
                 </h3>
                 <p style={{ color: '#6B6B6B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  Your material has been submitted and will be visible after review.
+                  Your material is now live! Our community moderation system ensures quality content through user reporting.
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                   <button type="button" onClick={handleUploadAnother} className={styles.submitBtn} style={{ width: 'auto', padding: '10px 22px' }}>
@@ -454,7 +454,7 @@ export default function UploadNotePage() {
                 </button>
                 <p className={styles.uploadHint}>
                   <Info size={12} color="#9E9E9E" />
-                  Your note will be reviewed before going live.
+                  Your note goes live immediately. Community reports help maintain quality.
                 </p>
               </>
             )}
@@ -475,8 +475,8 @@ export default function UploadNotePage() {
                     'Accepted formats: PDF, Word, PowerPoint, Excel, TXT.',
                     'Maximum file size is 25 MB per upload.',
                     'Include an accurate title and course code so others can find your material.',
-                    'Notes are reviewed before going live -- avoid plagiarised content.',
-                    'Repeated policy violations may result in account suspension.',
+                    'Content is moderated by community reporting -- ensure your material is original and helpful.',
+                    'Repeated valid reports may result in content removal or account suspension.',
                   ].map((rule, i) => (
                     <li key={i} className={styles.guideItem}>
                       <span className={styles.guideDot} />

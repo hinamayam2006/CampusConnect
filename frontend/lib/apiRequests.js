@@ -4,11 +4,14 @@ import api from './api';
 // UPLOAD
 // ============================================
 
-export const uploadImage = async (file, onProgress) => {
+export const uploadImage = async (file, onProgress, folder) => {
   const formData = new FormData();
   formData.append('image', file);
   try {
-    const response = await api.post('/upload/image', formData, {
+    // Prepend 'campusconnect/' to folder if not already included
+    const fullFolder = folder && !folder.startsWith('campusconnect/') ? `campusconnect/${folder}` : folder;
+    const url = fullFolder ? `/upload/image?folder=${fullFolder}` : '/upload/image';
+    const response = await api.post(url, formData, {
       // Do NOT set Content-Type manually — browser must auto-set multipart boundary
       timeout: 120000,
       onUploadProgress: onProgress

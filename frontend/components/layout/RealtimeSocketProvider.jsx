@@ -26,7 +26,7 @@ export default function RealtimeSocketProvider() {
     }
 
     const socket = initializeSocket(accessToken);
-    const register = () => registerUser(user._id);
+    const register = () => registerUser(user._id, accessToken);
     const handleNotification = (notification) => {
       const headline = notification?.type === 'chat_message' ? 'New message' : 'New notification';
       const body = buildNotificationBody(notification) || 'You have a new update.';

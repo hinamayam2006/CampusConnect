@@ -251,7 +251,7 @@ export default function Home() {
         <header className={styles['dash-header']}>
           <div className={styles['dash-header__left']}>
             <h1 className={styles['dash-header__greeting']}>
-              {greeting}, {firstName} <span className={styles['dash-star']}>✦</span>
+              {greeting}, {firstName}
             </h1>
             <p className={styles['dash-header__date']}>{today}</p>
           </div>
@@ -342,7 +342,7 @@ export default function Home() {
               <div className={styles['dashboard-shortcuts__grid']}>
                 <Link href="/dashboard/student" className={styles['sub-dash-card']}>
                   <BookOpen size={20} strokeWidth={1.7} />
-                  <span>My Bookings</span>
+                  <span>My Bookings (Student)</span>
                 </Link>
                 <Link href="/dashboard/uploader" className={styles['sub-dash-card']}>
                   <Download size={20} strokeWidth={1.7} />
@@ -412,7 +412,7 @@ export default function Home() {
                         <span className={styles['dash-ride-dot']} style={{ background: dotColor }} />
                         <div className={styles['dash-ride-body']}>
                           <span className={styles['dash-ride-route']}>
-                            {ride.from || ride.origin} → {ride.to || ride.destination}
+                            {ride.originName || ride.from || ride.origin} → {ride.destName || ride.to || ride.destination}
                           </span>
                           <span className={styles['dash-ride-time']}>
                             {ride.departureTime

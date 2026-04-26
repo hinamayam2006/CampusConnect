@@ -32,6 +32,22 @@ const bookingSchema = new mongoose.Schema(
       default: 'not_required',
       index: true,
     },
+
+    // Attendance verification
+    attendanceStatus: {
+      type: String,
+      enum: ['pending', 'attended', 'no_show', 'cancelled'],
+      default: 'pending',
+      index: true,
+    },
+    attendanceVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    attendanceVerifiedAt: { type: Date },
+    studentConfirmedAttendance: { type: Boolean, default: false },
+    tutorConfirmedAttendance: { type: Boolean, default: false },
+
+    // Reminder tracking
+    reminderSent: { type: Boolean, default: false },
+    completionPromptSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

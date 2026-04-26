@@ -301,7 +301,7 @@ export const submitReviewSchema = z
 
 export const reportNoteSchema = z
   .object({
-    reason: z.string().min(1).max(120),
+    reason: z.enum(['spam', 'inappropriate', 'copyright', 'low_quality', 'plagiarism', 'other']),
     comment: z.string().max(500).optional().default(''),
   })
   .strict();

@@ -1121,3 +1121,79 @@
   font-family: var(--font-inter), sans-serif;
   white-space: nowrap;
 }
+
+/* ── Payment Proof Modal ── */
+.proofModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.proofModal {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.proofModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #E8E2D9;
+  background: #F9F9F9;
+}
+
+.proofModalHeader span {
+  font-weight: 600;
+  color: #1A1A1A;
+  font-size: 1rem;
+}
+
+.proofModalImage {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  background: #f9f9f9;
+}
+
+.proofModalActions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #E8E2D9;
+  background: #F9F9F9;
+  justify-content: flex-end;
+}
+
+.btnSmall {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.btnSmall:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

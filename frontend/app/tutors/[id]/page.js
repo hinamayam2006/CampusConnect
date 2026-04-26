@@ -10,13 +10,10 @@ import useRequireAuth from '../../../lib/useRequireAuth';
 import useStore from '../../../store/useStore';
 import StarRating from '../../../components/StarRating';
 import ReviewsList from '../../../components/ReviewsList';
+import { initials } from '@/lib/utils'; // L-1 FIX: use shared util
 
 const DAY_SHORT = { Monday:'Mon', Tuesday:'Tue', Wednesday:'Wed', Thursday:'Thu', Friday:'Fri', Saturday:'Sat', Sunday:'Sun' };
 
-function initials(name) {
-  if (!name) return '?';
-  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-}
 
 export default function TutorDetailPage() {
   useRequireAuth();
@@ -149,7 +146,8 @@ export default function TutorDetailPage() {
                 {tutor.paymentMethod && (
                   <>
                     <p className={styles.sectionTitle}>Payment</p>
-                    <p className={styles.bioText}>{tutor.paymentMethod}{tutor.paymentDetails ? ' — ' + tutor.paymentDetails : ''}</p>
+                    {/* L-7 FIX: paymentDetails doesn't exist in TutorProfile schema — correct field is paymentInstructions */}
+                    <p className={styles.bioText}>{tutor.paymentMethod}{tutor.paymentInstructions ? ' — ' + tutor.paymentInstructions : ''}</p>
                   </>
                 )}
               </div>
@@ -161,7 +159,8 @@ export default function TutorDetailPage() {
                 <div className={styles.detailCardBody}>
                   <p className={styles.formTitle}>Reviews</p>
                   <StarRating value={tutor.averageRating || 0} readOnly size={16} />
-                  <ReviewsList reviews={reviews} />
+                  {/* M-1 FIX: ReviewsList expects 'items' prop, not 'reviews' — reviews never rendered */}
+                  <ReviewsList items={reviews} />
                 </div>
               </div>
             )}

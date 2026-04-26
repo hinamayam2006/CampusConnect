@@ -1,13 +1,16 @@
 import api from './api';
 
 export const submitFeedback = async (data) => {
-  return api.post('/tickets/feedback', data);
+  const response = await api.post('/tickets/feedback', data);
+  return response.data;
 };
 
 export const submitIssueReport = async (data) => {
-  return api.post('/tickets/report', data);
+  const response = await api.post('/tickets/report', data);
+  return response.data;
 };
 
 export const fetchMyTickets = async () => {
-  return api.get('/tickets/mine');
+  const response = await api.get('/tickets/mine');
+  return response.data;
 };

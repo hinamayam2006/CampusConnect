@@ -22,12 +22,15 @@ const ticketSchema = new mongoose.Schema(
 
     // Issue Report specific
     targetId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
+      trim: true,
       index: true,
     },
     targetType: {
       type: String,
-      enum: ['User', 'Listing', 'Note', 'Request', 'Review', 'Ride', 'TutorProfile', 'Borrowing', 'LostnFound', 'other', 'user', 'listing', 'note', 'request', 'review', 'ride', 'tutorprofile', 'borrowing', 'lostnfound', ''],
+      // M-3 FIX: Removed lowercase duplicates — PascalCase only to match Mongoose model names.
+      // Previously had both 'User' and 'user' etc., causing inconsistent stored values.
+      enum: ['User', 'Listing', 'Note', 'Request', 'Review', 'Ride', 'TutorProfile', 'Borrowing', 'LostnFound', 'other', ''],
       default: '',
     },
     images: [{ type: String, trim: true }],

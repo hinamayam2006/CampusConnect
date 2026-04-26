@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowLeft, Send, CheckCircle2, Image as ImageIcon, X } f
 import toast from 'react-hot-toast';
 import useRequireAuth from '../../lib/useRequireAuth';
 import api from '../../lib/api';
+import { uploadImage } from '../../lib/apiRequests';
 import { submitIssueReport } from '../../lib/apiTickets';
 import hubStyles from '../community.module.css';
 import uploadStyles from '../notes/upload/upload.module.css';
@@ -61,18 +62,13 @@ export default function ReportIssuePage() {
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const fd = new FormData();
-        fd.append('image', files[i]);
-        const res = await api.post('/upload/image', fd, {
-          onUploadProgress: (evt) => {
-            if (evt.total) {
-              const fileBase = Math.round((i / files.length) * 100);
-              const fileChunk = Math.round((evt.loaded / evt.total) * (100 / files.length));
-              setUploadProgress(fileBase + fileChunk);
-            }
-          },
-        });
-        if (res.data.success) urls.push(res.data.data.url);
+        const result = await uploadImage(files[i], (progress) => {
+          const fileBase = Math.round((i / files.length) * 100);
+          const fileChunk = Math.round((progress * (100 / files.length)) / 100);
+          setUploadProgress(fileBase + fileChunk);
+        }, 'tickets');
+        
+        if (result.success) urls.push(result.data.url);
       }
       setImages((prev) => [...prev, ...urls].slice(0, 3));
       toast.success('Screenshots attached');

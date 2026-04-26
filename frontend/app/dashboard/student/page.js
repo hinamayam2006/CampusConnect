@@ -10,11 +10,12 @@ import {
   submitBookingReview,
   uploadPaymentProof,
   uploadImage,
-} from '../../../lib/apiRequests';
-import BookingStatusBadge from '../../../components/BookingStatusBadge';
-import ReviewForm from '../../../components/ReviewForm';
-import ConfirmDialog from '../../../components/ConfirmDialog';
-import ImagePreviewModal from '../../../components/ImagePreviewModal';
+} from '@/lib/apiRequests';
+import BookingStatusBadge from '@/components/BookingStatusBadge';
+import ReviewForm from '@/components/ReviewForm';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
+import { formatDate, getGreeting } from '@/lib/utils'; // L-2/L-3 FIX: use shared utils
 import {
   CalendarCheck,
   Clock,
@@ -26,21 +27,6 @@ import {
 
 import styles from './student.module.css';
 
-function formatSchedule(dateValue) {
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return String(dateValue || '');
-  return date.toLocaleString('en-PK', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
 
 export default function StudentDashboardPage() {
   const { isReady, user } = useRequireAuth();
@@ -100,7 +86,7 @@ export default function StudentDashboardPage() {
     }
     setUploadingPaymentId(bookingId);
     try {
-      const imgRes = await uploadImage(file);
+      const imgRes = await uploadImage(file, null, 'payment-proofs');
       const proofUrl = imgRes?.data?.url;
       if (!proofUrl) throw new Error('Upload failed');
       const res = await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
@@ -240,9 +226,9 @@ export default function StudentDashboardPage() {
                         <GraduationCap size={13} />
                         <strong>{booking.tutor?.name || 'Tutor'}</strong>
                       </div>
-                      <div className={styles.bookingMetaItem}>
-                        <CalendarCheck size={13} />
-                        <span>{formatSchedule(booking.scheduledAt)}</span>
+                      <div className={styles.itemSchedule}>
+                        <Clock size={12} />
+                        {formatDate(booking.scheduledAt)}
                       </div>
                       <div className={styles.bookingMetaItem}>
                         <Clock size={13} />

@@ -1,0 +1,181 @@
+.appealContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.appealCard {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 600px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.appealHeader {
+  background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: white;
+}
+
+.appealTitle {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.appealSubtitle {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.appealContent {
+  padding: 2rem;
+}
+
+.infoBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.infoBox h3 {
+  margin: 0 0 1rem;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.infoBox ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #4b5563;
+  line-height: 1.8;
+}
+
+.infoBox li {
+  margin-bottom: 0.5rem;
+}
+
+.appealForm {
+  margin-bottom: 2rem;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.formInput,
+.formTextarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formInput:focus,
+.formTextarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.charCount {
+  margin: 0.5rem 0 0;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.3);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.alternativeBox {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.alternativeBox h3 {
+  margin: 0 0 0.75rem;
+  color: #92400e;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.alternativeBox p {
+  margin: 0;
+  color: #78350f;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .appealContainer {
+    padding: 1rem;
+  }
+  
+  .appealHeader {
+    padding: 2rem 1.5rem;
+  }
+  
+  .appealTitle {
+    font-size: 1.5rem;
+  }
+  
+  .appealContent {
+    padding: 1.5rem;
+  }
+  
+  .infoBox,
+  .alternativeBox {
+    padding: 1rem;
+  }
+}

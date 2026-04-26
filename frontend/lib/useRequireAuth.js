@@ -87,7 +87,6 @@ export default function useRequireAuth() {
       }
     };
 
-    setAuthChecked(false);
     verifyAuth();
 
     return () => {

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import { uploadImage } from '../../../lib/apiRequests';
 import styles from '../../create-forms.module.css';
 
 function RequiredLabel({ children }) {
@@ -45,29 +46,27 @@ export default function CreateListingPage() {
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const fd = new FormData();
-        fd.append('image', files[i]);
-        const res = await api.post('/upload/image', fd, {
-          timeout: 120000,
-          onUploadProgress: (e) => {
-            if (e.total) {
-              const fileBase = Math.round((i / files.length) * 100);
-              const fileChunk = Math.round((e.loaded / e.total) * (100 / files.length));
-              setUploadProgress(fileBase + fileChunk);
-            }
-          },
-        });
-        if (res.data.success) urls.push(res.data.data.url);
+        const res = await uploadImage(files[i], (pct) => {
+          const base = Math.round((i / files.length) * 100);
+          setUploadProgress(base + Math.round(pct / files.length));
+        }, 'listings');
+        const url = res?.data?.url || '';
+        if (url) urls.push(url);
       }
 
       setImages((prev) => [...prev, ...urls].slice(0, 6));
       toast.success('Images uploaded');
-    } catch {
-      toast.error('Image upload failed - check Cloudinary env on the server');
+    } catch (err) {
+      toast.error(err?.message || 'Image upload failed - check Cloudinary env on the server');
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const removeImage = (urlToRemove) => {
+    setImages((prev) => prev.filter((url) => url !== urlToRemove));
+    toast.success('Image removed');
   };
 
   const onSubmit = async (e) => {
@@ -263,8 +262,35 @@ export default function CreateListingPage() {
           {images.length > 0 && (
             <div className="d-flex flex-wrap gap-2 mt-2">
               {images.map((url) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={url} src={url} alt="" className={styles['form-image-preview']} />
+                <div key={url} className={styles['form-image-preview-wrapper']} style={{ position: 'relative' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className={styles['form-image-preview']} />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className={styles['form-image-remove-btn']}
+                    style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      background: '#DC2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1
+                    }}
+                    title="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           )}

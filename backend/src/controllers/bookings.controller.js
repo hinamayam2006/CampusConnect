@@ -588,25 +588,17 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (!booking.tutor.equals(req.user._id)) {
-      return res.status(403).json({ success: false, message: 'Only the tutor can delete this session' });
+    if (String(booking.tutor) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    if (booking.status === 'completed') {
-      return res.status(400).json({ success: false, message: 'Completed sessions cannot be deleted' });
-    }
-
-    const hasReview = await Review.findOne({
+    const hasReview = await Review.exists({
       targetType: 'tutor',
       targetId: booking.tutorProfile,
       reviewer: booking.student,
     });
     if (hasReview) {
       return res.status(400).json({ success: false, message: 'Cannot delete a session that has a review' });
-    }
-
-    if (booking.paymentStatus === 'approved') {
-      return res.status(400).json({ success: false, message: 'Cannot delete a session with approved payment. Cancel it instead.' });
     }
 
     const scheduledTime = new Date(booking.scheduledAt);
@@ -641,6 +633,89 @@ export const deleteBooking = async (req, res) => {
     await Booking.findByIdAndDelete(booking._id);
 
     res.status(200).json({ success: true, message: 'Session deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const confirmAttendance = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Only tutor can confirm attendance
+    if (String(booking.tutor) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Only tutors can confirm attendance' });
+    }
+
+    const { attendanceStatus } = req.body;
+    if (!['attended', 'no_show'].includes(attendanceStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid attendance status' });
+    }
+
+    // Update attendance
+    booking.attendanceStatus = attendanceStatus;
+    booking.attendanceVerifiedBy = req.user._id;
+    booking.attendanceVerifiedAt = new Date();
+    booking.tutorConfirmedAttendance = true;
+
+    // If attended, mark as completed
+    if (attendanceStatus === 'attended') {
+      booking.status = 'completed';
+    }
+
+    await booking.save();
+
+    // Send notification to student
+    await notifyEmail(
+      booking.student,
+      `CampusConnect: Session ${attendanceStatus === 'attended' ? 'Completed' : 'No Show'}`,
+      `CampusConnect update: Your tutoring session for ${booking.course} on ${formatSchedule(booking.scheduledAt)} has been marked as ${attendanceStatus === 'attended' ? 'attended' : 'no show'} by the tutor.`
+    );
+
+    try {
+      await pushNotification(booking.student, {
+        type: attendanceStatus === 'attended' ? 'booking_completed' : 'booking_no_show',
+        message: `Your session for ${booking.course} was marked as ${attendanceStatus === 'attended' ? 'completed' : 'no show'}`,
+        link: '/tutoring',
+        meta: { refModel: 'Booking', refId: booking._id },
+      });
+    } catch (logErr) {
+      console.warn('Notification failed:', logErr.message);
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: `Attendance marked as ${attendanceStatus}`,
+      data: booking
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const studentConfirmAttendance = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Only student can confirm their attendance
+    if (String(booking.student) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Only students can confirm their attendance' });
+    }
+
+    booking.studentConfirmedAttendance = true;
+    await booking.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Attendance confirmed',
+      data: booking
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

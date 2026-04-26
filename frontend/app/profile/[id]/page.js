@@ -64,7 +64,7 @@ function PersonalInfoTab({ profile }) {
     if (!file) return;
     try {
       setUploading(true);
-      const res = await uploadImage(file);
+      const res = await uploadImage(file, null, 'profiles');
       const url = res?.data?.url || '';
       if (!url) throw new Error('No URL returned');
       setAvatarPreview(url);

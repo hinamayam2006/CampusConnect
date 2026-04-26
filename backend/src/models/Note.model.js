@@ -32,6 +32,17 @@ const noteSchema = new mongoose.Schema(
 			default: 'active',
 			index: true,
 		},
+		// Community moderation fields
+		reportCount: { type: Number, default: 0, min: 0 },
+		reports: [{
+			reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+			reason: { type: String, required: true, enum: ['spam', 'inappropriate', 'copyright', 'low_quality', 'other'] },
+			comment: { type: String, maxlength: 500 },
+			reportedAt: { type: Date, default: Date.now },
+		}],
+		autoFlaggedAt: { type: Date },
+		adminReviewedAt: { type: Date },
+		adminReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 	},
 	{ timestamps: true }
 );

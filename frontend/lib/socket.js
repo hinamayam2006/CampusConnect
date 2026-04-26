@@ -58,9 +58,9 @@ export const disconnectSocket = () => {
 /**
  * Register user for notifications
  */
-export const registerUser = (userId) => {
+export const registerUser = (userId, token) => {
   if (socket) {
-    socket.emit('register_user', userId);
+    socket.emit('register_user', userId, token);
   }
 };
 

@@ -119,13 +119,17 @@ export default function ChatWindow({
     }
   }, [request._id]);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
     if (!isOpen || !request?._id) return undefined;
 
     const socket = initializeSocket(store.accessToken);
 
     if (store.user?._id) {
-      registerUser(store.user._id);
+      registerUser(store.user._id, store.accessToken);
     }
     joinChatRoom(request._id);
 
@@ -150,9 +154,12 @@ export default function ChatWindow({
     socket.on('user_stop_typing', handleStopTyping);
     socket.on('chat_closed', handleChatClosed);
 
-    loadMessages();
+    const timer = setTimeout(() => {
+      void loadMessages();
+    }, 0);
 
     return () => {
+      clearTimeout(timer);
       socket.off('receive_message', handleReceiveMessage);
       socket.off('user_typing', handleTyping);
       socket.off('user_stop_typing', handleStopTyping);
@@ -163,15 +170,6 @@ export default function ChatWindow({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  useEffect(() => {
-    setChatClosed(request?.chatClosed || false);
-    setClosedBy(request?.chatClosedBy || null);
-  }, [request?.chatClosed, request?.chatClosedBy]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const handleTyping = () => {
     if (!isTyping) {
@@ -312,7 +310,7 @@ export default function ChatWindow({
         ) : messages.length === 0 ? (
           <div className={styles.emptyState}><p>No messages yet.</p></div>
         ) : (
-          messages.map((message) => {
+          messages.map((message, idx) => {
             const messageSenderId = message.sender?._id || message.sender;
             const currentUserId = store.user?._id;
             const isMe = messageSenderId?.toString() === currentUserId?.toString();
@@ -320,7 +318,7 @@ export default function ChatWindow({
 
             return (
               <div
-                key={message._id || Math.random()}
+                key={message._id}
                 className={`${styles.messageBubble} ${isMe ? styles.sentMessage : styles.receivedMessage}`}
               >
                 {!isMe && (

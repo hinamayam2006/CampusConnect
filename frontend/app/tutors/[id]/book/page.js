@@ -49,12 +49,24 @@ export default function BookTutorPage() {
   }, [id]);
 
   const handlePaymentFile = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const file = e.target.files[0];
     if (!file) return;
     setPaymentFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setPaymentPreview(reader.result);
     reader.readAsDataURL(file);
+  };
+
+  const clearPaymentFile = () => {
+    setPaymentFile(null);
+    setPaymentPreview('');
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   const handleSubmit = async () => {
@@ -72,15 +84,24 @@ export default function BookTutorPage() {
         course: course.trim(),
         studentMessage: message.trim(),
       });
+
+      // H-2 FIX: Explicit guard — never silently skip payment proof upload
       const booking = bookingRes?.data || bookingRes;
       const bookingId = booking?._id;
+      if (!bookingId) {
+        throw new Error('Booking created but ID was missing in the response. Please check your dashboard.');
+      }
 
       // Step 2: upload payment proof if paid and file selected
-      if (!isFreeCheck && paymentFile && bookingId) {
-        const upRes = await uploadImage(paymentFile);
-        const proofUrl = upRes?.data?.url || upRes?.url || '';
+      if (!isFreeCheck && paymentFile) {
+        const upRes = await uploadImage(paymentFile, null, 'payment-proofs');
+        // uploadImage returns response.data directly; backend sends { success, url }
+        const proofUrl = upRes?.url || upRes?.data?.url || '';
         if (proofUrl) {
           await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
+        } else {
+          // Booking exists but proof failed — warn user explicitly
+          toast.error('Booking created but payment proof upload failed. Please upload it from your dashboard.');
         }
       }
 
@@ -235,13 +256,56 @@ export default function BookTutorPage() {
                 </div>
                 <p className={styles.formTitle} style={{ fontSize: '0.9rem' }}>Upload Payment Screenshot *</p>
                 <label className={styles.proofWrap} style={{ cursor: 'pointer' }}>
-                  {paymentPreview
-                    ? <img src={paymentPreview} alt="Payment proof" className={styles.proofPreview} />
-                    : <div style={{ padding: '1.5rem', color: '#9E9E9E', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                        <Upload size={28} />
-                        <span style={{ fontSize: '0.82rem' }}>Click to upload payment screenshot</span>
-                      </div>
-                  }
+                  {paymentPreview ? (
+                    <div style={{ marginTop: '0.5rem', position: 'relative' }}>
+                      <img 
+                        src={paymentPreview} 
+                        alt="Payment proof" 
+                        style={{ 
+                          width: '100%', 
+                          maxWidth: '200px', 
+                          height: 'auto', 
+                          borderRadius: '8px',
+                          border: '2px solid #E5E7EB',
+                          objectFit: 'contain',
+                          backgroundColor: '#f9f9f9',
+                          cursor: 'default',
+                          pointerEvents: 'none'
+                        }} 
+                        onClick={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                      />
+                      <button
+                        type="button"
+                        onClick={clearPaymentFile}
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-6px',
+                          background: '#DC2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 1
+                        }}
+                        title="Remove image"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', color: '#9E9E9E', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Upload size={28} />
+                      <span style={{ fontSize: '0.82rem' }}>Click to upload payment screenshot</span>
+                    </div>
+                  )}
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePaymentFile} />
                 </label>
               </div>

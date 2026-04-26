@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { GraduationCap, Search, ArrowRight, Clock, Calendar, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styles from './tutoring.module.css';
@@ -51,8 +52,26 @@ function SessionCard({ booking }) {
   const tutor = booking.tutor?.user || {};
   const name  = tutor.name || booking.tutor?.name || 'Tutor';
   const subjects = (booking.tutor?.subjects || booking.tutor?.courses || []).slice(0, 2).join(', ');
+  const router = useRouter();
+  
+  const handleClick = () => {
+    router.push('/dashboard/student');
+  };
+  
   return (
-    <div className={styles.sessionCard}>
+    <div 
+      className={styles.sessionCard} 
+      onClick={handleClick}
+      style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
       <div className={styles.sessionAvatar}>
         {tutor.avatar
           ? <Image src={tutor.avatar} alt={name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

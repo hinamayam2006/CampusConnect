@@ -16,6 +16,9 @@ import {
   approvePayment,
   rejectPayment,
   deleteBooking,
+  // H-4 FIX: These existed in the controller but were never registered as routes
+  confirmAttendance,
+  studentConfirmAttendance,
 } from '../controllers/bookings.controller.js';
 
 const router = express.Router();
@@ -34,5 +37,8 @@ router.post('/:id/payment-proof', uploadPaymentProof);
 router.post('/:id/approve-payment', approvePayment);
 router.post('/:id/reject-payment', rejectPayment);
 router.delete('/:id', deleteBooking);
+// H-4 FIX: Attendance confirmation routes — tutor and student sides
+router.post('/:id/confirm-attendance', confirmAttendance);
+router.post('/:id/student-confirm', studentConfirmAttendance);
 
 export default router;

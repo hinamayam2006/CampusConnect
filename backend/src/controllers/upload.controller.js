@@ -16,7 +16,24 @@ export const uploadImage = async (req, res) => {
     if (!req.file?.buffer) {
       return res.status(400).json({ success: false, message: 'Image file required' });
     }
-    const url = await uploadBufferToCloudinary(req.file.buffer, 'campusconnect/listings');
+    
+    // Determine folder based on query parameter or default to listings
+    const folder = req.query.folder || 'campusconnect/listings';
+    
+    // Validate folder to prevent unauthorized folder access
+    const allowedFolders = [
+      'campusconnect/listings',
+      'campusconnect/profiles', 
+      'campusconnect/payment-proofs',
+      'campusconnect/lost-found',
+      'campusconnect/tickets'
+    ];
+    
+    if (!allowedFolders.includes(folder)) {
+      return res.status(400).json({ success: false, message: 'Invalid folder specified' });
+    }
+    
+    const url = await uploadBufferToCloudinary(req.file.buffer, folder);
     res.status(200).json({ success: true, data: { url } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Upload failed' });

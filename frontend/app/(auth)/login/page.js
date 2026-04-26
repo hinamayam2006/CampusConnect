@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import api from '../../../lib/api';
 import useStore from '../../../store/useStore';
+import SuspensionModal from '../../../components/SuspensionModal';
 import styles from '../auth.module.css';
 
 const FEATURE_BADGES = [
@@ -31,6 +32,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+  const [suspensionData, setSuspensionData] = useState({ reason: '', email: '' });
 
   useEffect(() => { if (user) router.push('/'); }, [user, router]);
 
@@ -57,10 +60,20 @@ export default function LoginPage() {
     } catch (err) {
       const apiMessage = err.response?.data?.message;
       const suspended = err.response?.data?.suspended;
-      const text = suspended
-        ? `Your account is suspended: ${apiMessage || 'Please contact support.'}`
-        : apiMessage || 'Login failed. Please try again.';
-      setMessage({ type: 'error', text });
+      
+      if (suspended) {
+        // Show suspension modal instead of error message
+        setSuspensionData({
+          reason: apiMessage || 'Violation of community guidelines',
+          email: formData.email
+        });
+        setShowSuspensionModal(true);
+      } else {
+        // Show regular error message
+        const text = apiMessage || 'Login failed. Please try again.';
+        setMessage({ type: 'error', text });
+      }
+      
       setFormData((prev) => ({ ...prev, password: '' }));
       setLoading(false);
     }
@@ -159,6 +172,14 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Suspension Modal */}
+      <SuspensionModal
+        isOpen={showSuspensionModal}
+        onClose={() => setShowSuspensionModal(false)}
+        suspensionReason={suspensionData.reason}
+        userEmail={suspensionData.email}
+      />
     </div>
   );
 }
