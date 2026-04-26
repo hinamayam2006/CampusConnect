@@ -575,25 +575,45 @@ export const withdrawRequest = async (req, res) => {
       { session }
     );
 
-    // Notify owner
-    await pushNotification(
+    // Update owner's existing request notification so it no longer shows action buttons.
+    await User.findByIdAndUpdate(
       request.owner,
       {
-        type: 'request_withdrawn',
-        message: `${req.user.name} withdrew their request.`,
+        $set: {
+          'notifications.$[elem].message': 'This request was withdrawn',
+          'notifications.$[elem].type': 'request_withdrawn_by_requester',
+          'notifications.$[elem].read': false,
+          'notifications.$[elem].meta.withdrawnBy': req.user._id,
+        },
+      },
+      {
+        arrayFilters: [{ 'elem.requestId': request._id }],
+        session,
+      }
+    );
+
+    const io = globalThis.__campusIo;
+    if (io?.to) {
+      io.to(`user_${request.owner}`).emit('notification_received', {
+        type: 'request_withdrawn_by_requester',
+        message: 'This request was withdrawn',
         link: `/requests/${request._id}`,
         requestId: request._id,
-        meta: { refModel: request.refModel, refId: request.refId, context: request.context, withdrawnBy: req.user._id },
-      },
-      { session, emailQueue }
-    );
+        meta: {
+          refModel: request.refModel,
+          refId: request.refId,
+          context: request.context,
+          withdrawnBy: req.user._id,
+        },
+      });
+    }
 
     // Update requester's notification to show withdrawn status
     await User.findByIdAndUpdate(
       req.user._id,
       {
         $set: {
-          'notifications.$[elem].message': 'You withdrew that request',
+          'notifications.$[elem].message': 'You withdrew this request',
           'notifications.$[elem].type': 'request_withdrawn_by_requester',
         },
       },

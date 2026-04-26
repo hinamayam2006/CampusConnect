@@ -36,6 +36,7 @@ export default function CreateRidePage() {
   const [departureTime, setDepartureTime] = useState('');
   const [seatsTotal, setSeatsTotal] = useState(3);
   const [vehicleInfo, setVehicleInfo] = useState('');
+  const [licensePlateNumber, setLicensePlateNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [recurring, setRecurring] = useState(false);
   const [days, setDays] = useState([]);
@@ -68,6 +69,7 @@ export default function CreateRidePage() {
         departureTime: new Date(departureTime).toISOString(),
         seatsTotal: Number(seatsTotal),
         vehicleInfo,
+        licensePlateNumber,
         notes,
         recurring: { enabled: recurring, daysOfWeek: recurring ? days : [] },
       };
@@ -104,7 +106,7 @@ export default function CreateRidePage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary, #F2EDE4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ background: '#fff', borderRadius: '1.25rem', padding: '2.5rem 2rem', maxWidth: 480, width: '100%', boxShadow: '0 4px 40px rgba(0,0,0,0.08)', textAlign: 'center' }}>
-          <CheckCircle2 size={56} style={{ color: '#166534', marginBottom: '1rem' }} />
+            <CheckCircle2 size={56} style={{ color: '#166534', marginBottom: '1rem' }} />
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Ride Published!</h1>
           <p style={{ color: '#6B7280', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Your ride is now live for passengers to discover.</p>
           <div style={{ background: '#F9FAFB', borderRadius: '0.9rem', padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -128,6 +130,12 @@ export default function CreateRidePage() {
                 <span style={{ color: '#374151', fontSize: '0.9rem' }}>{publishedRide.vehicleInfo}</span>
               </div>
             )}
+            {publishedRide.licensePlateNumber && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ width: 16, height: 16, borderRadius: 999, background: '#111827', flexShrink: 0 }} />
+                <span style={{ color: '#374151', fontSize: '0.9rem' }}>Plate: {publishedRide.licensePlateNumber}</span>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href={`/rides/${publishedRide._id}`} className="btn btn-success" style={{ background: '#166534', borderColor: '#166534' }}>
@@ -146,7 +154,7 @@ export default function CreateRidePage() {
     <div className={`container py-4 py-md-5 ${styles['form-page-shell']}`}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">Offer a ride</h1>
-        <Link href="/rides" className="btn btn-outline-secondary btn-sm">
+        <Link href="/rides" className={`btn btn-outline-secondary btn-sm ${styles.backLink}`}>
           Cancel
         </Link>
       </div>
@@ -177,6 +185,7 @@ export default function CreateRidePage() {
             onChange={(e) => setDepartureTime(e.target.value)}
             min={todayMin}
             required
+            style={{ accentColor: '#1A1A1A', colorScheme: 'light' }}
           />
         </div>
 
@@ -202,6 +211,18 @@ export default function CreateRidePage() {
               value={vehicleInfo}
               onChange={(e) => setVehicleInfo(e.target.value)}
               placeholder="e.g. White Corolla"
+            />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label">
+              <RequiredLabel>License plate number</RequiredLabel>
+            </label>
+            <input
+              className="form-control"
+              value={licensePlateNumber}
+              onChange={(e) => setLicensePlateNumber(e.target.value)}
+              placeholder="e.g. ABC-123"
+              required
             />
           </div>
         </div>
@@ -230,7 +251,7 @@ export default function CreateRidePage() {
               <button
                 key={day.v}
                 type="button"
-                className={`btn btn-sm ${days.includes(day.v) ? 'btn-primary' : 'btn-outline-secondary'}`}
+                className={`btn btn-sm ${days.includes(day.v) ? 'btn-dark' : 'btn-outline-dark'}`}
                 onClick={() => toggleDay(day.v)}
               >
                 {day.l}
@@ -239,7 +260,11 @@ export default function CreateRidePage() {
           </div>
         )}
 
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
+        <button
+          type="submit"
+          className={`btn ${styles.submitPrimary} ${submitting ? styles.submitPrimaryBusy : ''}`}
+          disabled={submitting}
+        >
           {submitting ? 'Publishing...' : 'Publish ride'}
         </button>
       </form>

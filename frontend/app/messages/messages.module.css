@@ -1,0 +1,227 @@
+.page {
+  padding: 1.75rem 0 3rem;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+.title {
+  font-family: var(--font-playfair);
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+  max-width: 680px;
+}
+
+.btnGhost {
+  border: 1px solid #d4ccbf;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 1rem;
+  min-height: calc(100vh - 190px);
+}
+
+.sidebar,
+.thread {
+  background: #fff;
+  border: 1px solid #e8e2d9;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.searchWrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.8rem 1rem 0.8rem 2.35rem;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #1a1a1a;
+}
+
+.chatList {
+  display: grid;
+  gap: 0.65rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+.chatRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid #f0ebe3;
+  border-radius: 16px;
+  background: #faf8f4;
+  padding: 0.8rem;
+  text-align: left;
+}
+
+.chatRowActive {
+  border-color: #1a1a1a;
+  background: #f7f3ee;
+}
+
+.chatAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1a1a1a;
+  color: #f2ede4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.chatAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chatMeta {
+  min-width: 0;
+}
+
+.chatTopLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chatTopLine strong {
+  color: #1a1a1a;
+  font-size: 0.9rem;
+}
+
+.chatStatus {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #ebe9e4;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.chatTitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.chatPreview {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: #1a1a1a;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.chatChevron {
+  color: #9ca3af;
+}
+
+.thread {
+  min-height: 620px;
+  display: flex;
+  flex-direction: column;
+}
+
+.thread > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.emptyState,
+.emptyThread {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #6b7280;
+  gap: 0.4rem;
+  padding: 1.5rem;
+}
+
+.emptyThread h2 {
+  margin: 0;
+  font-family: var(--font-playfair);
+  color: #1a1a1a;
+}
+
+@media (max-width: 980px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .thread {
+    min-height: 560px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1rem 0 2rem;
+  }
+
+  .sidebar,
+  .thread {
+    border-radius: 16px;
+  }
+
+  .chatRow {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .chatChevron {
+    display: none;
+  }
+}

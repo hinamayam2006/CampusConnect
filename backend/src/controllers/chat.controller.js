@@ -12,6 +12,7 @@ export const sendMessage = async (req, res) => {
   try {
     const { requestId, content, messageType = 'text', attachment = null } = req.body;
     const sender = req.user._id;
+    const normalizedContent = String(content || '').trim();
 
     // Validate request exists and is approved
     const request = await Request.findById(requestId).session(session);
@@ -42,6 +43,16 @@ export const sendMessage = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
 
+    if (messageType === 'text' && !normalizedContent) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Message cannot be empty' });
+    }
+
+    if (messageType !== 'text' && !attachment?.url) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Attachment is required for media messages' });
+    }
+
     // Determine receiver
     const receiver = request.requester.equals(sender) ? request.owner : request.requester;
 
@@ -52,7 +63,7 @@ export const sendMessage = async (req, res) => {
           request: requestId,
           sender,
           receiver,
-          content,
+          content: messageType === 'text' ? normalizedContent : normalizedContent || attachment?.name || 'Attachment',
           messageType,
           attachment: messageType !== 'text' ? attachment : null,
         },
@@ -73,9 +84,29 @@ export const sendMessage = async (req, res) => {
     );
 
     await session.commitTransaction();
+    const messageDoc = await Message.findById(message[0]._id)
+      .populate('sender', 'name avatar')
+      .populate('receiver', 'name avatar');
+
+    if (req.app?.io && messageDoc) {
+      const room = `request_${requestId}`;
+      req.app.io.to(room).emit('receive_message', messageDoc);
+      req.app.io.to(`user_${receiver}`).emit('notification_received', {
+        type: 'chat_message',
+        message: `${req.user.name} sent you a new message.`,
+        link: `/messages?requestId=${requestId}`,
+        requestId,
+        meta: {
+          requestId,
+          sender: messageDoc.sender,
+          preview: messageDoc.content,
+        },
+      });
+    }
+
     res.status(201).json({
       success: true,
-      data: message[0],
+      data: messageDoc || message[0],
       message: 'Message sent',
     });
   } catch (err) {
@@ -181,6 +212,7 @@ export const getActiveChats = async (req, res) => {
     })
       .populate('requester', 'name avatar department')
       .populate('owner', 'name avatar department')
+      .populate('refId')
       .sort({ updatedAt: -1 });
 
     // For each request, get the latest message

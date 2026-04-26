@@ -53,6 +53,14 @@
   color: #333;
 }
 
+.headerContext {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
 .typingIndicator {
   margin: 0;
   font-size: 0.8rem;
@@ -111,6 +119,15 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.bubbleAvatar img,
+.headerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .bubbleContent {
@@ -145,6 +162,28 @@
   line-height: 1.4;
 }
 
+.attachmentPreview {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.attachmentPreview img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+}
+
+.fileBubble {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: underline;
+  font-size: 0.92rem;
+}
+
 .timestamp {
   display: block;
   font-size: 0.75rem;
@@ -166,6 +205,94 @@
   padding: 12px 16px;
   border-top: 1px solid #e0e0e0;
   background-color: white;
+  align-items: center;
+}
+
+.attachmentButtons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.attachmentBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #1e3a8a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.attachmentBtn:hover:not(:disabled) {
+  border-color: #1e3a8a;
+  background: #f8fafc;
+}
+
+.attachmentBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.inputAttachment {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem 0.2rem;
+}
+
+.inputAttachmentPreview {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f4f6;
+  flex-shrink: 0;
+}
+
+.inputAttachmentPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.inputAttachmentMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.inputAttachmentMeta span {
+  font-size: 0.85rem;
+  color: #1f2937;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inputAttachmentMeta small {
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.attachmentRemoveBtn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 999px;
+}
+
+.attachmentRemoveBtn:hover {
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .messageInput {

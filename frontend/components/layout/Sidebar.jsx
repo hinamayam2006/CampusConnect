@@ -16,6 +16,7 @@ import {
   Bell,
   LogOut,
   MessageSquare,
+  Inbox,
   AlertTriangle,
   Shield,
   Users,
@@ -49,6 +50,7 @@ const NAV_SECTIONS = [
     items: [
       { label: 'My Profile', href: null, icon: User, isDynamic: true },
       { label: 'Notifications', href: '/notifications', icon: Bell, hasBadge: true },
+      { label: 'Inbox', href: '/messages', icon: Inbox },
     ],
   },
   {

@@ -32,6 +32,8 @@ const io = new Server(server, {
   },
 });
 
+globalThis.__campusIo = io;
+
 // Store user socket connections for routing
 const userConnections = new Map();
 
@@ -42,6 +44,7 @@ io.on('connection', (socket) => {
   socket.on('register_user', (userId) => {
     userConnections.set(userId, socket.id);
     socket.userId = userId;
+    socket.join(`user_${userId}`);
     console.log(`User ${userId} registered with socket ${socket.id}`);
   });
 
@@ -55,7 +58,7 @@ io.on('connection', (socket) => {
   // Handle incoming messages
   socket.on('send_message', async (data) => {
     try {
-      const { requestId, content, messageType = 'text' } = data;
+      const { requestId, content, messageType = 'text', attachment = null } = data;
       const senderId = socket.userId;
 
       // Verify request exists and is approved and chat is enabled
@@ -75,20 +78,33 @@ io.on('connection', (socket) => {
       const receiverId = request.requester.equals(senderId) ? request.owner : request.requester;
 
       // Save message to database
+      const normalizedContent = String(content || '').trim();
       const message = await Message.create({
         request: requestId,
         sender: senderId,
         receiver: receiverId,
-        content,
+        content: messageType === 'text' ? normalizedContent : normalizedContent || attachment?.name || 'Attachment',
         messageType,
+        attachment: messageType !== 'text' ? attachment : null,
       });
 
       // Populate sender/receiver info
-      const populatedMessage = await message.populate('sender', 'name avatar');
+      const populatedMessage = await message.populate('sender', 'name avatar').populate('receiver', 'name avatar');
 
       // Emit message to both users in the room
       const room = `request_${requestId}`;
       io.to(room).emit('receive_message', populatedMessage);
+      io.to(`user_${receiverId}`).emit('notification_received', {
+        type: 'chat_message',
+        message: `${populatedMessage.sender?.name || 'Someone'} sent you a new message.`,
+        link: `/messages?requestId=${requestId}`,
+        requestId,
+        meta: {
+          requestId,
+          sender: populatedMessage.sender,
+          preview: populatedMessage.content,
+        },
+      });
 
       console.log(`Message sent in room ${room}`);
     } catch (err) {

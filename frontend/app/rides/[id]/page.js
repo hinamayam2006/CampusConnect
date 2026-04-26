@@ -53,6 +53,7 @@ export default function RideDetailPage() {
       setRequesting(true);
       await createRequest('Ride', id, seatsRequested, message.trim());
       toast.success('Ride request sent to the driver');
+      setRide((current) => (current ? { ...current, hasRequested: true } : current));
       setMessage('');
     } catch (err) {
       toast.error(err.response?.message || err.message || 'Could not request this ride');
@@ -124,11 +125,12 @@ export default function RideDetailPage() {
           <div className={styles.detailCard}>
             <div className={styles.detailCardLabel}>Trip Details</div>
             <ul className={styles.detailMetaList}>
-              <li><strong>Seats left</strong> {ride.seatsAvailable}</li>
-              <li><strong>Vehicle</strong> {ride.vehicleInfo || '—'}</li>
-              {ride.recurring?.enabled && ride.recurring.daysOfWeek?.length > 0 && (
-                <li>
-                  <strong>Weekly</strong>
+            <li><strong>Seats left</strong> {ride.seatsAvailable}</li>
+            <li><strong>Vehicle</strong> {ride.vehicleInfo || '—'}</li>
+            <li><strong>Plate</strong> {ride.licensePlateNumber || '—'}</li>
+            {ride.recurring?.enabled && ride.recurring.daysOfWeek?.length > 0 && (
+              <li>
+                <strong>Weekly</strong>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <RotateCcw size={12} /> {ride.recurring.daysOfWeek.join(', ')}
                   </span>
@@ -200,10 +202,10 @@ export default function RideDetailPage() {
               <strong>{ride.seatsAvailable}</strong> seat{ride.seatsAvailable !== 1 ? 's' : ''} available
             </p>
 
-            {ride.hasRequested ? (
-              <div className={styles.actionInfoBanner}>Your request is pending approval.</div>
-            ) : already ? (
-              <div className={styles.actionInfoBanner}>You are confirmed on this ride.</div>
+              {ride.hasRequested ? (
+              <div className={styles.actionInfoBanner}>Your request has been sent and is pending approval.</div>
+              ) : already ? (
+                <div className={styles.actionInfoBanner}>You are confirmed on this ride.</div>
             ) : isDriver ? (
               <div className={styles.actionInfoBanner}>You are hosting this trip.</div>
             ) : ride.status !== 'scheduled' ? (

@@ -5,16 +5,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '../../../lib/api';
 import useRequireAuth from '../../../lib/useRequireAuth';
+import ImageCarousel from '../../../components/ImageCarousel';
 import styles from '../../shared/marketplace-rides.module.css';
 import hubStyles from '../../community.module.css';
 
 function ListingCard({ item }) {
-  const img = item.images?.[0];
   return (
     <div className={styles['mc-listing-card']}>
-      {img ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt="" className={styles['mc-img-ph']} />
+      {item.images?.length ? (
+        <ImageCarousel images={item.images} alt={item.title} aspectRatio="4 / 3" showDots={false} />
       ) : (
         <div className={styles['mc-img-ph']} />
       )}

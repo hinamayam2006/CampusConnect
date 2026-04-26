@@ -95,6 +95,9 @@ export default function RidesHubPage() {
                 {ride.driver?.name && (
                   <div className={styles.rideDriver}>by {ride.driver.name}</div>
                 )}
+                <div className={styles.rideDriver} style={{ fontSize: '0.72rem' }}>
+                  Plate: {ride.licensePlateNumber || 'N/A'}
+                </div>
               </Link>
             ))}
           </div>

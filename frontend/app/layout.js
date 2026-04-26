@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import AppShell from '../components/layout/AppShell';
 import SessionActivityGuard from '../components/layout/SessionActivityGuard';
+import RealtimeSocketProvider from '../components/layout/RealtimeSocketProvider';
 import { UserRoleProvider } from '../context/UserRoleContext';
 import { Toaster } from 'react-hot-toast';
 import BootstrapClient from '../components/BootstrapClient';
@@ -34,11 +35,12 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body>
         <UserRoleProvider>
-    <SessionActivityGuard>
-        <AppShell>{children}</AppShell>
-    </SessionActivityGuard>
+          <SessionActivityGuard>
+            <RealtimeSocketProvider />
+            <AppShell>{children}</AppShell>
+          </SessionActivityGuard>
           <Toaster
-            position="top-right"
+            position="top-left"
             toastOptions={{
               style: {
                 background: '#1A1A1A',

@@ -167,14 +167,14 @@ export default function MyMarketplaceRequestsPage() {
 
                 <div className={styles.cardActions}>
                   {request.refId?._id && (
-                    <Link href={`/marketplace/${request.refId._id}`} className="btn btn-outline-primary btn-sm">
+                    <Link href={`/marketplace/${request.refId._id}`} className={styles.btnView}>
                       View listing
                     </Link>
                   )}
                   {request.status === 'pending' && (
                     <button
                       type="button"
-                      className="btn btn-outline-danger btn-sm"
+                      className={styles.btnDanger}
                       onClick={() => handleWithdraw(request._id)}
                       disabled={actionLoading}
                     >
@@ -184,7 +184,7 @@ export default function MyMarketplaceRequestsPage() {
                   {request.status !== 'pending' && (
                     <button
                       type="button"
-                      className="btn btn-outline-secondary btn-sm"
+                      className={styles.btnOutline}
                       onClick={() => handleClose(request._id)}
                       disabled={actionLoading}
                     >

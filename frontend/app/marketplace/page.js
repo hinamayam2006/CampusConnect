@@ -16,6 +16,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import useStore from '../../store/useStore';
+import ImageCarousel from '../../components/ImageCarousel';
 import styles from '../community.module.css';
 
 const TYPES = [
@@ -292,7 +293,6 @@ export default function MarketplacePage() {
               </div>
             ) : (
               filtered.map((item) => {
-                const img = item.images?.[0];
                 const priceBadgeClass = getPriceBadgeClass(item, styles);
                 const priceText = formatPrice(item);
                 const initials = getInitials(item.seller?.name || item.owner?.name || '');
@@ -300,9 +300,13 @@ export default function MarketplacePage() {
                 return (
                   <div key={item._id} className={styles.card}>
                     <div className={styles.cardImageWrap}>
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt={item.title} className={styles.cardImage} />
+                      {item.images?.length ? (
+                        <ImageCarousel
+                          images={item.images}
+                          alt={item.title}
+                          imageClassName={styles.cardImage}
+                          showDots={false}
+                        />
                       ) : (
                         <div className={`${styles.cardImagePlaceholder} ${getCategoryFallback(item.category, styles)}`}>
                           {getCategoryIcon(item.category)}

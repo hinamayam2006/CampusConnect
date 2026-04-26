@@ -76,6 +76,7 @@ export const createRide = async (req, res) => {
   try {
     const body = { ...req.body };
     body.seatsAvailable = body.seatsTotal;
+    body.licensePlateNumber = String(body.licensePlateNumber || '').trim();
     if (!body.recurring) {
       body.recurring = { enabled: false, daysOfWeek: [] };
     }
@@ -143,34 +144,76 @@ export const updateRide = async (req, res) => {
 };
 
 export const deleteRide = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  const emailQueue = [];
   try {
-    const ride = await Ride.findById(req.params.id);
+    const ride = await Ride.findById(req.params.id).session(session);
     if (!ride) {
+      await session.abortTransaction();
       return res.status(404).json({ success: false, message: 'Ride not found' });
     }
 
     if (!ride.driver.equals(req.user._id)) {
+      await session.abortTransaction();
       return res.status(403).json({ success: false, message: 'Only the driver can delete this ride' });
     }
 
-    await Request.updateMany(
-      {
-        refModel: 'Ride',
-        refId: ride._id,
-        status: { $in: ['pending', 'approved'] },
-      },
-      {
-        $set: {
-          status: 'cancelled',
+    const relatedRequests = await Request.find({
+      refModel: 'Ride',
+      refId: ride._id,
+      status: { $in: ['pending', 'approved'] },
+    }).session(session);
+
+    if (relatedRequests.length > 0 && req.query.force !== 'true') {
+      await session.abortTransaction();
+      return res.status(409).json({
+        success: false,
+        message: 'This ride has active requests. Deleting it will cancel those requests. Confirm to continue.',
+        data: { hasRequests: true, count: relatedRequests.length },
+      });
+    }
+
+    for (const request of relatedRequests) {
+      request.status = 'cancelled';
+      await request.save({ session });
+
+      await pushNotification(
+        request.requester,
+        {
+          type: 'request_deleted_by_owner',
+          message: `Your ride request for ${ride.originName} to ${ride.destName} was cancelled because the ride was deleted.`,
+          meta: { refModel: 'Ride', refId: ride._id, context: 'ride', deletedByOwner: true, requestId: request._id },
         },
-      }
-    );
+        { session, emailQueue }
+      );
 
-    await ride.deleteOne();
+      await User.updateOne(
+        { _id: ride.driver },
+        {
+          $set: {
+            'notifications.$[elem].message': 'Request was deleted by you',
+            'notifications.$[elem].type': 'request_deleted_by_owner',
+            'notifications.$[elem].meta.deletedByOwner': true,
+          },
+        },
+        {
+          arrayFilters: [{ 'elem.requestId': request._id }],
+          session,
+        }
+      );
+    }
 
+    await ride.deleteOne({ session });
+
+    await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({ success: true, message: 'Ride deleted successfully' });
   } catch (err) {
+    await session.abortTransaction();
     res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
   }
 };
 

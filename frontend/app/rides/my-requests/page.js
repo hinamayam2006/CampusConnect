@@ -132,6 +132,10 @@ export default function MyRideRequestsPage() {
                     <span className={detailStyles.detailLabel}>Driver</span>
                     <span className={detailStyles.detailValue}>{request.owner?.name || 'Driver unavailable'}</span>
                   </div>
+                  <div className={detailStyles.requestDetailCard}>
+                    <span className={detailStyles.detailLabel}>Ride plate</span>
+                    <span className={detailStyles.detailValue}>{request.refId?.licensePlateNumber || 'N/A'}</span>
+                  </div>
                 </div>
 
                 {request.message && (
@@ -142,15 +146,14 @@ export default function MyRideRequestsPage() {
 
                 <div className={detailStyles.cardActions}>
                   {request.refId?._id && (
-                    <Link href={`/rides/${request.refId._id}`} className={styles.btnOutline} style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
+                    <Link href={`/rides/${request.refId._id}`} className={detailStyles.btnView}>
                       View Ride
                     </Link>
                   )}
                   {request.status === 'pending' && (
                     <button
                       type="button"
-                      className="btn btn-outline-danger btn-sm"
-                      style={{ borderRadius: 10 }}
+                      className={detailStyles.btnDanger}
                       disabled={actionLoading}
                       onClick={() => handleWithdraw(request._id)}
                     >

@@ -12,6 +12,18 @@ const overlay = {
   padding: '1rem',
 };
 
+const topRightOverlay = {
+  position: 'fixed',
+  inset: 0,
+  background: 'transparent',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'flex-end',
+  zIndex: 1050,
+  padding: '1rem',
+  pointerEvents: 'none',
+};
+
 const card = {
   background: '#ffffff',
   border: '1px solid #E8E2D9',
@@ -72,12 +84,14 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   confirmVariant = 'danger',
+  placement = 'center',
   onConfirm,
   onCancel,
 }) {
   if (!open) return null;
 
   const isDanger = confirmVariant === 'danger';
+  const useTopRight = placement === 'top-right';
   const btnConfirm = {
     ...btnConfirmBase,
     background: isDanger ? '#EF4444' : '#1A1A1A',
@@ -85,8 +99,17 @@ export default function ConfirmDialog({
   };
 
   return (
-    <div style={overlay} role="dialog" aria-modal="true">
-      <div style={card}>
+    <div style={useTopRight ? topRightOverlay : overlay} role="dialog" aria-modal="true">
+      <div
+        style={{
+          ...card,
+          width: useTopRight ? 'min(380px, 100%)' : card.maxWidth,
+          marginTop: useTopRight ? '0.25rem' : 0,
+          pointerEvents: 'auto',
+          boxShadow: useTopRight ? '0 18px 42px rgba(0,0,0,0.16)' : card.boxShadow,
+          borderRadius: useTopRight ? '18px' : card.borderRadius,
+        }}
+      >
         <p style={titleStyle}>{title}</p>
         <p style={messageStyle}>{message}</p>
         <div style={footer}>

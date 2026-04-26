@@ -7,7 +7,7 @@ let socket = null;
  * Called once when the app loads (in layout or App component)
  */
 export const initializeSocket = (token) => {
-  if (socket?.connected) {
+  if (socket) {
     return socket;
   }
 
@@ -59,7 +59,7 @@ export const disconnectSocket = () => {
  * Register user for notifications
  */
 export const registerUser = (userId) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('register_user', userId);
   }
 };
@@ -68,7 +68,7 @@ export const registerUser = (userId) => {
  * Join a chat room for a specific request
  */
 export const joinChatRoom = (requestId) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('join_request_chat', requestId);
   }
 };
@@ -77,7 +77,7 @@ export const joinChatRoom = (requestId) => {
  * Send a message via Socket.io
  */
 export const sendMessage = (requestId, content, messageType = 'text', attachment = null) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('send_message', {
       requestId,
       content,
@@ -97,10 +97,19 @@ export const onMessageReceived = (callback) => {
 };
 
 /**
+ * Listen for global notification events
+ */
+export const onNotificationReceived = (callback) => {
+  if (socket) {
+    socket.on('notification_received', callback);
+  }
+};
+
+/**
  * Handle typing indicator
  */
 export const sendTyping = (requestId) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('typing', { requestId });
   }
 };
@@ -109,7 +118,7 @@ export const sendTyping = (requestId) => {
  * Handle stop typing
  */
 export const sendStopTyping = (requestId) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('stop_typing', { requestId });
   }
 };
@@ -136,7 +145,7 @@ export const onUserStopTyping = (callback) => {
  * Mark message as read
  */
 export const markMessageRead = (messageId) => {
-  if (socket?.connected) {
+  if (socket) {
     socket.emit('mark_read', { messageId });
   }
 };

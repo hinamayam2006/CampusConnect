@@ -20,3 +20,33 @@
   object-fit: cover;
   border-radius: 8px;
 }
+
+.submitPrimary {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.submitPrimary:hover:not(:disabled),
+.submitPrimary:focus-visible {
+  background: #0b0b0b;
+  border-color: #0b0b0b;
+  color: #ffffff;
+}
+
+.submitPrimaryBusy {
+  background: #556b2f;
+  border-color: #556b2f;
+  color: #ffffff;
+}
+
+.submitPrimaryBusy:hover:not(:disabled),
+.submitPrimaryBusy:focus-visible {
+  background: #556b2f;
+  border-color: #556b2f;
+  color: #ffffff;
+}
+
+.backLink {
+  color: #6b7280;
+}

@@ -35,6 +35,7 @@ const rideSchema = new mongoose.Schema(
     seatsTotal: { type: Number, required: true, min: 1, max: 8 },
     seatsAvailable: { type: Number, required: true, min: 0, max: 8 },
     vehicleInfo: { type: String, trim: true, default: '' },
+    licensePlateNumber: { type: String, trim: true, default: '' },
     notes: { type: String, trim: true, maxlength: 1000, default: '' },
     recurring: {
       enabled: { type: Boolean, default: false },

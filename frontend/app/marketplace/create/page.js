@@ -117,7 +117,7 @@ export default function CreateListingPage() {
     <div className={`container py-4 py-md-5 ${styles['form-page-shell']}`}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="mb-0">New listing</h1>
-        <Link href="/marketplace" className="btn btn-outline-secondary btn-sm">
+        <Link href="/marketplace" className={`btn btn-outline-secondary btn-sm ${styles.backLink}`}>
           Cancel
         </Link>
       </div>
@@ -270,7 +270,11 @@ export default function CreateListingPage() {
           )}
         </div>
 
-        <button type="submit" className="btn btn-primary" disabled={submitting || uploading}>
+        <button
+          type="submit"
+          className={`btn ${styles.submitPrimary} ${submitting || uploading ? styles.submitPrimaryBusy : ''}`}
+          disabled={submitting || uploading}
+        >
           {submitting ? 'Publishing...' : 'Publish listing'}
         </button>
       </form>

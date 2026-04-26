@@ -45,10 +45,10 @@
 }
 
 .requestCard {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(30, 58, 138, 0.1);
-  border-radius: 1rem;
-  padding: 1.25rem;
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.2rem 1.25rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -61,8 +61,9 @@
 }
 
 .requestRoute {
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -108,7 +109,8 @@
 }
 
 .requestDetailCard {
-  background: linear-gradient(180deg, rgba(224, 231, 255, 0.55), rgba(248, 250, 252, 0.95));
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
   border-radius: 0.9rem;
   padding: 0.85rem 1rem;
 }
@@ -137,7 +139,7 @@
 }
 
 .messageBox {
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--bg-secondary);
   color: var(--text-secondary);
 }
 
@@ -150,6 +152,61 @@
   display: flex;
   gap: 0.65rem;
   flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.btnView,
+.btnOutline,
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btnView {
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #1a1a1a;
+}
+
+.btnView:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.btnOutline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.btnOutline:hover {
+  border-color: var(--border-medium);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btnDanger {
+  background: transparent;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.btnDanger:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #b91c1c;
 }
 
 @media (max-width: 768px) {
@@ -233,11 +290,11 @@
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .hubBtnDark:hover {
-  opacity: 0.9;
+  background: #333;
   color: #F2EDE4;
   transform: translateY(-1px);
 }

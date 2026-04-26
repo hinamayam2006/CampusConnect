@@ -58,6 +58,14 @@ export async function pushNotification(userId, { type, message, link, requestId,
     await deliverNotificationEmail(userId, { message });
   }
 
+  const io = globalThis.__campusIo;
+  if (io?.to) {
+    io.to(`user_${userId}`).emit('notification_received', {
+      ...notification,
+      userId: String(userId),
+    });
+  }
+
   return updatedUser;
 }
 

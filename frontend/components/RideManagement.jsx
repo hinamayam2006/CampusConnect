@@ -9,6 +9,7 @@ import { Clock, Users, Car, X } from 'lucide-react';
 import styles from './ride-management.module.css';
 import { hidePassengerRide, markRideCompleted } from '../lib/apiRequests';
 import api from '../lib/api';
+import ConfirmDialog from './ConfirmDialog';
 
 function toLocalDateTimeInput(value) {
   if (!value) return '';
@@ -46,6 +47,7 @@ export default function RideManagement({ showHeader = true }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState('driver');
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, rideId: null, force: false, message: '' });
 
   const loadRides = async () => {
     try {
@@ -76,6 +78,7 @@ export default function RideManagement({ showHeader = true }) {
       destName: ride.destName || '',
       departureTime: toLocalDateTimeInput(ride.departureTime),
       vehicleInfo: ride.vehicleInfo || '',
+      licensePlateNumber: ride.licensePlateNumber || '',
       notes: ride.notes || '',
       seatsTotal: ride.seatsTotal || 1,
     });
@@ -116,15 +119,36 @@ export default function RideManagement({ showHeader = true }) {
   };
 
   const handleDelete = async (rideId) => {
-    if (!window.confirm('Delete this ride? This will remove it from carpooling.')) return;
+    setDeleteDialog({
+      open: true,
+      rideId,
+      force: false,
+      message: 'Delete this ride? If there are pending requests, we will ask you to confirm again and notify the affected users.',
+    });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteDialog.rideId) return;
 
     try {
       setActionLoading(true);
       setError(null);
-      await api.delete(`/rides/${rideId}`);
+      const config = deleteDialog.force ? { params: { force: 'true' } } : undefined;
+      await api.delete(`/rides/${deleteDialog.rideId}`, config);
+      setDeleteDialog({ open: false, rideId: null, force: false, message: '' });
       setSuccess('Ride deleted successfully');
       await loadRides();
     } catch (err) {
+      if (err.response?.status === 409 && !deleteDialog.force) {
+        setDeleteDialog({
+          open: true,
+          rideId: deleteDialog.rideId,
+          force: true,
+          message: `${err.response?.data?.message || 'This ride has pending requests.'} Requesters will be notified that you cancelled the ride.`,
+        });
+        return;
+      }
+      setDeleteDialog({ open: false, rideId: null, force: false, message: '' });
       setError(err.response?.data?.message || err.message || 'Failed to delete ride');
     } finally {
       setActionLoading(false);
@@ -193,6 +217,7 @@ export default function RideManagement({ showHeader = true }) {
         {(ride.vehicleInfo || ride.notes) && (
           <div className={styles.infoBlock}>
             {ride.vehicleInfo && <p className={styles.infoText}><strong>Vehicle:</strong> {ride.vehicleInfo}</p>}
+            {ride.licensePlateNumber && <p className={styles.infoText}><strong>Plate:</strong> {ride.licensePlateNumber}</p>}
             {ride.notes && <p className={styles.infoText}><strong>Notes:</strong> {ride.notes}</p>}
           </div>
         )}
@@ -247,12 +272,13 @@ export default function RideManagement({ showHeader = true }) {
         </span>
       </div>
 
-      <div className={styles.infoBlock}>
-        <p className={styles.infoText}><strong>Driver:</strong> {ride.driver?.name || 'Driver'}</p>
-        <p className={styles.infoText}><strong>Department:</strong> {ride.driver?.department || 'N/A'}</p>
-        {ride.vehicleInfo && <p className={styles.infoText}><strong>Vehicle:</strong> {ride.vehicleInfo}</p>}
-        {ride.notes && <p className={styles.infoText}><strong>Notes:</strong> {ride.notes}</p>}
-      </div>
+        <div className={styles.infoBlock}>
+          <p className={styles.infoText}><strong>Driver:</strong> {ride.driver?.name || 'Driver'}</p>
+          <p className={styles.infoText}><strong>Department:</strong> {ride.driver?.department || 'N/A'}</p>
+          {ride.vehicleInfo && <p className={styles.infoText}><strong>Vehicle:</strong> {ride.vehicleInfo}</p>}
+          {ride.licensePlateNumber && <p className={styles.infoText}><strong>Plate:</strong> {ride.licensePlateNumber}</p>}
+          {ride.notes && <p className={styles.infoText}><strong>Notes:</strong> {ride.notes}</p>}
+        </div>
 
       <div className={styles.cardActions}>
         <Link href={`/rides/${ride._id}`} className={styles.btnView}>
@@ -379,6 +405,15 @@ export default function RideManagement({ showHeader = true }) {
               />
             </Form.Group>
 
+            <Form.Group className="mb-3">
+              <Form.Label>License plate number</Form.Label>
+              <Form.Control
+                type="text"
+                value={editFormData.licensePlateNumber || ''}
+                onChange={(e) => setEditFormData((current) => ({ ...current, licensePlateNumber: e.target.value }))}
+              />
+            </Form.Group>
+
             <Form.Group>
               <Form.Label>Notes</Form.Label>
               <Form.Control
@@ -399,6 +434,18 @@ export default function RideManagement({ showHeader = true }) {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        title={deleteDialog.force ? 'Confirm deletion with requests' : 'Delete ride?'}
+        message={deleteDialog.message}
+        confirmLabel={deleteDialog.force ? 'Delete anyway' : 'Delete'}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        placement="top-right"
+        onConfirm={executeDelete}
+        onCancel={() => setDeleteDialog({ open: false, rideId: null, force: false, message: '' })}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '../../../lib/api';
 import { DEPARTMENTS } from '../../../lib/campusConstants';
 import useStore from '../../../store/useStore';
+import ImageCarousel from '../../../components/ImageCarousel';
 import styles from '../../shared/marketplace-rides.module.css';
 import hubStyles from '../../community.module.css';
 
@@ -151,15 +152,13 @@ export default function GeneralMarketplacePage() {
       ) : (
         <div className="row g-3">
           {items.map((item) => {
-            const img = item.images?.[0];
             return (
               <div key={item._id} className="col-6 col-lg-3">
                 <Link href={`/marketplace/${item._id}`} className="text-decoration-none text-reset">
                   <div className={styles['mc-listing-card']}>
                     <div style={{ position: 'relative' }}>
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt="" style={{ display: 'block', width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />
+                      {item.images?.length ? (
+                        <ImageCarousel images={item.images} alt={item.title} aspectRatio="4 / 3" showDots={false} />
                       ) : (
                         <div className={styles['mc-img-ph']} />
                       )}

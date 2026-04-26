@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Listing from '../models/Listing.model.js';
 import ActivityEvent from '../models/ActivityEvent.model.js';
 import Request from '../models/Request.model.js';
+import User from '../models/User.model.js';
 import { logActivity } from '../services/activity.service.js';
 import { flushQueuedNotificationEmails, pushNotification } from '../services/notification.service.js';
 import { buildTokenSearchQuery } from '../utils/search.js';
@@ -176,20 +177,75 @@ export const updateListing = async (req, res) => {
 };
 
 export const deleteListing = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  const emailQueue = [];
   try {
-    const listing = await Listing.findById(req.params.id);
+    const listing = await Listing.findById(req.params.id).session(session);
     if (!listing) {
+      await session.abortTransaction();
       return res.status(404).json({ success: false, message: 'Listing not found' });
     }
     const isOwner = listing.seller.equals(req.user._id);
     const isMod = req.user.role === 'moderator';
     if (!isOwner && !isMod) {
+      await session.abortTransaction();
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
-    await listing.deleteOne();
+    const relatedRequests = await Request.find({
+      refModel: 'Listing',
+      refId: listing._id,
+      status: { $in: ['pending', 'approved'] },
+    }).session(session);
+
+    if (relatedRequests.length > 0 && req.query.force !== 'true') {
+      await session.abortTransaction();
+      return res.status(409).json({
+        success: false,
+        message: 'This listing has active requests. Deleting it will cancel those requests. Confirm to continue.',
+        data: { hasRequests: true, count: relatedRequests.length },
+      });
+    }
+
+    for (const request of relatedRequests) {
+      request.status = 'cancelled';
+      await request.save({ session });
+
+      await pushNotification(
+        request.requester,
+        {
+          type: 'request_deleted_by_owner',
+          message: `Your marketplace request for "${listing.title}" was cancelled because the listing was deleted.`,
+          meta: { refModel: 'Listing', refId: listing._id, context: 'marketplace', deletedByOwner: true, requestId: request._id },
+        },
+        { session, emailQueue }
+      );
+
+      await User.updateOne(
+        { _id: listing.seller },
+        {
+          $set: {
+            'notifications.$[elem].message': 'Request was deleted by you',
+            'notifications.$[elem].type': 'request_deleted_by_owner',
+            'notifications.$[elem].meta.deletedByOwner': true,
+          },
+        },
+        {
+          arrayFilters: [{ 'elem.requestId': request._id }],
+          session,
+        }
+      );
+    }
+
+    await listing.deleteOne({ session });
+    await session.commitTransaction();
+    await flushQueuedNotificationEmails(emailQueue);
     res.status(200).json({ success: true, message: 'Listing removed' });
   } catch (err) {
+    await session.abortTransaction();
     res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
   }
 };
 

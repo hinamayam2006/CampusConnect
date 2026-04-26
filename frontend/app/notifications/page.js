@@ -339,6 +339,11 @@ export default function NotificationsPage() {
                         <p className={styles.notifQuote}>{n.meta.message}</p>
                       </div>
                     )}
+                    {n.type === 'request_deleted_by_owner' && (
+                      <div className={styles.deletedNotice}>
+                        Request was deleted by you.
+                      </div>
+                    )}
                     <div className={styles.notifMeta}>
                       <span className={styles.notifTime}>{formatRelativeTime(n.createdAt)}</span>
                     </div>

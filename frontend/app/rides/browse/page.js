@@ -184,6 +184,7 @@ export default function RidesBrowsePage() {
                     <div className={styles.rideInfoItem}><CalendarDays size={14} /><span>{formatDeparture(ride.departureTime)}</span></div>
                     <div className={styles.rideInfoItem}><MapPin size={14} /><span>{ride.originName}</span></div>
                     <div className={styles.rideInfoItem}><MapPin size={14} /><span>{ride.destName}</span></div>
+                    <div className={styles.rideInfoItem}><Car size={14} /><span>{ride.licensePlateNumber || 'Plate unavailable'}</span></div>
                   </div>
 
                   <div className={styles.rideDriver}>

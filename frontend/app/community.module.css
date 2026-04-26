@@ -62,7 +62,7 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.65rem 1.35rem;
-  background: var(--primary);
+  background: #1A1A1A;
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
@@ -75,9 +75,8 @@
 }
 
 .btnPrimary:hover {
-  background: var(--primary-hover);
+  background: #333;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
   color: #fff;
 }
 

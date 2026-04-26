@@ -1,5 +1,26 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+const safePersistStorage = typeof window !== 'undefined'
+  ? {
+      getItem: (name) => {
+        try {
+          const value = window.localStorage.getItem(name);
+          if (!value) return null;
+          return JSON.parse(value);
+        } catch {
+          window.localStorage.removeItem(name);
+          return null;
+        }
+      },
+      setItem: (name, newValue) => {
+        window.localStorage.setItem(name, JSON.stringify(newValue));
+      },
+      removeItem: (name) => {
+        window.localStorage.removeItem(name);
+      },
+    }
+  : undefined;
 
 const useStore = create(
   persist(
@@ -56,7 +77,9 @@ const useStore = create(
         tokenExpiry
       }),
 
-      setUnreadCount: (count) => set({ unreadCount: count }),
+      setUnreadCount: (count) => set((state) => ({
+        unreadCount: typeof count === 'function' ? count(state.unreadCount) : count,
+      })),
 
       updateUser: (updates) => set((state) => ({
         user: { ...state.user, ...updates }
@@ -64,6 +87,7 @@ const useStore = create(
     }),
     {
       name: 'campus-storage', // key in localStorage
+      storage: safePersistStorage,
     }
   )
 );

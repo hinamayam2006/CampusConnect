@@ -165,6 +165,7 @@ export const createRideSchema = z.object({
   departureTime: z.coerce.date(),
   seatsTotal: z.coerce.number().min(1).max(8),
   vehicleInfo: z.string().max(120).optional().default(''),
+  licensePlateNumber: z.string().trim().min(2, 'License plate number is required').max(32),
   notes: z.string().max(1000).optional().default(''),
   recurring: z
     .object({
@@ -181,6 +182,7 @@ export const updateRideSchema = z
     departureTime: z.coerce.date().optional(),
     seatsTotal: z.coerce.number().min(1).max(8).optional(),
     vehicleInfo: z.string().max(120).optional(),
+    licensePlateNumber: z.string().trim().min(2).max(32).optional(),
     notes: z.string().max(1000).optional(),
     recurring: z
       .object({

@@ -1,10 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import styles from './listing-management.module.css';
-import { markListingCompleted } from '../lib/apiRequests';
+import { markListingCompleted, uploadImage } from '../lib/apiRequests';
 import api from '../lib/api';
+import ImageCarousel from './ImageCarousel';
+import ConfirmDialog from './ConfirmDialog';
 
 /**
  * ListingManagement
@@ -18,8 +19,11 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [actionLoading, setActionLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, listingId: null, force: false, message: '' });
 
   const loadListings = async () => {
     try {
@@ -80,8 +84,59 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
       description: listing.description,
       price: listing.price || '',
       condition: listing.condition || '',
+      images: listing.images ? [...listing.images] : [],
     });
     setShowEditModal(true);
+  };
+
+  const handleEditImages = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const currentImages = editFormData.images || [];
+    const remaining = Math.max(0, 6 - currentImages.length);
+    if (remaining === 0) {
+      setError('You can upload up to 6 images per listing');
+      e.target.value = '';
+      return;
+    }
+
+    setImageUploading(true);
+    setImageUploadProgress(0);
+
+    try {
+      const nextUrls = [];
+      const batch = files.slice(0, remaining);
+      for (let index = 0; index < batch.length; index += 1) {
+        const response = await uploadImage(batch[index], (pct) => {
+          const base = Math.round((index / batch.length) * 100);
+          setImageUploadProgress(base + Math.round(pct / batch.length));
+        });
+        const url = response?.data?.url || '';
+        if (url) nextUrls.push(url);
+      }
+
+      if (nextUrls.length) {
+        setEditFormData((current) => ({
+          ...current,
+          images: [...(current.images || []), ...nextUrls].slice(0, 6),
+        }));
+        setError(null);
+      }
+    } catch (err) {
+      setError(err?.message || 'Image upload failed');
+    } finally {
+      setImageUploading(false);
+      setImageUploadProgress(0);
+      e.target.value = '';
+    }
+  };
+
+  const removeEditImage = (urlToRemove) => {
+    setEditFormData((current) => ({
+      ...current,
+      images: (current.images || []).filter((url) => url !== urlToRemove),
+    }));
   };
 
   const handleSaveEdit = async () => {
@@ -102,15 +157,36 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
   };
 
   const handleDelete = async (listingId) => {
-    if (!confirm('Are you sure you want to delete this listing?')) return;
+    setDeleteDialog({
+      open: true,
+      listingId,
+      force: false,
+      message: 'Delete this listing? If there are pending requests, we will ask you to confirm again and notify requesters.',
+    });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteDialog.listingId) return;
 
     try {
       setActionLoading(true);
       setError(null);
-      await api.delete(`/marketplace/listings/${listingId}`);
+      const config = deleteDialog.force ? { params: { force: 'true' } } : undefined;
+      await api.delete(`/marketplace/listings/${deleteDialog.listingId}`, config);
+      setDeleteDialog({ open: false, listingId: null, force: false, message: '' });
       setSuccess('Listing deleted successfully');
       await loadListings();
     } catch (err) {
+      if (err.response?.status === 409 && !deleteDialog.force) {
+        setDeleteDialog({
+          open: true,
+          listingId: deleteDialog.listingId,
+          force: true,
+          message: `${err.response?.data?.message || 'This listing has pending requests.'} Requesters will be notified that you cancelled the listing.`,
+        });
+        return;
+      }
+      setDeleteDialog({ open: false, listingId: null, force: false, message: '' });
       setError(err.message || 'Failed to delete listing');
     } finally {
       setActionLoading(false);
@@ -184,16 +260,16 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
         <div className={styles.listingGrid}>
           {visibleListings.map((listing) => (
             <div key={listing._id} className={styles.listingCard}>
-              {listing.images && listing.images[0] && (
-                <Image
-                  src={listing.images[0]}
+              {listing.images?.length ? (
+                <ImageCarousel
+                  images={listing.images}
                   alt={listing.title}
-                  width={640}
-                  height={360}
-                  unoptimized
-                  className={styles.listingImage}
+                  className={styles.listingImageWrap}
+                  aspectRatio="16 / 9"
+                  showDots={listing.images.length > 1}
                 />
-              )}
+              ) : null}
+              {!listing.images?.length && <div className={styles.listingImageEmpty}>No photo</div>}
 
               <div className={styles.cardContent}>
                 <div className={styles.cardHeader}>
@@ -297,11 +373,11 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
                 />
               </div>
 
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Price</label>
-                  <input
-                    type="number"
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Price</label>
+                    <input
+                      type="number"
                     className="form-control"
                     value={editFormData.price || ''}
                     onChange={(e) =>
@@ -326,8 +402,45 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
                         condition: e.target.value,
                       })
                     }
-                  />
+                      />
+                  </div>
                 </div>
+
+              <div className={styles.formGroup}>
+                <label>Photos</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="form-control"
+                  onChange={handleEditImages}
+                  disabled={imageUploading}
+                />
+                <small className="text-muted">
+                  {imageUploading ? `Uploading... ${imageUploadProgress}%` : 'Add or replace listing photos. Up to 6 images total.'}
+                </small>
+                {imageUploading && (
+                  <div style={{ marginTop: '0.4rem', height: 4, background: '#E5E7EB', borderRadius: 9999, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#111827', borderRadius: 9999, width: `${imageUploadProgress}%`, transition: 'width 0.2s ease' }} />
+                  </div>
+                )}
+                {(editFormData.images || []).length > 0 && (
+                  <div className={styles.imagePreviewGrid}>
+                    {(editFormData.images || []).map((url) => (
+                      <div key={url} className={styles.imagePreviewWrap}>
+                        <img src={url} alt="" className={styles.imagePreview} />
+                        <button
+                          type="button"
+                          className={styles.imageRemoveBtn}
+                          onClick={() => removeEditImage(url)}
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -350,6 +463,18 @@ export default function ListingManagement({ showHeader = true, statusFilter = 'a
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        title={deleteDialog.force ? 'Confirm deletion with requests' : 'Delete listing?'}
+        message={deleteDialog.message}
+        confirmLabel={deleteDialog.force ? 'Delete anyway' : 'Delete'}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        placement="top-right"
+        onConfirm={executeDelete}
+        onCancel={() => setDeleteDialog({ open: false, listingId: null, force: false, message: '' })}
+      />
     </div>
   );
 }
