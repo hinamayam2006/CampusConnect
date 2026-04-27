@@ -81,6 +81,13 @@ function getConversationLabel(request) {
     };
   }
 
+  if (request.refModel === 'Booking') {
+    return {
+      title: request.refId?.course || 'Tutoring Session',
+      type: 'tutoring',
+    };
+  }
+
   return { title: 'Conversation', type: 'conversation' };
 }
 

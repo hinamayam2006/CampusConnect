@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import useStore from '../../store/useStore';
 
 /**
@@ -46,10 +46,14 @@ export default function Navbar() {
         </Link>
 
         <div className="guest-navbar__actions">
+          <Link href="/marketplace" className="nav-btn explore">
+            Explore
+          </Link>
           <Link
             href="/login"
             className={`nav-btn login${isLoginPage ? ' active' : ''}`}
           >
+            <LogIn size={15} style={{ marginRight: '0.35rem', verticalAlign: 'middle' }} />
             Log In
           </Link>
           <Link

@@ -29,6 +29,8 @@ const tutorProfileSchema = new mongoose.Schema(
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
     totalSessions: { type: Number, default: 0, min: 0 },
 
+    contactEmail: { type: String, trim: true, maxlength: 200, default: '' },
+
     paymentMethod: { type: String, trim: true, maxlength: 50, default: '' },
     paymentAccountNumber: { type: String, trim: true, maxlength: 50, default: '' },
     paymentInstructions: { type: String, trim: true, maxlength: 300, default: '' },

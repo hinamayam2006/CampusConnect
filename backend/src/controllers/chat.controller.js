@@ -56,6 +56,25 @@ export const sendMessage = async (req, res) => {
     // Determine receiver
     const receiver = request.requester.equals(sender) ? request.owner : request.requester;
 
+    // L-10 FIX: For tutoring chats, ensure payment is approved before student can message
+    if (request.context === 'tutoring' && request.refModel === 'Booking') {
+      const Booking = mongoose.model('Booking');
+      const booking = await Booking.findById(request.refId).session(session);
+      
+      if (booking) {
+        // If sender is the student, verify payment is approved
+        if (booking.student.equals(sender)) {
+          if (booking.paymentStatus !== 'approved' && booking.paymentStatus !== 'not_required') {
+            await session.abortTransaction();
+            return res.status(403).json({
+              success: false,
+              message: 'You cannot send messages until your payment is approved.',
+            });
+          }
+        }
+      }
+    }
+
     // Create message
     const message = await Message.create(
       [

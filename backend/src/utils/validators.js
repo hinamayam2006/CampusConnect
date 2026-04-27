@@ -203,6 +203,20 @@ export const createNoteSchema = z
     fileName: z.string().optional().default(''),
     fileType: z.string().optional().default(''),
     fileSize: z.coerce.number().min(0).optional().default(0),
+    additionalFiles: z
+      .array(
+        z.object({
+          fileUrl: z.string().url('fileUrl must be a valid URL'),
+          publicId: z.string().optional().default(''),
+          resourceType: z.string().optional().default(''),
+          fileFormat: z.string().optional().default(''),
+          fileName: z.string().optional().default(''),
+          fileType: z.string().optional().default(''),
+          fileSize: z.coerce.number().min(0).optional().default(0),
+        })
+      )
+      .optional()
+      .default([]),
   })
   .strict();
 
@@ -222,6 +236,7 @@ export const createTutorProfileSchema = z
     isFree: z.coerce.boolean().optional().default(false),
     availabilitySlots: z.array(availabilitySlotSchema).optional().default([]),
     isActive: z.coerce.boolean().optional().default(true),
+    contactEmail: z.string().email().max(200).optional().default(''),
     paymentMethod: z.string().max(50).optional().default(''),
     paymentAccountNumber: z.string().max(50).optional().default(''),
     paymentInstructions: z.string().max(300).optional().default(''),
@@ -239,6 +254,7 @@ export const updateTutorProfileSchema = z
     isFree: z.coerce.boolean().optional(),
     availabilitySlots: z.array(availabilitySlotSchema).optional(),
     isActive: z.coerce.boolean().optional(),
+    contactEmail: z.string().email().max(200).optional().or(z.literal('')),
     paymentMethod: z.string().max(50).optional(),
     paymentAccountNumber: z.string().max(50).optional(),
     paymentInstructions: z.string().max(300).optional(),

@@ -1,4 +1,3 @@
-import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 
 
@@ -68,7 +67,7 @@ export async function uploadBufferToCloudinary(buffer, folder = 'campusconnect')
       }
     );
 
-    Readable.from(buffer).pipe(uploadStream);
+    uploadStream.end(buffer);
   });
 }
 
@@ -112,7 +111,7 @@ export async function uploadBufferToCloudinaryWithOptions(
       }
     );
 
-    Readable.from(buffer).pipe(uploadStream);
+    uploadStream.end(buffer);
   });
 }
 

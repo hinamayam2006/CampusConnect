@@ -502,3 +502,56 @@
 }
 
 .btnModalOk:hover { background: #333; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .page {
+    padding: 1.25rem 0 2.5rem;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .statsRow {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .searchWrap {
+    min-width: unset;
+  }
+
+  .cardActions {
+    flex-wrap: wrap;
+  }
+
+  .btnMarkAll {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .notifCard {
+    padding: 0.85rem;
+  }
+
+  .cardActions {
+    gap: 0.35rem;
+  }
+
+  .btnAction {
+    font-size: 0.74rem;
+    padding: 0.28rem 0.6rem;
+  }
+}
