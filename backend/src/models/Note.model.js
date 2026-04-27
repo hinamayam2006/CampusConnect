@@ -17,6 +17,19 @@ const noteSchema = new mongoose.Schema(
 		fileType: { type: String, trim: true, default: '' },
 		fileSize: { type: Number, default: 0, min: 0 },
 
+		// Additional files attached to this note (for multi-file uploads)
+		additionalFiles: [
+			{
+				fileUrl:      { type: String, trim: true },
+				publicId:     { type: String, trim: true, default: '' },
+				resourceType: { type: String, trim: true, default: '' },
+				fileFormat:   { type: String, trim: true, default: '' },
+				fileName:     { type: String, trim: true, default: '' },
+				fileType:     { type: String, trim: true, default: '' },
+				fileSize:     { type: Number, default: 0, min: 0 },
+			},
+		],
+
 		uploadedBy: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',

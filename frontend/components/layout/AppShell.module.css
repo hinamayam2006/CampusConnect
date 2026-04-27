@@ -13,6 +13,7 @@
   min-height: 100vh;
   background-color: var(--bg-primary);
   min-width: 0;
+  position: relative;
 }
 
 .mainContent {
@@ -20,8 +21,45 @@
   background-color: var(--bg-primary);
 }
 
+/* ── Mobile hamburger toggle ── */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 300;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-neutral, #E8E2DA);
+  border-radius: 10px;
+  padding: 7px 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  line-height: 0;
+}
+
+/* ── Mobile overlay behind sidebar ── */
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
+}
+
 @media (max-width: 768px) {
   .appMain {
     margin-left: 0;
+    padding-top: 56px; /* room for the hamburger button row */
+  }
+
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebarOverlay {
+    display: block;
   }
 }

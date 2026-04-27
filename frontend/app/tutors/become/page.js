@@ -31,6 +31,7 @@ export default function BecomeTutorPage() {
   const [saving, setSaving]       = useState(false);
 
   const [bio, setBio]                       = useState('');
+  const [contactEmail, setContactEmail]     = useState('');
   const [coursesText, setCoursesText]       = useState('');
   const [isFree, setIsFree]                 = useState(false);
   const [hourlyRate, setHourlyRate]         = useState('');
@@ -39,7 +40,7 @@ export default function BecomeTutorPage() {
   const [slots, setSlots]                   = useState([]);
 
   // new slot form
-  const [slotDay, setSlotDay]     = useState('Monday');
+  const [slotDay, setSlotDay]     = useState(() => new Date().toISOString().split('T')[0]);
   const [slotStart, setSlotStart] = useState('09:00');
   const [slotEnd, setSlotEnd]     = useState('11:00');
 
@@ -55,6 +56,7 @@ export default function BecomeTutorPage() {
           setCoursesText((profile.courses || []).join(', '));
           setIsFree(profile.isFree || false);
           setHourlyRate(profile.hourlyRate ? String(profile.hourlyRate) : '');
+          setContactEmail(profile.contactEmail || '');
           setPaymentMethod(profile.paymentMethod || '');
           setPaymentInstructions(profile.paymentInstructions || '');
           setSlots(profile.availabilitySlots || []);
@@ -76,11 +78,13 @@ export default function BecomeTutorPage() {
   const handleSubmit = async () => {
     if (!bio.trim()) return toast.error('Please write a short bio.');
     if (!coursesText.trim()) return toast.error('Please list at least one subject.');
+    if (!contactEmail.trim()) return toast.error('Please provide a contact email.');
     if (!isFree && !hourlyRate) return toast.error('Enter your hourly rate or mark as free.');
     setSaving(true);
     try {
       const payload = {
         bio: bio.trim(),
+        contactEmail: contactEmail.trim(),
         courses: parseCourses(coursesText),
         isFree,
         hourlyRate: isFree ? 0 : Number(hourlyRate),
@@ -145,6 +149,17 @@ export default function BecomeTutorPage() {
             />
             <p className={styles.charCount}>{bio.length} / 500 characters</p>
           </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Contact Email *</label>
+            <input
+              type="email"
+              className={styles.fieldInput}
+              placeholder="e.g. yourname@university.edu"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+            />
+            <p className={styles.charCount}>Shown to students who book sessions with you.</p>
+          </div>
           <div className={styles.field} style={{ marginTop: '0.75rem' }}>
             <label className={styles.fieldLabel}>Subjects / Courses *</label>
             <textarea
@@ -205,7 +220,7 @@ export default function BecomeTutorPage() {
             <div style={{ marginBottom: '1rem' }}>
               {slots.map((s, i) => (
                 <div key={i} className={styles.slotRow}>
-                  <span className={styles.slotDayBadge}>{s.day.slice(0, 3)}</span>
+                  <span className={styles.slotDayBadge}>{s.day.length > 6 ? new Date(s.day + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : s.day.slice(0, 3)}</span>
                   <span className={styles.slotTime}>{s.startTime} – {s.endTime}</span>
                   <button type="button" className={styles.slotRemove} onClick={() => removeSlot(i)}>
                     <X size={14} />
@@ -216,10 +231,14 @@ export default function BecomeTutorPage() {
           )}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div className={styles.field} style={{ flex: '1 1 140px' }}>
-              <label className={styles.fieldLabel}>Day</label>
-              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={slotDay} onChange={(e) => setSlotDay(e.target.value)}>
-                {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <label className={styles.fieldLabel}>Date</label>
+              <input
+                type="date"
+                className={styles.fieldInput}
+                value={slotDay}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setSlotDay(e.target.value)}
+              />
             </div>
             <div className={styles.field} style={{ flex: '1 1 110px' }}>
               <label className={styles.fieldLabel}>From</label>

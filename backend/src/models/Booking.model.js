@@ -48,6 +48,9 @@ const bookingSchema = new mongoose.Schema(
     // Reminder tracking
     reminderSent: { type: Boolean, default: false },
     completionPromptSent: { type: Boolean, default: false },
+
+    // Chat request tied to this booking (auto-created on first message)
+    chatRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'Request', default: null },
   },
   { timestamps: true }
 );

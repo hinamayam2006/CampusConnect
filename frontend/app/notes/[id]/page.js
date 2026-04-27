@@ -219,8 +219,10 @@ export default function NoteDetailPage() {
                   fileName={note.fileName}
                   fileType={note.fileType}
                   fileSize={note.fileSize}
+                  additionalFiles={note.additionalFiles}
                   onDownloaded={() => setHasDownloaded(true)}
                 />
+                
                 <BookmarkButton
                   key={note._id}
                   noteId={note._id}
@@ -293,14 +295,30 @@ export default function NoteDetailPage() {
                   <div className={styles.statValue}>{note.downloadCount || 0}</div>
                 </div>
                 <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Size</div>
-                  <div className={styles.statValue}>{formatFileSize(note.fileSize)}</div>
+                  <div className={styles.statLabel}>Total Size</div>
+                  <div className={styles.statValue}>
+                    {formatFileSize(
+                      (note.fileSize || 0) + 
+                      (note.additionalFiles || []).reduce((acc, f) => acc + (f.fileSize || 0), 0)
+                    )}
+                  </div>
                 </div>
               </div>
               {(note.fileName || note.fileType) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: '0.8rem', color: '#9E9E9E' }}>
                   <span>{note.fileName || 'Attachment'}</span>
                   <FileTypeBadge fileType={note.fileType} fileName={note.fileName} />
+                </div>
+              )}
+              {note.additionalFiles?.length > 0 && (
+                <div style={{ marginTop: '0.75rem', borderTop: '1px solid #E8E2DA', paddingTop: '0.75rem' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B6B6B', marginBottom: '0.4rem' }}>Also included ({note.additionalFiles.length} more file{note.additionalFiles.length > 1 ? 's' : ''})</p>
+                  {note.additionalFiles.map((f, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#9E9E9E', marginBottom: '0.25rem' }}>
+                      <span>{f.fileName || `File ${i + 2}`}</span>
+                      <FileTypeBadge fileType={f.fileType} fileName={f.fileName} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

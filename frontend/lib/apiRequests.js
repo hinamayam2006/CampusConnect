@@ -681,3 +681,12 @@ export const deleteBooking = async (bookingId, payload = {}) => {
     throw error.response?.data || { success: false, message: error.message };
   }
 };
+
+export const startBookingChat = async (bookingId) => {
+  try {
+    const response = await api.post(`/bookings/${bookingId}/start-chat`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};

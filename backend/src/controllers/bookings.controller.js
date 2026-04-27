@@ -2,6 +2,7 @@ import Booking from '../models/Booking.model.js';
 import TutorProfile from '../models/TutorProfile.model.js';
 import Review from '../models/Review.model.js';
 import User from '../models/User.model.js';
+import Request from '../models/Request.model.js';
 import { sendEmail, sendTutoringApprovalEmail, sendTutoringRequestEmail } from '../utils/email.js';
 import { logActivity } from '../services/activity.service.js';
 import { pushNotification } from '../services/notification.service.js';
@@ -716,6 +717,49 @@ export const studentConfirmAttendance = async (req, res) => {
       message: 'Attendance confirmed',
       data: booking
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const startBookingChat = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const isStudent = String(booking.student) === String(req.user._id);
+    const isTutor   = String(booking.tutor)   === String(req.user._id);
+    if (!isStudent && !isTutor) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (!['confirmed', 'completed', 'pending'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'Chat is only available for active or confirmed bookings' });
+    }
+
+    // Return existing chat request if already created
+    if (booking.chatRequestId) {
+      return res.status(200).json({ success: true, data: { requestId: booking.chatRequestId } });
+    }
+
+    // Create an auto-approved Request so both parties can chat immediately
+    const chatRequest = await Request.create({
+      requester: booking.student,
+      owner: booking.tutor,
+      refModel: 'Booking',
+      refId: booking._id,
+      context: 'tutoring',
+      status: 'approved',
+      chatInitialized: true,
+      message: `Chat for tutoring session: ${booking.course}`,
+    });
+
+    booking.chatRequestId = chatRequest._id;
+    await booking.save();
+
+    res.status(201).json({ success: true, data: { requestId: chatRequest._id } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

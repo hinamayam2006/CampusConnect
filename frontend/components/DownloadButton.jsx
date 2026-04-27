@@ -15,30 +15,74 @@ export default function DownloadButton({
   fileType,
   fileSize,
   onDownloaded,
+  additionalFiles = [],
 }) {
   const [loading, setLoading] = useState(false);
+
+  const downloadSingleFile = async (url, name) => {
+    const fileRes = await fetch(url);
+    const blob = await fileRes.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = name;
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // Delay revoke slightly to ensure browser processes the download
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    URL.revokeObjectURL(blobUrl);
+  };
 
   const handleDownload = async () => {
     if (!noteId) return;
     setLoading(true);
     try {
+      // Trigger API to increment count & check access
       const res = await downloadNote(noteId);
       if (onDownloaded) onDownloaded();
-      const proxyPath = res?.data?.downloadProxyPath || `/notes/${noteId}/file`;
-      const downloadName = res?.data?.downloadFileName || fileName || 'note-file';
+      
+      const filesToDownload = [];
+      
+      // Add primary file
+      const primaryUrl = downloadUrl || fileUrl;
+      const primaryName = fileName || 'note-file';
+      if (primaryUrl) {
+        filesToDownload.push({ url: primaryUrl, name: primaryName });
+      }
 
-      // Always use proxy endpoint to preserve content-type headers.
-      const fileRes = await api.get(proxyPath, { responseType: 'blob' });
-      const blob = fileRes.data;
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = downloadName;
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
+      // Add additional files
+      if (additionalFiles && additionalFiles.length > 0) {
+        additionalFiles.forEach(file => {
+          const url = file.downloadUrl || file.fileUrl;
+          const name = file.fileName || 'attachment';
+          if (url) {
+            filesToDownload.push({ url, name });
+          }
+        });
+      }
+
+      if (filesToDownload.length > 0) {
+        // Download files sequentially with a gap so browsers don't block them
+        for (let i = 0; i < filesToDownload.length; i++) {
+          if (i > 0) await new Promise((resolve) => setTimeout(resolve, 800));
+          await downloadSingleFile(filesToDownload[i].url, filesToDownload[i].name);
+        }
+      } else {
+        // Fallback to proxy path for the main file if no direct URL is available
+        const proxyPath = res?.data?.downloadProxyPath || `/notes/${noteId}/file`;
+        const fileRes = await api.get(proxyPath, { responseType: 'blob' });
+        const blob = fileRes.data;
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = primaryName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }
     } catch (err) {
       const msg = err?.message || 'Could not download note';
       toast.error(msg);

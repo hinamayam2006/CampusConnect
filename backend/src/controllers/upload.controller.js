@@ -23,10 +23,11 @@ export const uploadImage = async (req, res) => {
     // Validate folder to prevent unauthorized folder access
     const allowedFolders = [
       'campusconnect/listings',
-      'campusconnect/profiles', 
+      'campusconnect/profiles',
       'campusconnect/payment-proofs',
       'campusconnect/lost-found',
-      'campusconnect/tickets'
+      'campusconnect/tickets',
+      'campusconnect/notes'
     ];
     
     if (!allowedFolders.includes(folder)) {
@@ -88,6 +89,7 @@ export const uploadNotesFile = async (req, res) => {
       },
     });
   } catch (err) {
+    console.error('[Upload Controller Error]', err);
     res.status(500).json({ success: false, message: err.message || 'Upload failed' });
   }
 };

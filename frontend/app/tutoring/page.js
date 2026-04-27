@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Search, ArrowRight, Clock, Calendar, CheckCircle, XCircle, BookOpen } from 'lucide-react';
+import { GraduationCap, Search, ArrowRight, Clock, Calendar, CheckCircle, XCircle, BookOpen, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styles from './tutoring.module.css';
 import useRequireAuth from '../../lib/useRequireAuth';
@@ -17,7 +17,9 @@ import {
   completeBooking,
   approvePayment,
   rejectPaymentProof,
+  startBookingChat,
 } from '../../lib/apiRequests';
+import ImagePreviewModal from '../../components/ImagePreviewModal';
 
 function initials(name) {
   if (!name) return '?';
@@ -53,44 +55,60 @@ function SessionCard({ booking }) {
   const name  = tutor.name || booking.tutor?.name || 'Tutor';
   const subjects = (booking.tutor?.subjects || booking.tutor?.courses || []).slice(0, 2).join(', ');
   const router = useRouter();
-  
-  const handleClick = () => {
-    router.push('/dashboard/student');
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleMessageTutor = async (e) => {
+    e.stopPropagation();
+    setChatLoading(true);
+    try {
+      const res = await startBookingChat(booking._id);
+      const requestId = res?.data?.requestId;
+      if (requestId) {
+        router.push(`/messages?requestId=${requestId}`);
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Could not open chat.');
+    } finally {
+      setChatLoading(false);
+    }
   };
-  
+
   return (
     <div 
-      className={styles.sessionCard} 
-      onClick={handleClick}
-      style={{ cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
+      className={styles.sessionCard}
+      style={{ flexDirection: 'column', gap: '0.5rem' }}
     >
-      <div className={styles.sessionAvatar}>
-        {tutor.avatar
-          ? <Image src={tutor.avatar} alt={name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : initials(name)
-        }
-      </div>
-      <div className={styles.sessionBody}>
-        <p className={styles.sessionName}>{name}</p>
-        <div className={styles.sessionMeta}>
-          {booking.course && <span>{booking.course}</span>}
-          {subjects && !booking.course && <span>{subjects}</span>}
-          {booking.scheduledAt && (
-            <span><Calendar size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {new Date(booking.scheduledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-          )}
-          {booking.durationMinutes && <span><Clock size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {booking.durationMinutes} min</span>}
-          <span style={{ color: '#C8BFB5' }}>{relativeTime(booking.createdAt)}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+        <div className={styles.sessionAvatar}>
+          {tutor.avatar
+            ? <Image src={tutor.avatar} alt={name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initials(name)
+          }
         </div>
+        <div className={styles.sessionBody}>
+          <p className={styles.sessionName}>{name}</p>
+          <div className={styles.sessionMeta}>
+            {booking.course && <span>{booking.course}</span>}
+            {subjects && !booking.course && <span>{subjects}</span>}
+            {booking.scheduledAt && (
+              <span><Calendar size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {new Date(booking.scheduledAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            )}
+            {booking.durationMinutes && <span><Clock size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {booking.durationMinutes} min</span>}
+            <span style={{ color: '#C8BFB5' }}>{relativeTime(booking.createdAt)}</span>
+          </div>
+        </div>
+        <StatusBadge status={booking.status} />
       </div>
-      <StatusBadge status={booking.status} />
+      {['pending', 'confirmed'].includes(booking.status) && (
+        <button
+          type="button"
+          onClick={handleMessageTutor}
+          disabled={chatLoading}
+          style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: 8, padding: '5px 12px', cursor: 'pointer' }}
+        >
+          <MessageSquare size={13} /> {chatLoading ? 'Opening…' : 'Message Tutor'}
+        </button>
+      )}
     </div>
   );
 }
@@ -99,7 +117,25 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
   const student = booking.student || {};
   const name    = student.name || 'Student';
   const busy    = actionId === booking._id;
-  const [showProof, setShowProof] = useState(false);
+  const router = useRouter();
+  const [proofModalOpen, setProofModalOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleMessageStudent = async (e) => {
+    e.stopPropagation();
+    setChatLoading(true);
+    try {
+      const res = await startBookingChat(booking._id);
+      const requestId = res?.data?.requestId;
+      if (requestId) {
+        router.push(`/messages?requestId=${requestId}`);
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Could not open chat.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const statusColors = {
     pending:   { bg: '#FFF7ED', color: '#B45309', label: 'Pending' },
@@ -144,33 +180,38 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
         <span style={{ background: sc.bg, color: sc.color, borderRadius: 99, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{sc.label}</span>
       </div>
 
+      {['pending', 'confirmed', 'approved', 'completed'].includes(booking.status) && (
+        <button
+          type="button"
+          onClick={handleMessageStudent}
+          disabled={chatLoading}
+          style={{ alignSelf: 'flex-end', marginTop: '-0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', fontWeight: 600, background: '#F0F9FF', color: '#0369A1', border: '1px solid #BAE6FD', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}
+        >
+          <MessageSquare size={12} /> {chatLoading ? 'Opening…' : 'Message Student'}
+        </button>
+      )}
+
       {/* Payment status banner */}
       {payBadge && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: payBadge.bg, color: payBadge.color, borderRadius: 8, padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600, width: '100%' }}>
           <span>{payBadge.label}</span>
           {booking.paymentProofUrl && (
             <button
-              onClick={() => setShowProof((v) => !v)}
+              onClick={() => setProofModalOpen(true)}
               style={{ marginLeft: 'auto', background: 'transparent', border: '1.5px solid currentColor', borderRadius: 6, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', color: 'inherit' }}
             >
-              {showProof ? 'Hide' : 'View Receipt'}
+              View Receipt
             </button>
           )}
         </div>
       )}
 
-      {/* Payment proof image */}
-      {showProof && booking.paymentProofUrl && (
-        <div style={{ width: '100%' }}>
-          <Image
-            src={booking.paymentProofUrl}
-            alt="Payment receipt"
-            width={400}
-            height={320}
-            style={{ maxWidth: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 10, border: '1px solid #E8E3DE', display: 'block' }}
-          />
-        </div>
-      )}
+      <ImagePreviewModal
+        isOpen={proofModalOpen}
+        imageUrl={booking.paymentProofUrl}
+        onClose={() => setProofModalOpen(false)}
+        title={`Payment proof — ${name}`}
+      />
 
       {/* Action buttons */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

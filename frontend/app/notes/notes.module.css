@@ -286,6 +286,31 @@
   transform: translateY(-2px);
 }
 
+.cardMedia {
+  position: relative;
+  background: #F2EDE4;
+  border-bottom: 1px solid #E8E2D9;
+}
+
+.cardMediaImg {
+  width: 100%;
+  display: block;
+  aspect-ratio: 550 / 300;
+  object-fit: cover;
+}
+
+.cardMediaPlaceholder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 550 / 300;
+  color: #9E9E9E;
+  font-size: 0.75rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
 .cardTop {
   background: #F2EDE4;
   padding: 1rem 1.1rem 0.85rem;
@@ -438,6 +463,144 @@
   white-space: nowrap;
 }
 
+.cardInnerLink {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.cardDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: #1A1A1A;
+  color: #fff;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--font-inter), sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cardDownloadBtn:hover { background: #333; }
+.cardDownloadBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cardDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid #FECACA;
+  background: #FEF2F2;
+  color: #DC2626;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--font-inter), sans-serif;
+  cursor: pointer;
+}
+.cardDeleteBtn:hover { background: #FEE2E2; }
+
+/* ══════════════════════════════════════
+   My Uploads View
+   ══════════════════════════════════════ */
+
+.mineViewBanner {
+  background: linear-gradient(135deg, #F9F5EF 0%, #EEE5D8 100%);
+  border: 1px solid #E0D9CE;
+  border-radius: 16px;
+  padding: 1.4rem 1.75rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  animation: fadeInUp 0.45s ease both;
+}
+
+.mineViewBannerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mineViewBannerTitle {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0;
+}
+
+.mineViewBannerSub {
+  font-size: 0.8rem;
+  color: #6B6B6B;
+  font-family: var(--font-inter), sans-serif;
+  margin: 0;
+}
+
+.mineViewStats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid #E0D9CE;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  flex-shrink: 0;
+}
+
+.mineViewStatDivider {
+  width: 1px;
+  height: 32px;
+  background: #E0D9CE;
+  flex-shrink: 0;
+}
+
+.mineStat {
+  text-align: center;
+}
+
+.mineStatNum {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1;
+}
+
+.mineStatLabel {
+  display: block;
+  font-size: 0.68rem;
+  color: #9E9E9E;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 0.3rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.mineViewTip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  color: #9A3412;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.76rem;
+  font-family: var(--font-inter), sans-serif;
+  margin-bottom: 1.25rem;
+  animation: fadeInUp 0.45s ease 0.1s both;
+}
+
 /* ── Empty / Error ── */
 .emptyState {
   text-align: center;
@@ -541,4 +704,175 @@
   .detailLayout {
     grid-template-columns: 1fr;
   }
+}
+
+/* ══════════════════════════════════════
+   Dashboard / Uploader Page
+   ══════════════════════════════════════ */
+
+/* Stats row */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  animation: fadeInUp 0.45s ease both;
+}
+
+.statCard {
+  background: #fff;
+  border: 1px solid #E8E2D9;
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: box-shadow 0.15s;
+}
+.statCard:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.06); }
+
+.statValue {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.72rem;
+  color: #9E9E9E;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Alert */
+.alertDanger {
+  background: #FEE2E2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #DC2626;
+  margin-bottom: 1rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Skeleton card wrapper */
+.skeletonCard {
+  background: #fff;
+  border: 1px solid #E8E2D9;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+/* Empty state icon */
+.emptyStateIcon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Uploader note row card */
+.noteCard {
+  background: #fff;
+  border: 1px solid #E8E2D9;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: box-shadow 0.15s, transform 0.15s;
+  animation: fadeInUp 0.4s ease both;
+}
+.noteCard:hover {
+  box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+  transform: translateY(-1px);
+}
+
+.noteCardBody {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.noteCardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.noteCardTitle {
+  font-family: var(--font-serif);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0 0 0.2rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.noteCardMeta {
+  font-size: 0.76rem;
+  color: #9E9E9E;
+  font-family: var(--font-inter), sans-serif;
+  margin: 0 0 0.45rem;
+}
+
+.noteCardMetaStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #6B6B6B;
+  font-family: var(--font-inter), sans-serif;
+  white-space: nowrap;
+}
+
+.noteCardFooter {
+  border-top: 1px solid #F2EDE4;
+  padding-top: 0.75rem;
+}
+
+.noteCardActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Button sizes */
+.btnSmall {
+  padding: 0.38rem 0.9rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 9px !important;
+}
+
+/* Danger button */
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-family: var(--font-inter), sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btnDanger:hover { background: #FEE2E2; border-color: #FCA5A5; }
+
+@media (max-width: 600px) {
+  .statGrid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .statValue { font-size: 1.4rem; }
+  .noteCardMetaStack { flex-direction: row; flex-wrap: wrap; align-items: center; }
 }

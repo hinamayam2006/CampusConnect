@@ -19,6 +19,23 @@ function attachDownloadUrl(noteDoc) {
     });
   }
   data.downloadFileName = data.fileName || '';
+
+  // Handle additional files
+  if (data.additionalFiles && data.additionalFiles.length > 0) {
+    data.additionalFiles = data.additionalFiles.map((file) => {
+      if (!file.downloadUrl && file.publicId) {
+        file.downloadUrl = buildDownloadUrl({
+          publicId: file.publicId,
+          resourceType: file.resourceType || 'raw',
+          format: file.fileFormat,
+          filename: file.fileName,
+        });
+      }
+      file.downloadFileName = file.fileName || '';
+      return file;
+    });
+  }
+
   return data;
 }
 

@@ -22,6 +22,7 @@ import {
   Users,
   Ticket,
   ArrowLeft,
+  X,
 } from 'lucide-react';
 import useStore from '../../store/useStore';
 import styles from './Sidebar.module.css';
@@ -82,7 +83,7 @@ function formatYear(year) {
 
 /* ─── Component ─── */
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }) {
   const { user, logout, unreadCount } = useStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -126,7 +127,7 @@ export default function Sidebar() {
     : NAV_SECTIONS;
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar}${isOpen ? ` ${styles['sidebar--open']}` : ''}`}>
       {/* Logo */}
       <Link href="/" className={styles['sidebar-logo']}>
         <span className={styles['sidebar-logo__icon']}>
@@ -134,6 +135,13 @@ export default function Sidebar() {
         </span>
         <span className={styles['sidebar-logo__text']}>CampusConnect</span>
       </Link>
+
+      {/* Mobile close button */}
+      {onClose && (
+        <button className={styles['sidebar-close']} onClick={onClose} type="button" aria-label="Close navigation">
+          <X size={18} />
+        </button>
+      )}
 
       {/* Navigation */}
       <nav className={styles['sidebar-nav']} aria-label="Main navigation">

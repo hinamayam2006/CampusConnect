@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, BookOpen, Clock, Star, ArrowRight, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, BookOpen, Clock, Star, ArrowRight, AlertTriangle, Mail } from 'lucide-react';
 import styles from '../../tutoring/tutoring.module.css';
 import { fetchTutorById, fetchTutorReviews } from '../../../lib/apiRequests';
 import useRequireAuth from '../../../lib/useRequireAuth';
@@ -148,6 +148,13 @@ export default function TutorDetailPage() {
                     <p className={styles.sectionTitle}>Payment</p>
                     {/* L-7 FIX: paymentDetails doesn't exist in TutorProfile schema — correct field is paymentInstructions */}
                     <p className={styles.bioText}>{tutor.paymentMethod}{tutor.paymentInstructions ? ' — ' + tutor.paymentInstructions : ''}</p>
+                  </>
+                )}
+
+                {tutor.contactEmail && (
+                  <>
+                    <p className={styles.sectionTitle}><Mail size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />Contact</p>
+                    <a href={`mailto:${tutor.contactEmail}`} className={styles.bioText} style={{ color: '#2563EB', textDecoration: 'none' }}>{tutor.contactEmail}</a>
                   </>
                 )}
               </div>

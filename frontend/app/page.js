@@ -26,6 +26,13 @@ import {
   BookOpenText,
   CarFront,
   Package2,
+  FileText,
+  GraduationCap,
+  Repeat,
+  ChevronDown,
+  AtSign,
+  Globe,
+  Share2,
 } from 'lucide-react';
 import styles from './home.module.css';
 
@@ -48,6 +55,7 @@ export default function Home() {
   const [upcomingRides, setUpcomingRides] = useState([]);
   const [ridesLoading, setRidesLoading] = useState(false);
   const [dashboardSearch, setDashboardSearch] = useState('');
+  const [openFaq, setOpenFaq] = useState(null);
 
   const landingFeatures = [
     {
@@ -476,6 +484,81 @@ export default function Home() {
   // ═══════════════════════════════════════════════════════════
   // LANDING PAGE RENDER
   // ═══════════════════════════════════════════════════════════
+
+  const lpFeatures = [
+    {
+      num: '01',
+      icon: <ShoppingBag size={22} />,
+      iconBg: '#EDE9FE',
+      iconColor: '#7C3AED',
+      title: 'Marketplace',
+      desc: 'Buy and sell student essentials — textbooks, gadgets, clothes — within your campus.',
+    },
+    {
+      num: '02',
+      icon: <FileText size={22} />,
+      iconBg: '#DBEAFE',
+      iconColor: '#2563EB',
+      title: 'Notes & Papers',
+      desc: 'Upload or download lecture notes, past papers, and assignments shared by peers.',
+    },
+    {
+      num: '03',
+      icon: <GraduationCap size={22} />,
+      iconBg: '#D1FAE5',
+      iconColor: '#059669',
+      title: 'Tutoring',
+      desc: 'Find verified student tutors for any subject and book sessions in minutes.',
+    },
+    {
+      num: '04',
+      icon: <Car size={22} />,
+      iconBg: '#FEF3C7',
+      iconColor: '#D97706',
+      title: 'Rides & Carpools',
+      desc: 'Coordinate campus trips with fellow students and split costs easily.',
+    },
+    {
+      num: '05',
+      icon: <Repeat size={22} />,
+      iconBg: '#FFE4E6',
+      iconColor: '#E11D48',
+      title: 'Borrow & Lend',
+      desc: 'Need something short-term? Borrow from classmates or lend out what you own.',
+    },
+    {
+      num: '06',
+      icon: <Search size={22} />,
+      iconBg: '#F3F4F6',
+      iconColor: '#374151',
+      title: 'Lost & Found',
+      desc: 'Report lost items or help return found belongings to their rightful owner.',
+    },
+  ];
+
+  const faqs = [
+    {
+      q: 'Who can join CampusConnect?',
+      a: 'CampusConnect is open to all registered students. You sign up with your student details and get access to the full platform instantly.',
+    },
+    {
+      q: 'How does the Marketplace work?',
+      a: 'Any student can list items for sale or browse listings from others. You negotiate and arrange the exchange directly on campus — no delivery needed.',
+    },
+    {
+      q: 'Is my personal data safe?',
+      a: 'Yes. We only store what is necessary for the platform. Your contact details are never shown publicly and we do not sell your data to third parties.',
+    },
+    {
+      q: 'How do I find a tutor?',
+      a: 'Go to the Tutoring section, search by subject or course code, and book a session with a verified student tutor. Reviews and ratings help you choose.',
+    },
+    {
+      q: 'Can I upload notes for free?',
+      a: 'Absolutely. Uploading notes is free. You can also choose to offer them for free or set a small price — it is entirely up to you.',
+    },
+  ];
+
   return (
     <div className={styles['landing-container']} onMouseMove={handleMouseMove}>
       <div className={styles['star-field']}>
@@ -496,7 +579,10 @@ export default function Home() {
           style={{ left: p.x, top: p.y, width: p.size, height: p.size }}
         />
       ))}
+
       <div className={styles['landing-shell']}>
+
+        {/* ── Hero ── */}
         <section className={styles['landing-hero']}>
           <div className={styles['landing-content']}>
             <h1 className={styles['landing-title']}>CampusConnect</h1>
@@ -515,27 +601,110 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={styles['landing-features']} aria-label="CampusConnect features">
-          <div className={styles['landing-features__grid']}>
-            {landingFeatures.map((feature) => (
-              <Link key={feature.title} href={feature.href} className={styles['feature-card']}>
-                <span className={styles['feature-card__icon']}>
-                  {feature.icon}
-                </span>
-                <h2 className={styles['feature-card__title']}>{feature.title}</h2>
-                <p className={styles['feature-card__text']}>{feature.value}</p>
-              </Link>
+        {/* ── Features Section ── */}
+        <section className={styles['lp-features-section']}>
+          <div className={styles['lp-section-eyebrow']}>FEATURES</div>
+          <h2 className={styles['lp-section-title']}>
+            Everything you need to{' '}
+            <span className={styles['lp-section-title-muted']}>thrive on campus</span>
+          </h2>
+          <p className={styles['lp-section-sub']}>
+            Built to help students study smarter, connect faster, and waste less — all in one platform.
+          </p>
+          <div className={styles['lp-features-grid']}>
+            {lpFeatures.map((f) => (
+              <div key={f.num} className={styles['lp-feat-card']}>
+                <div className={styles['lp-feat-card-top']}>
+                  <span
+                    className={styles['lp-feat-icon']}
+                    style={{ background: f.iconBg, color: f.iconColor }}
+                  >
+                    {f.icon}
+                  </span>
+                  <span className={styles['lp-feat-num']}>{f.num}</span>
+                </div>
+                <h3 className={styles['lp-feat-title']}>{f.title}</h3>
+                <p className={styles['lp-feat-desc']}>{f.desc}</p>
+              </div>
             ))}
           </div>
         </section>
 
-        <section className={styles['landing-bottom']}>
-          <footer className={styles['landing-footer']}>
-            <p className={styles['landing-footer__copy']}>
-              CampusConnect © {new Date().getFullYear()} · Built for students to share more and waste less.
-            </p>
-          </footer>
+        {/* ── FAQ Section ── */}
+        <section className={styles['lp-faq-section']}>
+          <div className={styles['lp-section-eyebrow']} style={{ color: '#059669' }}>FAQ</div>
+          <h2 className={styles['lp-section-title']}>Common questions</h2>
+          <p className={styles['lp-section-sub']}>Everything you need to know about how CampusConnect works.</p>
+          <div className={styles['lp-faq-list']}>
+            {faqs.map((item, i) => {
+              const isOpen = openFaq === i;
+              return (
+                <div key={i} className={`${styles['lp-faq-item']} ${isOpen ? styles['lp-faq-item--open'] : ''}`}>
+                  <button
+                    type="button"
+                    className={styles['lp-faq-trigger']}
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown
+                      size={18}
+                      className={styles['lp-faq-chevron']}
+                      style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className={styles['lp-faq-body']}>
+                      <p>{item.a}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </section>
+
+        {/* ── Footer ── */}
+        <footer className={styles['lp-footer']}>
+          <div className={styles['lp-footer-grid']}>
+            {/* Brand col */}
+            <div className={styles['lp-footer-brand']}>
+              <div className={styles['lp-footer-brand-name']}>CampusConnect</div>
+              <p className={styles['lp-footer-brand-desc']}>
+                The all-in-one campus platform for students to buy, sell, learn, and connect.
+              </p>
+            </div>
+
+            {/* Quick links */}
+            <div>
+              <p className={styles['lp-footer-col-label']}>Quick Links</p>
+              <ul className={styles['lp-footer-links']}>
+                <li><Link href="/">Home</Link></li>
+                <li><Link href="/marketplace">Marketplace</Link></li>
+                <li><Link href="/notes">Notes</Link></li>
+                <li><Link href="/tutoring">Tutoring</Link></li>
+              </ul>
+            </div>
+
+            {/* Connect */}
+            <div>
+              <p className={styles['lp-footer-col-label']}>Connect</p>
+              <div className={styles['lp-footer-socials']}>
+                <a href="#" aria-label="Social" className={styles['lp-footer-social-btn']}>
+                  <AtSign size={16} />
+                </a>
+                <a href="#" aria-label="Website" className={styles['lp-footer-social-btn']}>
+                  <Globe size={16} />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles['lp-footer-bottom']}>
+            <p>© {new Date().getFullYear()} CampusConnect. All rights reserved.</p>
+          </div>
+        </footer>
+
       </div>
     </div>
   );

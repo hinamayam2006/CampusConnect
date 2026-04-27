@@ -1232,3 +1232,310 @@
     display: none;
   }
 }
+
+/* ==========================================
+   LANDING — FEATURES, FAQ, FOOTER (new)
+   ========================================== */
+
+/* Shared section labels */
+.lp-section-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5B4EFF;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.lp-section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  text-align: center;
+  margin: 0 0 0.6rem;
+  line-height: 1.2;
+}
+
+.lp-section-title-muted {
+  color: #9E9E9E;
+}
+
+.lp-section-sub {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto 3rem;
+  line-height: 1.7;
+}
+
+/* ── Features section ── */
+.lp-features-section {
+  padding: 5rem 1.5rem 4rem;
+  position: relative;
+  z-index: 2;
+}
+
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lp-feat-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(232, 226, 217, 0.9);
+  border-radius: 20px;
+  padding: 1.75rem 1.6rem 1.6rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  animation: cardEntry 0.6s ease both;
+}
+
+.lp-feat-card:nth-child(2) { animation-delay: 0.07s; }
+.lp-feat-card:nth-child(3) { animation-delay: 0.14s; }
+.lp-feat-card:nth-child(4) { animation-delay: 0.21s; }
+.lp-feat-card:nth-child(5) { animation-delay: 0.28s; }
+.lp-feat-card:nth-child(6) { animation-delay: 0.35s; }
+
+.lp-feat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+}
+
+.lp-feat-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.lp-feat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lp-feat-num {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.08);
+  line-height: 1;
+  font-family: var(--font-sans);
+  letter-spacing: -1px;
+}
+
+.lp-feat-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.lp-feat-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── FAQ section ── */
+.lp-faq-section {
+  padding: 4rem 1.5rem 4rem;
+  position: relative;
+  z-index: 2;
+}
+
+.lp-faq-list {
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lp-faq-item {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #E8E2D9;
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: border-color 0.18s;
+}
+
+.lp-faq-item--open {
+  border-color: #A7EDCE;
+}
+
+.lp-faq-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lp-faq-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.22s ease;
+}
+
+.lp-faq-body {
+  padding: 0 1.4rem 1.1rem;
+  font-size: 0.87rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  animation: fadeInUp 0.22s ease;
+}
+
+.lp-faq-body p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* ── Footer ── */
+.lp-footer {
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 6rem;
+  padding: 3rem 1.5rem 1.5rem;
+  background: #1A1A1A;
+  border-radius: 20px 20px 0 0;
+}
+
+.lp-footer-grid {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1fr;
+  gap: 2.5rem;
+  max-width: 1100px;
+  margin: 0 auto 2rem;
+}
+
+.lp-footer-brand-name {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #F2EDE4;
+  margin-bottom: 0.55rem;
+}
+
+.lp-footer-brand-desc {
+  font-size: 0.85rem;
+  color: rgba(242, 237, 228, 0.55);
+  line-height: 1.65;
+  max-width: 280px;
+  margin: 0;
+}
+
+.lp-footer-col-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #F2EDE4;
+  margin: 0 0 0.85rem;
+}
+
+.lp-footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lp-footer-links a {
+  font-size: 0.875rem;
+  color: rgba(242, 237, 228, 0.55);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-footer-links a:hover {
+  color: #F2EDE4;
+}
+
+.lp-footer-socials {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.lp-footer-social-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(242, 237, 228, 0.7);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.lp-footer-social-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.lp-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1.25rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(242, 237, 228, 0.38);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.lp-footer-bottom p { margin: 0; color: rgba(242, 237, 228, 0.38); }
+
+/* Responsive for new sections */
+@media (max-width: 900px) {
+  .lp-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lp-footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .lp-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-footer-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-faq-section,
+  .lp-features-section {
+    padding: 3rem 1rem 2rem;
+  }
+}

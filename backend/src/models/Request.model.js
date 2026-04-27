@@ -18,7 +18,7 @@ const requestSchema = new mongoose.Schema(
     // Polymorphic reference: can reference either Listing or Ride
     refModel: {
       type: String,
-      enum: ['Listing', 'Ride', 'LostnFound', 'Borrowing'],
+      enum: ['Listing', 'Ride', 'LostnFound', 'Borrowing', 'Booking'],
       required: true,
       index: true,
     },
@@ -39,7 +39,7 @@ const requestSchema = new mongoose.Schema(
     // Context metadata
     context: {
       type: String,
-      enum: ['marketplace', 'ride', 'lostnfound', 'borrow'],
+      enum: ['marketplace', 'ride', 'lostnfound', 'borrow', 'tutoring'],
       required: true,
     },
     // For rides: number of seats requested

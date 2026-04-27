@@ -49,6 +49,13 @@ function getConversationLabel(request) {
     };
   }
 
+  if (request.refModel === 'Booking') {
+    return {
+      title: request.refId?.course || 'Tutoring Session',
+      type: 'tutoring',
+    };
+  }
+
   return { title: 'Conversation', type: 'conversation' };
 }
 
@@ -95,12 +102,20 @@ export default function MessagesPage() {
       void loadChats(true);
     };
 
+    const onNotification = (data) => {
+      if (data?.type === 'chat_message') {
+        void loadChats(true);
+      }
+    };
+
     socket.on('receive_message', refreshChats);
     socket.on('chat_closed', refreshChats);
+    socket.on('notification_received', onNotification);
 
     return () => {
       socket.off('receive_message', refreshChats);
       socket.off('chat_closed', refreshChats);
+      socket.off('notification_received', onNotification);
     };
   }, [accessToken, isReady, loadChats, user?._id]);
 

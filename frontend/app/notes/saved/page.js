@@ -78,6 +78,17 @@ export default function SavedNotesPage() {
           <div className={styles.grid} style={{ animation: 'fadeInUp 0.6s ease both' }}>
             {notes.map((note) => (
               <div key={note._id} className={styles.card}>
+                <div className={styles.cardMedia}>
+                  {note.previewImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={note.previewImageUrl} alt={note.title} className={styles.cardMediaImg} />
+                  ) : (
+                    <div className={styles.cardMediaPlaceholder}>
+                      <BookOpen size={20} />
+                      <span>No cover</span>
+                    </div>
+                  )}
+                </div>
                 <div className={styles.cardTop}>
                   <div className={styles.cardIcon}><BookOpen size={20} /></div>
                   <div className={styles.cardBadgeWrap}>
