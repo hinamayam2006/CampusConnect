@@ -91,9 +91,14 @@ export default function AdminCommandCenterPage() {
           <h1 className="h3 mb-1">Admin Command Center</h1>
           <p className="text-secondary mb-0">Live operational insights from aggregation pipelines and audit logs.</p>
         </div>
-        <Link href="/admin/tickets" className="btn btn-primary">
-          Open Ticket Center
-        </Link>
+        <div className="d-flex gap-2">
+          <Link href="/admin/reports" className="btn btn-primary">
+            Open Reports Inbox
+          </Link>
+          <Link href="/admin/moderation" className="btn btn-outline-primary">
+            Open Moderation Queue
+          </Link>
+        </div>
       </div>
 
       {loading ? (

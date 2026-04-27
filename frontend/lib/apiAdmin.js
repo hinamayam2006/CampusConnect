@@ -80,3 +80,32 @@ export const suspendAdminUser = async (userId, reason) => {
     throw error.response?.data || { success: false, message: error.message };
   }
 };
+
+export const fetchModerationQueue = async (params = {}) => {
+  try {
+    const response = await api.get('/moderation/admin/queue', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const fetchModerationContentReports = async (targetModel, targetId) => {
+  try {
+    const response = await api.get(
+      `/moderation/content/${encodeURIComponent(targetModel)}/${encodeURIComponent(targetId)}/reports`
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};
+
+export const reviewModerationReport = async (reportId, payload) => {
+  try {
+    const response = await api.patch(`/moderation/admin/reports/${reportId}/review`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { success: false, message: error.message };
+  }
+};

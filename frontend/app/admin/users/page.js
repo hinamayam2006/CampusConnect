@@ -257,7 +257,6 @@ export default function AdminUsersPage() {
               <thead className="table-light">
                 <tr>
                   <th>User</th>
-                  <th>Department</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Joined</th>
@@ -271,14 +270,6 @@ export default function AdminUsersPage() {
                       <div>
                         <div className="fw-semibold">{userItem.name}</div>
                         <div className="small text-secondary">{userItem.email}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="small">
-                        {userItem.department || '—'}
-                        {userItem.year && (
-                          <div className="text-secondary">{userItem.year} Year</div>
-                        )}
                       </div>
                     </td>
                     <td>

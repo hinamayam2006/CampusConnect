@@ -85,9 +85,6 @@ export const handleAppealEmail = async (req, res) => {
                 <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Email:</strong></p>
                 <p style="margin: 0 0 15px; color: #111827; font-size: 16px;">${user.email}</p>
                 
-                <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Department:</strong></p>
-                <p style="margin: 0 0 15px; color: #111827; font-size: 16px;">${user.department}</p>
-                
                 <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Suspension Reason:</strong></p>
                 <p style="margin: 0 0 15px; color: #111827; font-size: 16px;">${user.suspensionReason || 'Not specified'}</p>
                 
@@ -266,7 +263,6 @@ export const submitAppeal = async (req, res) => {
               <div style="background: #f3f4f6; border-radius: 6px; padding: 20px;">
                 <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Name:</strong> ${user.name}</p>
                 <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Email:</strong> ${user.email}</p>
-                <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Department:</strong> ${user.department}</p>
                 <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Suspension Reason:</strong> ${user.suspensionReason || 'Not specified'}</p>
               </div>
             </div>

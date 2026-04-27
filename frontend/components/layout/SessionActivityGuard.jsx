@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import useStore from '../../store/useStore';
 import api from '../../lib/api';
@@ -17,6 +17,9 @@ const PROTECTED_PREFIXES = [
   '/profile',
 ];
 
+let hasValidatedSessionThisBoot = false;
+let sessionValidationPromise = null;
+
 function isProtectedPath(pathname = '') {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
@@ -26,6 +29,7 @@ export default function SessionActivityGuard({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const sessionValidatedRef = useRef(false);
 
   useEffect(() => {
     let unsub;
@@ -59,8 +63,9 @@ export default function SessionActivityGuard({ children }) {
   }, [hydrated, accessToken, refreshToken, pathname, router]);
 
   // Validate persisted session against backend so stale localStorage cannot look "logged in".
+  // Runs ONLY ONCE per app load to prevent spamming /auth/me on every navigation.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || sessionValidatedRef.current || hasValidatedSessionThisBoot) return;
     const hasSession = !!accessToken || !!refreshToken;
     if (!hasSession) return;
 
@@ -68,13 +73,21 @@ export default function SessionActivityGuard({ children }) {
 
     const validateSession = async () => {
       try {
-        await api.get('/auth/me', { timeout: 12000 });
+        if (!sessionValidationPromise) {
+          sessionValidationPromise = api.get('/auth/me', { timeout: 12000 });
+        }
+
+        await sessionValidationPromise;
+        hasValidatedSessionThisBoot = true;
+        if (!cancelled) sessionValidatedRef.current = true;
       } catch {
         if (cancelled) return;
         logout();
-        if (isProtectedPath(pathname)) {
+        if (isProtectedPath(window.location.pathname)) {
           router.replace('/login');
         }
+      } finally {
+        sessionValidationPromise = null;
       }
     };
 
@@ -83,7 +96,17 @@ export default function SessionActivityGuard({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, accessToken, refreshToken, logout, pathname, router]);
+  }, [hydrated, accessToken, refreshToken, logout, router]);
+
+  // Reset validation state when there is no active session.
+  useEffect(() => {
+    const hasSession = !!accessToken || !!refreshToken;
+    if (!hasSession) {
+      sessionValidatedRef.current = false;
+      hasValidatedSessionThisBoot = false;
+      sessionValidationPromise = null;
+    }
+  }, [accessToken, refreshToken]);
 
   // Inactivity timeout handling
   useEffect(() => {

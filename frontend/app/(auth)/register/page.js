@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  LayoutGrid,
   Eye,
   EyeOff,
   ArrowRight,
@@ -12,12 +11,6 @@ import {
 import api from '../../../lib/api';
 import toast from 'react-hot-toast';
 import styles from '../auth.module.css';
-
-const DEPARTMENTS = [
-  'SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME',
-  'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS',
-];
-const YEARS = [1, 2, 3, 4];
 
 const STRENGTH_RULES = [
   { key: 'length',   label: '8+ characters', test: (p) => p.length >= 8 },
@@ -27,7 +20,7 @@ const STRENGTH_RULES = [
 ];
 
 const STEPS = [
-  { title: 'Create your profile', desc: 'Name, department & year' },
+  { title: 'Create your profile', desc: 'Name and secure password' },
   { title: 'Verify your email',   desc: 'email required' },
   { title: 'Start connecting',    desc: 'Access all features' },
 ];
@@ -41,8 +34,6 @@ export default function RegisterPage() {
     lastName: '',
     email: '',
     password: '',
-    department: '',
-    year: '',
   });
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -62,8 +53,6 @@ export default function RegisterPage() {
       name,
       email: formData.email,
       password: formData.password,
-      department: formData.department,
-      year: Number(formData.year),
     };
     try {
       const { data } = await api.post('/auth/register', payload);
@@ -89,7 +78,9 @@ export default function RegisterPage() {
     <div className={styles['auth-split']}>
       <div className={styles['auth-left']}>
         <Link href="/" className={styles['auth-logo']}>
-          <span className={styles['auth-logo__icon']}><LayoutGrid size={17} strokeWidth={2} /></span>
+          <span className={styles['auth-logo__icon']}>
+            <img src="/logo.png" alt="CC" width="24" height="24" className={styles['auth-logo__image']} />
+          </span>
           <span className={styles['auth-logo__name']}>CampusConnect</span>
         </Link>
         <div className={styles['auth-tagline']}>
@@ -200,39 +191,6 @@ export default function RegisterPage() {
                 </div>
               )}
               {fieldErrors.password && <p className={styles['auth-field-error']}>{fieldErrors.password}</p>}
-            </div>
-
-            <div className={styles['auth-field-row']}>
-              <div className={styles['auth-field']}>
-                <label className={styles['auth-label']} htmlFor="reg-dept">Department</label>
-                <select
-                  id="reg-dept"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                  className={`${styles['auth-select']}${fieldErrors.department ? ` ${styles['auth-select--error']}` : ''}`}
-                >
-                  <option value="">Select dept.</option>
-                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-                {fieldErrors.department && <p className={styles['auth-field-error']}>{fieldErrors.department}</p>}
-              </div>
-              <div className={styles['auth-field']}>
-                <label className={styles['auth-label']} htmlFor="reg-year">Year</label>
-                <select
-                  id="reg-year"
-                  name="year"
-                  value={formData.year}
-                  onChange={handleChange}
-                  required
-                  className={`${styles['auth-select']}${fieldErrors.year ? ` ${styles['auth-select--error']}` : ''}`}
-                >
-                  <option value="">Select year</option>
-                  {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
-                </select>
-                {fieldErrors.year && <p className={styles['auth-field-error']}>{fieldErrors.year}</p>}
-              </div>
             </div>
 
             <button type="submit" disabled={loading} className={styles['auth-btn']}>

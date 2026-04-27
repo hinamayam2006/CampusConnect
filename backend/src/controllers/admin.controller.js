@@ -61,7 +61,7 @@ export const listAllTickets = async (req, res) => {
 
     const [items, total] = await Promise.all([
       Ticket.find(q)
-        .populate('submittedBy', 'name email department year role isSuspended')
+        .populate('submittedBy', 'name email role isSuspended')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(lim),
@@ -281,6 +281,72 @@ export const unsuspendUser = async (req, res) => {
     await auditLog(req.user._id, 'admin_user_unsuspended', 'User', user._id, {
       by: req.user.name,
     });
+
+    // Send unsuspension email to user
+    try {
+      const unsuspensionEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Account Restored - CampusConnect</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa;">
+          <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 30px 40px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">CampusConnect</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Account Reinstated</p>
+            </div>
+
+            <div style="padding: 40px;">
+              <div style="background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <h2 style="margin: 0 0 8px; color: #166534; font-size: 20px;">Your account has been restored</h2>
+                <p style="margin: 0; color: #166534; line-height: 1.6;">
+                  You can now log back in and continue using CampusConnect.
+                </p>
+              </div>
+
+              <p style="margin: 0 0 12px; color: #374151; line-height: 1.7;">
+                Hello ${user.name || 'there'},
+              </p>
+              <p style="margin: 0 0 20px; color: #4b5563; line-height: 1.7;">
+                After review, your account suspension has been lifted by the administration team.
+              </p>
+
+              <div style="background: #f3f4f6; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #111827; font-size: 14px;"><strong>Restored on:</strong> ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              </div>
+
+              <p style="margin: 0; color: #6b7280; line-height: 1.7; font-size: 14px;">
+                Thank you for helping keep CampusConnect safe for everyone.
+              </p>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">
+                This is an automated message from CampusConnect Administration
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                © ${new Date().getFullYear()} CampusConnect. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail({
+        to: user.email,
+        subject: 'Account Restored - CampusConnect',
+        html: unsuspensionEmailHtml,
+      });
+
+      console.log(`Unsuspension email sent to ${user.email}`);
+    } catch (emailError) {
+      console.warn('Failed to send unsuspension email:', emailError.message);
+      // Keep unsuspension successful even if email delivery fails.
+    }
 
     return res.status(200).json({ success: true, message: `User ${user.name} unsuspended.`, data: { isSuspended: false } });
   } catch (err) {

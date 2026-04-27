@@ -235,7 +235,7 @@ export default function MarketplacePage() {
 
           {/* Listing type filters for current hub view */}
           <div className={styles.pillGroup} style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+            <div className={styles.pillGroup}>
               {TYPES.map(({ label, value }) => (
                 <button
                   key={value}

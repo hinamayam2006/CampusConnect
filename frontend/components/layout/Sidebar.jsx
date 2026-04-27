@@ -73,13 +73,6 @@ function getInitials(name = '') {
     .join('');
 }
 
-const YEAR_SUFFIXES = { 1: 'st', 2: 'nd', 3: 'rd', 4: 'th' };
-
-function formatYear(year) {
-  if (!year) return '';
-  return `${year}${YEAR_SUFFIXES[year] || 'th'} Year`;
-}
-
 /* ─── Component ─── */
 
 export default function Sidebar() {
@@ -116,7 +109,8 @@ export default function Sidebar() {
       items: [
         { label: 'Command Center', href: '/admin', icon: Shield, exact: true },
         { label: 'User Management', href: '/admin/users', icon: Users },
-        { label: 'Ticket Center', href: '/admin/tickets', icon: Ticket },
+        { label: 'Reports Inbox', href: '/admin/reports', icon: Ticket },
+        { label: 'Moderation Queue', href: '/admin/moderation', icon: AlertTriangle },
       ],
     },
   ];
@@ -182,8 +176,7 @@ export default function Sidebar() {
         <div className={styles['sidebar-user__info']}>
           <span className={styles['sidebar-user__name']}>{user.name}</span>
           <span className={styles['sidebar-user__meta']}>
-            {user.department}
-            {user.year ? ` · ${formatYear(user.year)}` : ''}
+            {user.email || 'Campus member'}
           </span>
         </div>
       </div>

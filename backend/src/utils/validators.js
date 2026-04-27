@@ -16,16 +16,6 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, 'Must contain one uppercase letter')
     .regex(/[0-9]/, 'Must contain one number')
     .regex(/[!@#$%^&*(),.?":{}|<>_\-]/, 'Must contain one special character'),
-
-  department: z.enum(
-    ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
-    { errorMap: () => ({ message: 'Invalid department' }) }
-  ),
-
-  year: z
-    .number({ invalid_type_error: 'Year must be a number' })
-    .min(1)
-    .max(4),
 });
 
 export const loginSchema = z.object({
@@ -80,20 +70,6 @@ export const updateProfileSchema = z.object({
   bio: z
     .string()
     .max(500, 'Bio cannot exceed 500 characters')
-    .optional(),
-
-  department: z
-    .enum(
-      ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
-      { errorMap: () => ({ message: 'Invalid department' }) }
-    )
-    .optional(),
-
-  year: z
-    .coerce // Convert string "3" to number 3
-    .number({ invalid_type_error: 'Year must be a valid number' })
-    .min(1, 'Year must be between 1 and 4')
-    .max(4, 'Year must be between 1 and 4')
     .optional(),
 
   // Arrays of strings: ["Math", "Physics"]

@@ -62,13 +62,18 @@
 .auth-logo__icon {
   width: 34px;
   height: 34px;
-  background: #FFFFFF;
+  background: #1A1A1A;
+  border: 1px solid rgba(242, 237, 228, 0.14);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-primary);
   flex-shrink: 0;
+}
+
+.auth-logo__image {
+  object-fit: contain;
+  filter: brightness(0) invert(100%);
 }
 
 .auth-logo__name {

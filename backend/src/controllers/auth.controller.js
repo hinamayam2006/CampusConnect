@@ -28,7 +28,7 @@ const generateTokens = async (userId) => {
 // ─── REGISTER ────────────────────────────────────────────
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, department, year } = req.body;
+    const { name, email, password } = req.body;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email });
@@ -52,8 +52,6 @@ export const register = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
-      department,
-      year,
       isVerified: false,
       verificationToken: hashedVerificationToken,
       verificationTokenExpiry,

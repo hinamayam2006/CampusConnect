@@ -10,7 +10,7 @@ import { flushQueuedNotificationEmails, pushNotification } from '../services/not
 export const getPublicProfile = async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
-      .select('name email department year avatar bio profilePublic showEmail allowMessages showActivity createdAt');
+      .select('name email avatar bio profilePublic showEmail allowMessages showActivity createdAt');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

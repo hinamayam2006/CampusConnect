@@ -2,12 +2,27 @@ import { io } from 'socket.io-client';
 
 let socket = null;
 
+function toErrorText(err) {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  if (typeof err?.message === 'string') return err.message;
+  return String(err);
+}
+
+function isAuthFailure(err) {
+  const text = toErrorText(err).toLowerCase();
+  return text.includes('authentication failed') || text.includes('token') || text.includes('not authorized');
+}
+
 /**
  * Initialize Socket.io connection
  * Called once when the app loads (in layout or App component)
  */
 export const initializeSocket = (token) => {
   if (socket) {
+    if (token) {
+      socket.auth = { ...(socket.auth || {}), token };
+    }
     return socket;
   }
 
@@ -31,11 +46,32 @@ export const initializeSocket = (token) => {
     console.log('Socket.io disconnected');
   });
 
+  socket.on('connect_error', (err) => {
+    if (isAuthFailure(err)) {
+      console.warn('Socket auth connect failed. Waiting for fresh token.');
+      return;
+    }
+    console.error('Socket.io connect_error:', err);
+  });
+
   socket.on('error', (err) => {
+    if (isAuthFailure(err)) {
+      console.warn('Socket auth error. Waiting for fresh token.');
+      return;
+    }
     console.error('Socket.io error:', err);
   });
 
   return socket;
+};
+
+/**
+ * Update auth token for existing socket instance.
+ * Useful when access token rotates via refresh.
+ */
+export const updateSocketAuthToken = (token) => {
+  if (!socket || !token) return;
+  socket.auth = { ...(socket.auth || {}), token };
 };
 
 /**

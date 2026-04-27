@@ -3,7 +3,13 @@
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import useStore from '../../store/useStore';
-import { disconnectSocket, initializeSocket, registerUser, removeListener } from '../../lib/socket';
+import {
+  disconnectSocket,
+  initializeSocket,
+  registerUser,
+  removeListener,
+  updateSocketAuthToken,
+} from '../../lib/socket';
 
 function buildNotificationBody(notification) {
   const pieces = [notification?.message];
@@ -17,15 +23,21 @@ function buildNotificationBody(notification) {
 export default function RealtimeSocketProvider() {
   const user = useStore((state) => state.user);
   const accessToken = useStore((state) => state.accessToken);
+  const tokenExpiry = useStore((state) => state.tokenExpiry);
   const setUnreadCount = useStore((state) => state.setUnreadCount);
 
   useEffect(() => {
-    if (!user?._id || !accessToken) {
+    const tokenUsable =
+      !!accessToken &&
+      (!tokenExpiry || Number(tokenExpiry) > Date.now() + 5000);
+
+    if (!user?._id || !tokenUsable) {
       disconnectSocket();
       return undefined;
     }
 
     const socket = initializeSocket(accessToken);
+    updateSocketAuthToken(accessToken);
     const register = () => registerUser(user._id, accessToken);
     const handleNotification = (notification) => {
       const headline = notification?.type === 'chat_message' ? 'New message' : 'New notification';
@@ -79,7 +91,7 @@ export default function RealtimeSocketProvider() {
       socket.off('connect', register);
       removeListener('notification_received', handleNotification);
     };
-  }, [accessToken, setUnreadCount, user?._id]);
+  }, [accessToken, setUnreadCount, tokenExpiry, user?._id]);
 
   return null;
 }

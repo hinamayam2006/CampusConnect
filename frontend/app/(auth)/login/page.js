@@ -1,10 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  LayoutGrid,
   FileText,
   Car,
   GraduationCap,
@@ -60,7 +59,7 @@ export default function LoginPage() {
     } catch (err) {
       const apiMessage = err.response?.data?.message;
       const suspended = err.response?.data?.suspended;
-      
+
       if (suspended) {
         // Show suspension modal instead of error message
         setSuspensionData({
@@ -73,7 +72,7 @@ export default function LoginPage() {
         const text = apiMessage || 'Login failed. Please try again.';
         setMessage({ type: 'error', text });
       }
-      
+
       setFormData((prev) => ({ ...prev, password: '' }));
       setLoading(false);
     }
@@ -83,7 +82,9 @@ export default function LoginPage() {
     <div className={styles['auth-split']}>
       <div className={styles['auth-left']}>
         <Link href="/" className={styles['auth-logo']}>
-          <span className={styles['auth-logo__icon']}><LayoutGrid size={17} strokeWidth={2} /></span>
+          <span className={styles['auth-logo__icon']}>
+            <img src="/logo.png" alt="CC" width="24" height="24" className={styles['auth-logo__image']} />
+          </span>
           <span className={styles['auth-logo__name']}>CampusConnect</span>
         </Link>
         <div className={styles['auth-tagline']}>

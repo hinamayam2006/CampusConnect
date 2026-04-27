@@ -13,6 +13,14 @@ import {
   updateAdminTicket,
 } from '../../../lib/apiAdmin';
 
+const DELETE_TARGET_TYPE_MAP = {
+  listing: 'Listing',
+  ride: 'Ride',
+  note: 'Note',
+  borrowing: 'Borrowing',
+  lostnfound: 'LostnFound',
+};
+
 function resolveTargetLink(targetType, targetId) {
   if (!targetType || !targetId) return '';
   const normalized = String(targetType).toLowerCase();
@@ -95,9 +103,9 @@ export default function AdminTicketCenterPage() {
   const handleDeleteTarget = (ticket) => {
     const targetType = String(ticket.targetType || '').toLowerCase();
     const targetId = ticket.targetId;
-    const isSupported = targetType === 'listing' || targetType === 'ride';
+    const isSupported = Boolean(DELETE_TARGET_TYPE_MAP[targetType]);
     if (!isSupported || !targetId) {
-      toast.error('One-click delete supports Listing or Ride targets only.');
+      toast.error('One-click delete supports Listing, Ride, Note, Borrowing, and Lost & Found targets only.');
       return;
     }
 
@@ -144,7 +152,10 @@ export default function AdminTicketCenterPage() {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
     
     try {
-      const mappedType = targetType === 'listing' ? 'Listing' : 'Ride';
+      const mappedType = DELETE_TARGET_TYPE_MAP[targetType];
+      if (!mappedType) {
+        throw new Error('Unsupported target type for one-click delete');
+      }
       await deleteAdminContent(mappedType, targetId);
       toast.success(`${mappedType} deleted successfully`);
       await refreshTickets();
@@ -235,8 +246,8 @@ export default function AdminTicketCenterPage() {
     <div className="container py-4 py-md-5">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
-          <h1 className="h3 mb-1">Ticket Center</h1>
-          <p className="text-secondary mb-0">Reports and feedback with direct target navigation.</p>
+          <h1 className="h3 mb-1">Reports Inbox</h1>
+          <p className="text-secondary mb-0">Reports and feedback submitted from the Report Issue page.</p>
         </div>
         <Link href="/admin" className="btn btn-outline-secondary">
           Back to Command Center
@@ -270,7 +281,7 @@ export default function AdminTicketCenterPage() {
           {tickets.map((ticket) => {
             const targetLink = resolveTargetLink(ticket.targetType, ticket.targetId);
             const isBusy = Boolean(actionLoadingById[ticket._id]);
-            const canDeleteTarget = ['listing', 'ride'].includes(String(ticket.targetType || '').toLowerCase()) && Boolean(ticket.targetId);
+            const canDeleteTarget = Boolean(DELETE_TARGET_TYPE_MAP[String(ticket.targetType || '').toLowerCase()]) && Boolean(ticket.targetId);
             const canAdvanceStatus = ticket.status === 'open' || ticket.status === 'in_progress';
             return (
               <div key={ticket._id} className="border rounded-3 p-3 bg-white">

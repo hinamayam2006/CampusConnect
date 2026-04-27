@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  User, BookOpen, Car, ShoppingBag, Package,
-  MapPin, Shield, Eye, EyeOff, Edit3,
+  User, Car, ShoppingBag, Package,
+  Shield, Eye, EyeOff, Edit3,
   FileText, Clock, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,12 +13,6 @@ import api from '../../../lib/api';
 import { uploadImage } from '../../../lib/apiRequests';
 import useStore from '../../../store/useStore';
 import styles from '../profile.module.css';
-
-function ordinal(n) {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return s[(v - 20) % 10] || s[v] || s[0];
-}
 
 function getInitials(name) {
   if (!name) return '?';
@@ -45,15 +39,11 @@ function getActivityHref(item) {
   }
 }
 
-const DEPARTMENTS = ['SEECS','ASAB','SADA','NBS','SCME','SNS','SMME','USPCASE','NICE','IESE','IGIS','S3H','NLS'];
-
 function PersonalInfoTab({ profile }) {
   const { updateUser } = useStore();
   const [form, setForm] = useState({
     name: profile.name || '',
     bio: profile.bio || '',
-    department: profile.department || '',
-    year: profile.year ? String(profile.year) : '',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -82,8 +72,6 @@ function PersonalInfoTab({ profile }) {
       const payload = {
         name: form.name.trim(),
         bio: form.bio.trim(),
-        department: form.department,
-        year: Number(form.year) || undefined,
         avatar: avatarPreview || undefined,
       };
       const res = await api.put('/auth/profile', payload);
@@ -114,20 +102,6 @@ function PersonalInfoTab({ profile }) {
         <div className={styles.field}>
           <label className={styles.fieldLabel}>Full Name</label>
           <input className={styles.fieldInput} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel}>Department</label>
-          <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}>
-            <option value="">Select department</option>
-            {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel}>Year of Study</label>
-          <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: e.target.value }))}>
-            <option value="">Select year</option>
-            {[1,2,3,4].map((y) => <option key={y} value={y}>{y}{ordinal(y)} Year</option>)}
-          </select>
         </div>
       </div>
       <div className={styles.field}>
@@ -272,8 +246,6 @@ function OnboardingView({ me, onComplete }) {
   const { updateUser } = useStore();
   const [form, setForm] = useState({
     name: me?.name || '',
-    department: me?.department || '',
-    year: me?.year ? String(me.year) : '',
     bio: '',
   });
   const [saving, setSaving] = useState(false);
@@ -284,8 +256,6 @@ function OnboardingView({ me, onComplete }) {
     try {
       const res = await api.put('/auth/profile', {
         name: form.name.trim(),
-        department: form.department,
-        year: Number(form.year) || undefined,
         bio: form.bio.trim(),
       });
       const updated = res?.data?.data?.user;
@@ -314,20 +284,6 @@ function OnboardingView({ me, onComplete }) {
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Full Name</label>
               <input className={styles.fieldInput} value={form.name} placeholder="Your full name" onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>Department</label>
-              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}>
-                <option value="">Select department</option>
-                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>Year of Study</label>
-              <select className={`${styles.fieldInput} ${styles.fieldSelect}`} value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: e.target.value }))}>
-                <option value="">Select year</option>
-                {[1,2,3,4].map((y) => <option key={y} value={y}>{y}{ordinal(y)} Year</option>)}
-              </select>
             </div>
           </div>
           <div className={styles.field} style={{ textAlign: 'left', marginTop: '0.5rem' }}>
@@ -483,8 +439,6 @@ export default function ProfilePage() {
             <div className={styles.identityInfo}>
               <h1 className={styles.identityName}>{profile.name}</h1>
               <div className={styles.identityBadges}>
-                {profile.department && <span className={styles.deptBadge}><MapPin size={11} /> {profile.department}</span>}
-                {profile.year && <span className={styles.deptBadge}><BookOpen size={11} /> {profile.year}{ordinal(profile.year)} Year</span>}
                 {profile.email && (!publicView || profile.showEmail) && <span className={styles.deptBadge}><User size={11} /> {profile.email}</span>}
                 {profile.role === 'admin' && <span className={styles.deptBadge}><Shield size={11} /> Admin</span>}
               </div>

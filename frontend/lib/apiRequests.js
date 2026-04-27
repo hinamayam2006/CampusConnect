@@ -16,8 +16,8 @@ export const uploadImage = async (file, onProgress, folder) => {
       timeout: 120000,
       onUploadProgress: onProgress
         ? (e) => {
-            if (e.total) onProgress(Math.round((e.loaded * 100) / e.total));
-          }
+          if (e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+        }
         : undefined,
     });
     return response.data;

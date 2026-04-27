@@ -23,17 +23,6 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password is required'],
       minlength: [8, 'Password must be at least 8 characters'],
     },
-    department: {
-      type: String,
-      required: [true, 'Department is required'],
-      enum: ['SEECS', 'ASAB', 'SADA', 'NBS', 'SCME', 'SNS', 'SMME', 'USPCASE', 'NICE', 'IESE', 'IGIS', 'S3H', 'NLS'],
-    },
-    year: {
-      type: Number,
-      required: [true, 'Year is required'],
-      min: 1,
-      max: 4,
-    },
     avatar: {
       type: String,
       default: '',
@@ -167,7 +156,6 @@ const userSchema = new mongoose.Schema(
 
 // Index on email for fast login lookups
 userSchema.index({ email: 1 });
-userSchema.index({ department: 1, year: 1 });
 userSchema.index({ role: 1 });
 
 // Remove password from any JSON response automatically
