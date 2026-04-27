@@ -871,8 +871,82 @@
 }
 .btnDanger:hover { background: #FEE2E2; border-color: #FCA5A5; }
 
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .page {
+    padding: 1.25rem 0 2.5rem;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .actionRow {
+    width: 100%;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .searchWrap {
+    min-width: unset;
+  }
+
+  .filterGroup {
+    flex-wrap: wrap;
+  }
+
+  .mineViewBanner {
+    flex-direction: column;
+    padding: 1.1rem 1.25rem;
+  }
+
+  .mineViewStats {
+    flex-shrink: unset;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .detailLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 600px) {
   .statGrid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
   .statValue { font-size: 1.4rem; }
   .noteCardMetaStack { flex-direction: row; flex-wrap: wrap; align-items: center; }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pageTitle {
+    font-size: clamp(1.5rem, 6vw, 1.8rem);
+  }
+
+  .filterBar {
+    padding: 0.75rem;
+  }
+
+  .tagInput {
+    width: 100%;
+  }
+
+  .statGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mineViewStats {
+    padding: 0.6rem 1rem;
+    gap: 0.75rem;
+  }
 }

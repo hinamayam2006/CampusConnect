@@ -967,6 +967,54 @@
 .imgFallbackDefault  { background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary)); }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  .page {
+    padding: 1.25rem 0 2.5rem;
+  }
+
+  .pageHeader {
+    margin-bottom: 1.5rem;
+  }
+
+  .pageTitle {
+    font-size: clamp(1.5rem, 6vw, 1.9rem);
+  }
+
+  .pageSubtitle {
+    font-size: 0.875rem;
+  }
+
+  .filterBar {
+    padding: 0.85rem;
+  }
+
+  .pillGroup {
+    gap: 0.35rem;
+  }
+
+  .pill {
+    padding: 0.32rem 0.7rem;
+    font-size: 0.78rem;
+  }
+
+  .rideCard {
+    padding: 1rem;
+  }
+
+  .rideRouteWrap {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .feedCard {
+    padding: 1rem;
+  }
+
+  .needCard {
+    padding: 1rem;
+  }
+}
+
 @media (max-width: 640px) {
   .grid,
   .skeletonGrid {

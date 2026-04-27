@@ -555,10 +555,99 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  .page {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  .identityCard {
+    padding: 1.75rem 1.5rem;
+  }
+
+  .identityTop {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .identityActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tabBar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabBar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .formSection {
+    padding: 1.25rem;
+  }
+
+  .fieldGroup {
+    grid-template-columns: 1fr;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .formActions > * {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settingRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
 @media (max-width: 600px) {
   .identityCard { padding: 1.5rem; }
   .identityTop { gap: 1rem; }
   .identityActions { width: 100%; }
   .statsRow { gap: 0.5rem; }
   .statItem { min-width: 70px; }
+}
+
+@media (max-width: 400px) {
+  .page {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .identityCard {
+    padding: 1.25rem 1rem;
+  }
+
+  .identityName {
+    font-size: 1.4rem;
+  }
+
+  .statsRow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+
+  .statItem {
+    min-width: 60px;
+    flex-shrink: 0;
+  }
+
+  .dangerZone {
+    padding: 1rem;
+  }
 }
