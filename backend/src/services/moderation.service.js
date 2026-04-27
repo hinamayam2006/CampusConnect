@@ -172,9 +172,16 @@ class ModerationService {
     if (!Model) return;
 
     let contentQuery = Model.findById(targetId);
-    if (targetModel !== 'User') {
-      contentQuery = contentQuery.populate('uploadedBy seller driver owner');
+    if (targetModel === 'Note') {
+      contentQuery = contentQuery.populate('uploadedBy');
+    } else if (targetModel === 'Listing') {
+      contentQuery = contentQuery.populate('seller');
+    } else if (targetModel === 'Ride') {
+      contentQuery = contentQuery.populate('driver');
+    } else if (targetModel === 'Borrowing') {
+      contentQuery = contentQuery.populate('owner');
     }
+    
     const content = await contentQuery;
     
     if (!content) return;
@@ -261,17 +268,52 @@ class ModerationService {
     try {
       const report = await Report.findById(reportId).session(session);
       if (!report) throw new Error('Report not found');
+      if (['resolved', 'dismissed'].includes(report.status)) {
+        throw new Error('This report has already been processed.');
+      }
       
-      // Update report
-      report.status = 'reviewed';
+      // Update report status based on action
+      if (adminAction === 'dismiss') {
+        report.status = 'dismissed';
+      } else if (adminAction === 'no_action') {
+        report.status = 'reviewed'; // Can stay in queue for further action
+      } else {
+        report.status = 'resolved';
+      }
+      
       report.adminReviewedBy = adminId;
       report.adminReviewedAt = new Date();
       report.adminAction = adminAction;
       report.adminNote = adminNote;
       await report.save({ session });
       
+      // Bulk update all other pending reports for this exact target
+      await Report.updateMany(
+        {
+          targetModel: report.targetModel,
+          targetId: report.targetId,
+          status: { $in: ['pending', 'reviewed'] },
+          _id: { $ne: report._id }
+        },
+        {
+          $set: {
+            status: report.status,
+            adminReviewedBy: adminId,
+            adminReviewedAt: new Date(),
+            adminAction: adminAction,
+            adminNote: adminNote ? `Bulk resolved with parent report: ${adminNote}` : 'Bulk resolved with parent report'
+          }
+        },
+        { session }
+      );
+      
       // Apply admin action
       const Model = this.getContentModel(report.targetModel);
+      
+      // Get target name for audit log
+      const targetObj = await Model.findById(report.targetId).session(session);
+      const targetName = targetObj ? (targetObj.title || targetObj.name || (targetObj.originName ? `${targetObj.originName} to ${targetObj.destinationName}` : 'Unknown Item')) : 'Unknown Item';
+      
       await this.applyAdminAction(report.targetModel, Model, report.targetId, adminAction, adminNote, adminId, session);
       
       // Log activity
@@ -283,6 +325,7 @@ class ModerationService {
         meta: {
           reportId: report._id,
           reason: report.reason,
+          targetName,
           adminNote
         }
       });
@@ -408,6 +451,7 @@ class ModerationService {
     const reports = await Report.find(query)
       .populate('reportedBy', 'name email')
       .populate('adminReviewedBy', 'name email')
+      .populate('targetId', 'title name originName destinationName course subject')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);

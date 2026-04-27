@@ -10,6 +10,7 @@ import {
   fetchModerationQueue,
   reviewModerationReport,
 } from '../../../lib/apiAdmin';
+import { AlertCircle, FileText, User, ShieldAlert, XCircle, UserCheck } from 'lucide-react';
 
 const ACTION_OPTIONS = [
   { value: 'shadow_ban', label: 'Shadow Ban / Flag Content' },
@@ -21,16 +22,16 @@ const ACTION_OPTIONS = [
 
 const SENSITIVITY_ORDER = { high: 3, medium: 2, low: 1 };
 
-function resolveTargetLink(targetType, targetId) {
-  if (!targetType || !targetId) return '';
+function resolveTargetLink(targetType, targetIdStr) {
+  if (!targetType || !targetIdStr) return '';
   const normalized = String(targetType).toLowerCase();
-  if (normalized === 'listing') return `/marketplace/${targetId}`;
-  if (normalized === 'ride') return `/rides/${targetId}`;
-  if (normalized === 'note') return `/notes/${targetId}`;
-  if (normalized === 'borrowing') return `/borrow/${targetId}`;
-  if (normalized === 'lostnfound') return `/lostnfound/${targetId}`;
-  if (normalized === 'request') return `/requests/${targetId}`;
-  if (normalized === 'user') return `/profile/${targetId}`;
+  if (normalized === 'listing') return `/marketplace/${targetIdStr}`;
+  if (normalized === 'ride') return `/rides/${targetIdStr}`;
+  if (normalized === 'note') return `/notes/${targetIdStr}`;
+  if (normalized === 'borrowing') return `/borrow/${targetIdStr}`;
+  if (normalized === 'lostnfound') return `/lostnfound/${targetIdStr}`;
+  if (normalized === 'request') return `/requests/${targetIdStr}`;
+  if (normalized === 'user') return `/profile/${targetIdStr}`;
   return '';
 }
 
@@ -50,6 +51,14 @@ function getSensitivityBadgeClass(sensitivity) {
   if (sensitivity === 'high') return 'text-bg-danger';
   if (sensitivity === 'medium') return 'text-bg-warning';
   return 'text-bg-secondary';
+}
+
+function getTargetName(targetObj) {
+  if (!targetObj || typeof targetObj !== 'object') return null;
+  if (targetObj.title) return targetObj.title;
+  if (targetObj.name) return targetObj.name;
+  if (targetObj.originName && targetObj.destinationName) return `${targetObj.originName} → ${targetObj.destinationName}`;
+  return null;
 }
 
 export default function AdminModerationQueuePage() {
@@ -75,14 +84,19 @@ export default function AdminModerationQueuePage() {
     const map = new Map();
 
     for (const report of queueItems) {
-      const key = `${report.targetModel}:${report.targetId}`;
+      const targetObj = report.targetId;
+      const targetIdStr = typeof targetObj === 'object' ? targetObj?._id : targetObj;
+      if (!targetIdStr) continue;
+
+      const key = `${report.targetModel}:${targetIdStr}`;
       const existing = map.get(key);
 
       if (!existing) {
         map.set(key, {
           key,
           targetModel: report.targetModel,
-          targetId: report.targetId,
+          targetId: targetIdStr,
+          targetName: getTargetName(targetObj),
           sensitivity: report.sensitivity,
           status: report.status,
           latestCreatedAt: report.createdAt,
@@ -272,12 +286,12 @@ export default function AdminModerationQueuePage() {
         <div className="text-secondary">No moderation reports for this filter.</div>
       ) : (
         <div className="row g-3">
-          <div className="col-12 col-lg-5">
-            <div className="border rounded-3 bg-white overflow-hidden">
-              <div className="p-3 border-bottom fw-semibold">Reported Targets ({groupedQueue.length})</div>
-              <div className="list-group list-group-flush">
+          {/* LEFT PANEL - QUEUE LIST */}
+          <div className="col-12 col-lg-4">
+            <div className="border rounded-3 bg-white overflow-hidden" style={{ maxHeight: '800px', display: 'flex', flexDirection: 'column' }}>
+              <div className="p-3 border-bottom fw-semibold bg-light">Reported Targets ({groupedQueue.length})</div>
+              <div className="list-group list-group-flush overflow-auto">
                 {groupedQueue.map((group) => {
-                  const targetLink = resolveTargetLink(group.targetModel, group.targetId);
                   const isActive = selectedGroupKey === group.key;
                   return (
                     <button
@@ -285,27 +299,44 @@ export default function AdminModerationQueuePage() {
                       type="button"
                       className={`list-group-item list-group-item-action text-start ${isActive ? 'active' : ''}`}
                       onClick={() => setSelectedGroupKey(group.key)}
+                      style={{ padding: '1rem' }}
                     >
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <div className="fw-semibold">{group.targetModel}</div>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <div className="fw-bold" style={{ fontSize: '0.95rem' }}>
+                            {group.targetModel}
+                          </div>
+                          {group.targetName ? (
+                            <div className="text-truncate" style={{ fontSize: '0.85rem', maxWidth: '200px', opacity: isActive ? 0.9 : 0.6 }}>
+                              {group.targetName}
+                            </div>
+                          ) : (
+                            <div className="text-truncate font-monospace" style={{ fontSize: '0.75rem', opacity: isActive ? 0.9 : 0.5 }}>
+                              ID: {group.targetId}
+                            </div>
+                          )}
+                        </div>
                         <span className={`badge ${getSensitivityBadgeClass(group.sensitivity)}`}>
                           {group.sensitivity || 'unknown'}
                         </span>
                       </div>
-                      <div className="small mb-1">Target ID: {group.targetId}</div>
-                      <div className="d-flex flex-wrap gap-2 align-items-center">
-                        <span className="badge text-bg-dark">Reports: {group.reportCount}</span>
-                        <span className={`badge ${getAutoActionBadgeClass(group.autoActionTaken)}`}>
-                          {group.autoActionTaken || 'no auto action'}
+                      
+                      <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        <span className="badge text-bg-dark">
+                          <AlertCircle size={10} className="me-1" />
+                          {group.reportCount} Report{group.reportCount !== 1 && 's'}
                         </span>
-                        <span className="badge text-bg-secondary">{group.status}</span>
+                        {group.autoActionTaken && (
+                          <span className={`badge ${getAutoActionBadgeClass(group.autoActionTaken)}`}>
+                            {group.autoActionTaken.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        {group.status !== 'pending' && <span className="badge text-bg-secondary">{group.status}</span>}
                       </div>
-                      <div className="small mt-2">Latest: {formatDate(group.latestCreatedAt)}</div>
-                      {targetLink && (
-                        <div className="small mt-1">
-                          <span className="text-decoration-underline">Open target after select</span>
-                        </div>
-                      )}
+                      
+                      <div className="small mt-2" style={{ opacity: isActive ? 0.8 : 0.5, fontSize: '0.75rem' }}>
+                        Latest: {formatDate(group.latestCreatedAt)}
+                      </div>
                     </button>
                   );
                 })}
@@ -313,51 +344,120 @@ export default function AdminModerationQueuePage() {
             </div>
           </div>
 
-          <div className="col-12 col-lg-7">
-            <div className="border rounded-3 bg-white h-100">
+          {/* RIGHT PANEL - DETAILS & ACTION */}
+          <div className="col-12 col-lg-8">
+            <div className="border rounded-3 bg-white h-100 d-flex flex-column">
               {!selectedGroup ? (
-                <div className="p-3 text-secondary">Select a target to view all submitted reports.</div>
+                <div className="p-5 text-secondary text-center d-flex flex-column align-items-center justify-content-center h-100">
+                  <FileText size={48} className="mb-3 opacity-25" />
+                  <h4>Select a target</h4>
+                  <p>Choose an item from the queue to review evidence and take action.</p>
+                </div>
               ) : detailLoading ? (
-                <div className="p-3 text-secondary">Loading report details...</div>
+                <div className="p-5 text-secondary text-center">Loading evidence...</div>
               ) : (
                 <>
-                  <div className="p-3 border-bottom">
+                  {/* HEADER */}
+                  <div className="p-3 border-bottom bg-light">
                     <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
                       <div>
-                        <div className="fw-semibold">{selectedGroup.targetModel} moderation details</div>
-                        <div className="small text-secondary">Target ID: {selectedGroup.targetId}</div>
+                        <div className="d-flex align-items-center gap-2">
+                          <h4 className="fw-bold mb-0">{selectedGroup.targetModel}</h4>
+                          {selectedGroup.targetName && (
+                            <span className="text-secondary fs-5">— {selectedGroup.targetName}</span>
+                          )}
+                        </div>
+                        <div className="small text-secondary font-monospace mt-1">ID: {selectedGroup.targetId}</div>
                       </div>
-                      {resolveTargetLink(selectedGroup.targetModel, selectedGroup.targetId) ? (
+                      {resolveTargetLink(selectedGroup.targetModel, selectedGroup.targetId) && (
                         <Link
                           href={resolveTargetLink(selectedGroup.targetModel, selectedGroup.targetId)}
-                          className="btn btn-sm btn-primary"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-dark btn-sm d-flex align-items-center gap-1"
                         >
-                          Open Target
+                          View Original Content ↗
                         </Link>
-                      ) : null}
+                      )}
                     </div>
                   </div>
 
-                  <div className="p-3 border-bottom">
-                    <form className="row g-2" onSubmit={handleSubmitReview}>
-                      <div className="col-12 col-md-4">
-                        <label className="form-label small mb-1">Report</label>
+                  {/* EVIDENCE SECTION (Moved to top) */}
+                  <div className="p-4 border-bottom bg-white flex-grow-1 overflow-auto">
+                    <h5 className="mb-3 d-flex align-items-center gap-2">
+                      <ShieldAlert size={18} className="text-danger" /> 
+                      Evidence & Complaints ({detailReports.length})
+                    </h5>
+                    
+                    {detailReports.length === 0 ? (
+                      <div className="text-secondary small">No reports found for this target.</div>
+                    ) : (
+                      <div className="d-flex flex-column gap-3">
+                        {detailReports.map((report) => (
+                          <div key={report._id} className="border border-danger-subtle rounded-3 p-3 bg-white shadow-sm">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              <h6 className="fw-bold text-danger text-capitalize m-0">
+                                {report.reason?.replace(/_/g, ' ') || 'Unknown violation'}
+                              </h6>
+                              <div className="d-flex gap-2">
+                                <span className={`badge ${getSensitivityBadgeClass(report.sensitivity)}`}>{report.sensitivity} risk</span>
+                                <span className="badge text-bg-light border">{report.status}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="p-3 bg-light rounded-2 mb-3 mt-2 font-monospace" style={{ fontSize: '0.9rem', color: '#333' }}>
+                              "{report.comment || 'No additional context provided.'}"
+                            </div>
+                            
+                            <div className="d-flex flex-wrap justify-content-between align-items-center text-secondary" style={{ fontSize: '0.8rem' }}>
+                              <div className="d-flex align-items-center gap-2">
+                                <User size={14} />
+                                <span>{report.reportedBy?.name || 'Unknown'} ({report.reportedBy?.email || 'no email'})</span>
+                              </div>
+                              <div className="d-flex gap-3">
+                                {report.autoActionTaken && (
+                                  <span className="text-danger">Auto-action: {report.autoActionTaken}</span>
+                                )}
+                                <span>Reported: {formatDate(report.createdAt)}</span>
+                              </div>
+                            </div>
+
+                            {report.adminNote && (
+                              <div className="mt-3 p-2 bg-info-subtle rounded border border-info-subtle small">
+                                <strong>Previous Admin Note:</strong> {report.adminNote}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ACTION SECTION (Moved to bottom) */}
+                  <div className="p-4 bg-light border-top" style={{ borderTopWidth: '2px !important' }}>
+                    <h5 className="mb-3 d-flex align-items-center gap-2">
+                      <UserCheck size={18} className="text-primary" />
+                      Take Action
+                    </h5>
+                    <form className="row g-3" onSubmit={handleSubmitReview}>
+                      <div className="col-12 col-md-5">
+                        <label className="form-label fw-semibold small mb-1">Target Report</label>
                         <select
-                          className="form-select form-select-sm"
+                          className="form-select bg-white"
                           value={reviewReportId}
                           onChange={(e) => setReviewReportId(e.target.value)}
                         >
                           {detailReports.map((report) => (
                             <option key={report._id} value={report._id}>
-                              {report.reason} ({report.status})
+                              {report.reason.replace(/_/g, ' ')} ({report.status})
                             </option>
                           ))}
                         </select>
                       </div>
                       <div className="col-12 col-md-4">
-                        <label className="form-label small mb-1">Action</label>
+                        <label className="form-label fw-semibold small mb-1">Resolution Action</label>
                         <select
-                          className="form-select form-select-sm"
+                          className="form-select bg-white"
                           value={reviewAction}
                           onChange={(e) => setReviewAction(e.target.value)}
                         >
@@ -368,50 +468,22 @@ export default function AdminModerationQueuePage() {
                           ))}
                         </select>
                       </div>
-                      <div className="col-12 col-md-4 d-flex align-items-end">
-                        <button type="submit" className="btn btn-sm btn-danger w-100" disabled={submittingReview}>
-                          {submittingReview ? 'Applying...' : 'Apply Action'}
+                      <div className="col-12 col-md-3 d-flex align-items-end">
+                        <button type="submit" className={`btn w-100 ${reviewAction === 'dismiss' || reviewAction === 'no_action' ? 'btn-secondary' : 'btn-danger'}`} disabled={submittingReview}>
+                          {submittingReview ? 'Processing...' : 'Apply Decision'}
                         </button>
                       </div>
                       <div className="col-12">
-                        <label className="form-label small mb-1">Admin Note</label>
+                        <label className="form-label fw-semibold small mb-1">Internal Admin Note (Optional)</label>
                         <textarea
-                          className="form-control form-control-sm"
+                          className="form-control bg-white"
                           rows={2}
                           value={reviewNote}
                           onChange={(e) => setReviewNote(e.target.value)}
-                          placeholder="Optional moderation note"
+                          placeholder="Document your decision for other admins..."
                         />
                       </div>
                     </form>
-                  </div>
-
-                  <div className="p-3 d-grid gap-2">
-                    {detailReports.length === 0 ? (
-                      <div className="text-secondary small">No reports found for this target.</div>
-                    ) : (
-                      detailReports.map((report) => (
-                        <div key={report._id} className="border rounded-2 p-2">
-                          <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
-                            <div className="fw-semibold text-capitalize">{report.reason?.replace(/_/g, ' ') || 'Unknown reason'}</div>
-                            <div className="d-flex gap-2">
-                              <span className={`badge ${getSensitivityBadgeClass(report.sensitivity)}`}>{report.sensitivity}</span>
-                              <span className="badge text-bg-secondary">{report.status}</span>
-                            </div>
-                          </div>
-                          <div className="small mb-1">Reporter: {report.reportedBy?.name || 'Unknown'} ({report.reportedBy?.email || 'no email'})</div>
-                          <div className="small mb-1">Comment: {report.comment || 'No comment provided.'}</div>
-                          <div className="d-flex flex-wrap gap-2 small">
-                            <span>ID: {report._id}</span>
-                            <span>Auto: {report.autoActionTaken || 'none'}</span>
-                            <span>Created: {formatDate(report.createdAt)}</span>
-                          </div>
-                          {report.adminNote ? (
-                            <div className="small mt-1"><strong>Admin note:</strong> {report.adminNote}</div>
-                          ) : null}
-                        </div>
-                      ))
-                    )}
                   </div>
                 </>
               )}
@@ -422,3 +494,4 @@ export default function AdminModerationQueuePage() {
     </div>
   );
 }
+

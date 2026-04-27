@@ -1,4 +1,6 @@
 import Ticket from '../models/Ticket.model.js';
+import User from '../models/User.model.js';
+import { pushNotification } from '../services/notification.service.js';
 
 export const submitFeedback = async (req, res) => {
   try {
@@ -13,6 +15,16 @@ export const submitFeedback = async (req, res) => {
       submittedBy: req.user._id,
       priority: 'low',
     });
+
+    // Notify admins of new feedback
+    const admins = await User.find({ role: 'admin' }).select('_id');
+    await Promise.allSettled(
+      admins.map(admin => pushNotification(admin._id, {
+        type: 'new_ticket',
+        message: `New Feedback Submitted: ${title}`,
+        link: '/admin/reports',
+      }))
+    );
 
     res.status(201).json({ success: true, data: ticket });
   } catch (err) {
@@ -41,6 +53,17 @@ export const submitIssueReport = async (req, res) => {
       submittedBy: req.user._id,
       priority,
     });
+
+    // Notify admins of new issue report (High priority gets urgent message)
+    const admins = await User.find({ role: 'admin' }).select('_id');
+    const msgPrefix = priority === 'high' ? 'URGENT ISSUE: ' : 'New Issue Report: ';
+    await Promise.allSettled(
+      admins.map(admin => pushNotification(admin._id, {
+        type: 'new_ticket',
+        message: `${msgPrefix}${title}`,
+        link: '/admin/reports',
+      }))
+    );
 
     res.status(201).json({ success: true, data: ticket });
   } catch (err) {

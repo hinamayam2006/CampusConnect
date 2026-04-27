@@ -11,7 +11,8 @@ const reportSchema = new mongoose.Schema({
   targetId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    index: true
+    index: true,
+    refPath: 'targetModel'
   },
   
   // Who is reporting
@@ -122,23 +123,26 @@ reportSchema.statics.getReasonsForSensitivity = function(sensitivity) {
 };
 
 reportSchema.statics.getAutoAction = function(reportCount, sensitivity, targetModel) {
-  if (sensitivity === 'high' && reportCount >= 1) {
+  const config = this.getSensitivityConfig(targetModel);
+  const threshold = config.threshold;
+  
+  if (sensitivity === 'high' && reportCount >= threshold) {
     return 'shadow_banned';
   }
   
-  if (sensitivity === 'medium' && reportCount >= 3) {
+  if (sensitivity === 'medium' && reportCount >= threshold) {
     return 'flagged';
   }
   
-  if (sensitivity === 'medium' && reportCount >= 2) {
+  if (sensitivity === 'medium' && reportCount >= Math.max(1, threshold - 1)) {
     return 'warning_badge';
   }
   
-  if (sensitivity === 'low' && reportCount >= 7) {
+  if (sensitivity === 'low' && reportCount >= threshold + 2) {
     return 'hidden';
   }
   
-  if (sensitivity === 'low' && reportCount >= 5) {
+  if (sensitivity === 'low' && reportCount >= threshold) {
     return 'warning_badge';
   }
   

@@ -15,12 +15,27 @@ function formatDate(value) {
 function getAuditLabel(item) {
   const type = item?.type || '';
   const actor = item?.userId?.name || 'Admin';
+  
+  // Create a descriptive target label: " a Note ('Physics 101')" or just " a Note"
+  const modelName = item?.refModel ? ` ${item.refModel}` : ' content';
+  const specificName = item?.meta?.targetName ? ` ('${item.meta.targetName}')` : '';
+  const target = `${modelName}${specificName}`;
+  
+  // Existing ticket/user actions
   if (type === 'admin_user_suspended') return `${actor} suspended a user`;
   if (type === 'admin_user_unsuspended') return `${actor} unsuspended a user`;
   if (type === 'admin_role_changed') return `${actor} changed user role`;
   if (type === 'admin_ticket_updated') return `${actor} updated a ticket`;
-  if (type === 'admin_content_deleted') return `${actor} deleted content`;
-  return `${actor} performed ${type}`;
+  if (type === 'admin_content_deleted') return `${actor} deleted${target}`;
+  
+  // Moderation Queue actions
+  if (type === 'admin_moderation_shadow_ban') return `${actor} shadow-banned/flagged a${target}`;
+  if (type === 'admin_moderation_remove_content') return `${actor} removed a${target}`;
+  if (type === 'admin_moderation_warn_user') return `${actor} issued a warning to a${target}`;
+  if (type === 'admin_moderation_dismiss') return `${actor} dismissed a report against a${target}`;
+  if (type === 'admin_moderation_no_action') return `${actor} reviewed a${target} but took no action`;
+  
+  return `${actor} performed ${type.replace(/_/g, ' ')}`;
 }
 
 export default function AdminCommandCenterPage() {
@@ -117,7 +132,7 @@ export default function AdminCommandCenterPage() {
           </div>
 
           <div className="row g-4">
-            <div className="col-12 col-lg-4">
+            <div className="col-12 col-lg-6">
               <div className="border rounded-3 p-3 h-100 bg-white">
                 <h2 className="h6 mb-3">Department Activity (Last 30 Days)</h2>
                 {analytics?.departmentActivity?.length ? (
@@ -135,7 +150,7 @@ export default function AdminCommandCenterPage() {
               </div>
             </div>
 
-            <div className="col-12 col-lg-4">
+            <div className="col-12 col-lg-6">
               <div className="border rounded-3 p-3 h-100 bg-white">
                 <h2 className="h6 mb-3">Top Marketplace Categories</h2>
                 {analytics?.topCategories?.marketplace?.length ? (
@@ -162,73 +177,66 @@ export default function AdminCommandCenterPage() {
                 )}
               </div>
             </div>
+            </div>
 
-            <div className="col-12 col-lg-4">
-              <div className="border rounded-3 p-3 h-100 bg-white">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h2 className="h6 mb-0">Latest ActivityEvents (Audit Log)</h2>
+          {/* Audit Logs (Moved to Bottom, Full Width & Scrollable) */}
+          <div className="row g-4 mt-1">
+            <div className="col-12">
+              <div className="border rounded-3 p-3 bg-white">
+                <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
+                  <div>
+                    <h2 className="h5 mb-1">Latest ActivityEvents (Audit Log)</h2>
+                    <p className="text-secondary small mb-0">Complete historical record of all administrative and moderation actions.</p>
+                  </div>
                   <select
-                    className="form-select form-select-sm"
+                    className="form-select"
                     value={auditFilter}
                     onChange={(e) => setAuditFilter(e.target.value)}
-                    style={{ width: 'auto' }}
+                    style={{ width: '250px' }}
                   >
                     <option value="">All Actions</option>
-                    <option value="admin_user_suspended">User Suspended</option>
-                    <option value="admin_user_unsuspended">User Unsuspended</option>
-                    <option value="admin_role_changed">Role Changed</option>
-                    <option value="admin_ticket_updated">Ticket Updated</option>
-                    <option value="admin_content_deleted">Content Deleted</option>
+                    <optgroup label="User Management">
+                      <option value="admin_user_suspended">User Suspended</option>
+                      <option value="admin_user_unsuspended">User Unsuspended</option>
+                      <option value="admin_role_changed">Role Changed</option>
+                    </optgroup>
+                    <optgroup label="Moderation Decisions">
+                      <option value="admin_moderation_shadow_ban">Shadow Ban Applied</option>
+                      <option value="admin_moderation_remove_content">Content Removed</option>
+                      <option value="admin_moderation_warn_user">Warning Issued</option>
+                      <option value="admin_moderation_dismiss">Report Dismissed</option>
+                      <option value="admin_moderation_no_action">Reviewed / No Action</option>
+                    </optgroup>
+                    <optgroup label="General Admin">
+                      <option value="admin_ticket_updated">Ticket Updated</option>
+                      <option value="admin_content_deleted">Content Deleted</option>
+                    </optgroup>
                   </select>
                 </div>
-                {auditItems.length ? (
-                  <div className="d-grid gap-2">
-                    {auditItems.map((item) => (
-                      <div key={item._id} className="border rounded-2 p-2">
-                        <div className="small fw-semibold">{getAuditLabel(item)}</div>
-                        <div className="small text-secondary">{formatDate(item.createdAt)}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-secondary small">
-                    {auditFilter ? `No ${auditFilter.replace('admin_', '').replace('_', ' ')} events found.` : 'No recent audit events found.'}
-                  </div>
-                )}
+                
+                <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+                  {auditItems.length ? (
+                    <div className="d-flex flex-column gap-2">
+                      {auditItems.map((item) => (
+                        <div key={item._id} className="d-flex justify-content-between align-items-center border rounded-2 p-3 bg-light">
+                          <div className="fw-semibold text-dark" style={{ fontSize: '0.95rem' }}>
+                            {getAuditLabel(item)}
+                          </div>
+                          <div className="small text-secondary font-monospace" style={{ fontSize: '0.8rem' }}>
+                            {formatDate(item.createdAt)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-secondary small text-center p-4 border rounded bg-light">
+                      {auditFilter ? `No ${auditFilter.replace('admin_', '').replace(/_/g, ' ')} events found.` : 'No recent audit events found.'}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Lost & Found Categories */}
-          {analytics?.topCategories?.lostnfound?.length > 0 && (
-            <div className="row g-4 mt-1">
-              <div className="col-12">
-                <div className="border rounded-3 p-3 bg-white">
-                  <h2 className="h6 mb-3">Top Lost & Found Categories</h2>
-                  <div className="row g-3">
-                    {analytics.topCategories.lostnfound.map((entry) => (
-                      <div key={entry.category} className="col-12 col-sm-6 col-md-4">
-                        <div className="d-flex justify-content-between align-items-center small border rounded-2 p-2">
-                          <span className="text-capitalize">{entry.category}</span>
-                          <div className="d-flex align-items-center gap-2">
-                            <div className="progress" style={{ width: '60px', height: '4px' }}>
-                              <div 
-                                className="progress-bar bg-info" 
-                                style={{ 
-                                  width: `${Math.min(100, (entry.count / Math.max(...analytics.topCategories.lostnfound.map(c => c.count))) * 100)}%` 
-                                }}
-                              />
-                            </div>
-                            <span className="text-secondary">{entry.count}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>

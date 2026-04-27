@@ -18,7 +18,7 @@ import FileTypeBadge from '../../../components/FileTypeBadge';
 import RelativeTime from '../../../components/RelativeTime';
 import ReviewsList from '../../../components/ReviewsList';
 import { formatFileSize } from '../../../lib/uiHelpers';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
 import UnifiedReportModal from '../../../components/UnifiedReportModal';
 import styles from '../notes.module.css';
 
@@ -159,6 +159,16 @@ export default function NoteDetailPage() {
             <Link href="/notes" className={styles.btnSecondary}>← Back to Notes</Link>
           </div>
         </div>
+
+        {/* Warning Banner for reported notes */}
+        {note.reportCount > 0 && note.status === 'active' && (
+          <div className={`${styles.alertWarning} mb-4 d-flex align-items-center gap-2`} style={{ border: '1px solid #ffcc00' }}>
+            <AlertCircle size={20} className="text-warning" />
+            <div>
+              <strong>Community Warning:</strong> This note has received user reports. Please review the comments and rating before downloading.
+            </div>
+          </div>
+        )}
 
         <div className={styles.detailLayout}>
           {/* ── Left: Preview + Description ── */}
