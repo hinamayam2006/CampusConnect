@@ -110,7 +110,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
       items: [
         { label: 'Command Center', href: '/admin', icon: Shield, exact: true },
         { label: 'User Management', href: '/admin/users', icon: Users },
-        { label: 'Reports Inbox', href: '/admin/reports', icon: Ticket },
+        { label: 'Admin Inbox', href: '/admin/reports', icon: Ticket },
         { label: 'Moderation Queue', href: '/admin/moderation', icon: AlertTriangle },
       ],
     },

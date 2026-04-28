@@ -603,7 +603,6 @@ export default function Home() {
 
         {/* ── Features Section ── */}
         <section className={styles['lp-features-section']}>
-          <div className={styles['lp-section-eyebrow']}>FEATURES</div>
           <h2 className={styles['lp-section-title']}>
             Everything you need to{' '}
             <span className={styles['lp-section-title-muted']}>thrive on campus</span>
@@ -632,7 +631,6 @@ export default function Home() {
 
         {/* ── FAQ Section ── */}
         <section className={styles['lp-faq-section']}>
-          <div className={styles['lp-section-eyebrow']} style={{ color: '#059669' }}>FAQ</div>
           <h2 className={styles['lp-section-title']}>Common questions</h2>
           <p className={styles['lp-section-sub']}>Everything you need to know about how CampusConnect works.</p>
           <div className={styles['lp-faq-list']}>
@@ -675,15 +673,13 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Quick links */}
+            {/* Campus promise */}
             <div>
-              <p className={styles['lp-footer-col-label']}>Quick Links</p>
-              <ul className={styles['lp-footer-links']}>
-                <li><Link href="/">Home</Link></li>
-                <li><Link href="/marketplace">Marketplace</Link></li>
-                <li><Link href="/notes">Notes</Link></li>
-                <li><Link href="/tutoring">Tutoring</Link></li>
-              </ul>
+              <p className={styles['lp-footer-col-label']}>Campus Promise</p>
+              <p className={styles['lp-footer-brand-desc']}>
+                Built for verified students only. Keep exchanges on campus, stay private,
+                and focus on what matters most this semester.
+              </p>
             </div>
 
             {/* Connect */}

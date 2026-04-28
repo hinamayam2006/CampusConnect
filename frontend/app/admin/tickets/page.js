@@ -40,6 +40,7 @@ export default function AdminTicketCenterPage() {
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState('open');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [actionLoadingById, setActionLoadingById] = useState({});
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -57,7 +58,11 @@ export default function AdminTicketCenterPage() {
   };
 
   const refreshTickets = async () => {
-    const response = await fetchAdminTickets({ status: statusFilter, limit: 100 });
+    const params = { status: statusFilter, limit: 100 };
+    if (typeFilter && typeFilter !== 'all') {
+      params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
+    }
+    const response = await fetchAdminTickets(params);
     setTickets(response?.data?.items || []);
   };
 
@@ -150,16 +155,36 @@ export default function AdminTicketCenterPage() {
     const { ticketId, targetType, targetId } = confirmModal;
     setTicketBusy(ticketId, true);
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
-    
     try {
       const mappedType = DELETE_TARGET_TYPE_MAP[targetType];
       if (!mappedType) {
         throw new Error('Unsupported target type for one-click delete');
       }
+
       await deleteAdminContent(mappedType, targetId);
+      // after successful deletion, mark the ticket resolved so it moves to resolved list
+      try {
+        await updateAdminTicket(ticketId, { status: 'resolved' });
+      } catch (e) {
+        // ignore update failure
+      }
+
       toast.success(`${mappedType} deleted successfully`);
       await refreshTickets();
     } catch (err) {
+      const msg = err?.message || err?.response?.data?.message || '';
+      // If content not found, mark ticket resolved instead of showing an error
+      if (/not found/i.test(msg) || /Content not found/i.test(msg)) {
+        try {
+          await updateAdminTicket(ticketId, { status: 'resolved' });
+          toast.success('Target already missing — ticket marked resolved');
+          await refreshTickets();
+          return;
+        } catch (e) {
+          // continue to generic error handler
+        }
+      }
+
       toast.error(err?.message || 'Could not delete target content');
     } finally {
       setTicketBusy(ticketId, false);
@@ -210,7 +235,12 @@ export default function AdminTicketCenterPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const response = await fetchAdminTickets({ status: statusFilter, limit: 100 });
+        const params = { status: statusFilter, limit: 100 };
+        if (typeFilter && typeFilter !== 'all') {
+          params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
+        }
+
+        const response = await fetchAdminTickets(params);
         if (!cancelled) {
           setTickets(response?.data?.items || []);
         }
@@ -225,7 +255,7 @@ export default function AdminTicketCenterPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?._id, isAdmin, router, statusFilter]);
+  }, [user?._id, isAdmin, router, statusFilter, typeFilter]);
 
   const stats = useMemo(() => {
     return tickets.reduce(
@@ -259,16 +289,28 @@ export default function AdminTicketCenterPage() {
         <span className="badge text-bg-danger">Reports: {stats.reports}</span>
         <span className="badge text-bg-info">Feedback: {stats.feedback}</span>
         <div className="ms-auto">
-          <select
-            className="form-select form-select-sm"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-          </select>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select
+                className="form-select form-select-sm"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+
+              <select
+                className="form-select form-select-sm"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                <option value="reports">Reports</option>
+                <option value="feedback">Feedback</option>
+              </select>
+            </div>
         </div>
       </div>
 
@@ -283,6 +325,7 @@ export default function AdminTicketCenterPage() {
             const isBusy = Boolean(actionLoadingById[ticket._id]);
             const canDeleteTarget = Boolean(DELETE_TARGET_TYPE_MAP[String(ticket.targetType || '').toLowerCase()]) && Boolean(ticket.targetId);
             const canAdvanceStatus = ticket.status === 'open' || ticket.status === 'in_progress';
+            const isFinalized = ticket.status === 'resolved' || ticket.status === 'closed';
             return (
               <div key={ticket._id} className="border rounded-3 p-3 bg-white">
                 <div className="d-flex flex-wrap justify-content-between gap-2 mb-2">
@@ -294,6 +337,9 @@ export default function AdminTicketCenterPage() {
                 </div>
                 <div className="small text-secondary mb-2">
                   By {ticket.submittedBy?.name || 'Unknown'} ({ticket.submittedBy?.email || 'no email'})
+                  {ticket.createdAt && (
+                    <span style={{ marginLeft: 8 }}>· Submitted {new Date(ticket.createdAt).toLocaleString()}</span>
+                  )}
                 </div>
                 <p className="mb-2 small">{ticket.description}</p>
                 <div className="d-flex flex-wrap gap-2">
@@ -309,45 +355,58 @@ export default function AdminTicketCenterPage() {
                   </span>
                 </div>
                 <div className="mt-3 border-top pt-3">
-                  <div className="small fw-semibold mb-2">Quick Actions</div>
-                  <div className="d-flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => handleAdvanceStatus(ticket)}
-                      disabled={!canAdvanceStatus || isBusy}
-                    >
-                      {canAdvanceStatus ? `Move to ${getNextStatus(ticket.status).replace('_', ' ')}` : 'Already Finalized'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-success"
-                      onClick={() => handleResolveWithNote(ticket)}
-                      disabled={ticket.status === 'resolved' || ticket.status === 'closed' || isBusy}
-                    >
-                      Resolve with Note
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => handleDeleteTarget(ticket)}
-                      disabled={!canDeleteTarget || isBusy}
-                    >
-                      One-Click Delete Target
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-warning"
-                      onClick={() => handleSuspendUser(ticket)}
-                      disabled={isBusy}
-                    >
-                      Suspend User
-                    </button>
-                  </div>
-                  {ticket.adminNotes && (
-                    <div className="mt-2 small">
-                      <strong>Admin Note:</strong> {ticket.adminNotes}
-                    </div>
+                  {isFinalized ? (
+                    <>
+                      <div className="small fw-semibold mb-2">Already Finalized</div>
+                      {ticket.adminNotes && (
+                        <div className="mt-2 small">
+                          <strong>Admin Note:</strong> {ticket.adminNotes}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="small fw-semibold mb-2">Quick Actions</div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => handleAdvanceStatus(ticket)}
+                          disabled={!canAdvanceStatus || isBusy}
+                        >
+                          {canAdvanceStatus ? `Move to ${getNextStatus(ticket.status).replace('_', ' ')}` : 'Already Finalized'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-success"
+                          onClick={() => handleResolveWithNote(ticket)}
+                          disabled={ticket.status === 'resolved' || ticket.status === 'closed' || isBusy}
+                        >
+                          Resolve with Note
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDeleteTarget(ticket)}
+                          disabled={!canDeleteTarget || isBusy}
+                        >
+                          One-Click Delete Target
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-warning"
+                          onClick={() => handleSuspendUser(ticket)}
+                          disabled={isBusy}
+                        >
+                          Suspend User
+                        </button>
+                      </div>
+                      {ticket.adminNotes && (
+                        <div className="mt-2 small">
+                          <strong>Admin Note:</strong> {ticket.adminNotes}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

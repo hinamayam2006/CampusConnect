@@ -1,11 +1,12 @@
 // rides/[id]/page.js
-'use client';
+ 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ArrowRight, ChevronLeft, Clock, Car, Users, RotateCcw, AlertTriangle } from 'lucide-react';
+import UnifiedReportModal from '../../../components/UnifiedReportModal';
 import api from '../../../lib/api';
 import { createRequest } from '../../../lib/apiRequests';
 import useStore from '../../../store/useStore';
@@ -20,6 +21,7 @@ export default function RideDetailPage() {
   const [message, setMessage] = useState('');
   const [seatsRequested, setSeatsRequested] = useState(1);
   const [requesting, setRequesting] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -164,24 +166,37 @@ export default function RideDetailPage() {
                 </div>
               </div>
               {!isDriver && (
-                <Link 
-                  href={`/report-issue?targetId=${id}&targetType=Ride`}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: '0.4rem', 
-                    fontSize: '0.75rem', 
-                    color: '#DC2626', 
-                    textDecoration: 'none', 
-                    padding: '0.5rem', 
-                    border: '1px solid #FECACA', 
-                    borderRadius: '8px',
-                    background: '#FEF2F2'
-                  }}
-                >
-                  <AlertTriangle size={12} /> Report this ride
-                </Link>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setReportModalOpen(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.75rem',
+                      color: '#DC2626',
+                      textDecoration: 'none',
+                      padding: '0.5rem',
+                      border: '1px solid #FECACA',
+                      borderRadius: '8px',
+                      background: '#FEF2F2',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <AlertTriangle size={12} /> Report this ride
+                  </button>
+
+                  <UnifiedReportModal
+                    isOpen={reportModalOpen}
+                    onClose={() => setReportModalOpen(false)}
+                    targetModel="Ride"
+                    targetId={id}
+                    targetTitle={ride ? `${ride.originName} → ${ride.destName}` : ''}
+                    targetDescription={ride?.notes}
+                  />
+                </>
               )}
             </div>
           )}
