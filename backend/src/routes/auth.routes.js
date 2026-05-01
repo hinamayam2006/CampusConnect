@@ -1,9 +1,9 @@
 import express from 'express';
-import { register, login, getMe, updateProfile, deleteAccount, refresh, verifyEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+import { register, login, getMe, updateProfile, deleteAccount, refresh, verifyEmail, forgotPassword, resetPassword, resendVerification } from '../controllers/auth.controller.js';
 import protect from '../middleware/auth.middleware.js';
 import validate from '../middleware/validate.middleware.js';
 import { loginLimiter, registerLimiter } from '../middleware/authRateLimiter.js';
-import { registerSchema, loginSchema, updateProfileSchema, forgotPasswordSchema, resetPasswordSchema } from '../utils/validators.js';
+import { registerSchema, loginSchema, updateProfileSchema, forgotPasswordSchema, resetPasswordSchema, resendVerificationSchema } from '../utils/validators.js';
 
 const router = express.Router();
 
@@ -15,6 +15,7 @@ router.post('/login', loginLimiter, validate(loginSchema), login);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password/:token', validate(resetPasswordSchema), resetPassword);
+router.post('/resend-verification', validate(resendVerificationSchema), resendVerification);
 
 // Refresh token endpoint — exchange refresh token for new access token
 // Not rate-limited here (rate limiter already blocks bad attempts at login)

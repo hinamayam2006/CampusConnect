@@ -88,6 +88,10 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    verificationTokenSentAt: {
+      type: Date,
+      default: null,
+    },
     passwordResetToken: {
       type: String,
       default: null,

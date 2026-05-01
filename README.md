@@ -2,9 +2,9 @@
 
 A comprehensive campus management platform that connects students, faculty, and administrators through a unified digital ecosystem. Built with modern web technologies to facilitate seamless collaboration, resource sharing, and campus life management.
 
-## 🌟 Features
+##  Features
 
-### 🎓 Student Services
+###  Student Services
 - **Marketplace**: Buy, sell, and trade campus items with secure transactions
 - **Ride Sharing**: Find and offer rides for campus commutes and trips
 - **Lost & Found**: Report and recover lost items with community support
@@ -13,13 +13,13 @@ A comprehensive campus management platform that connects students, faculty, and 
 - **Tutoring Services**: Connect with tutors and offer academic assistance
 - **Real-time Chat**: Instant messaging for campus communication
 
-### 📊 Analytics & Insights
+###  Analytics & Insights
 - **Activity Tracking**: Monitor platform engagement and user interactions
 - **Department Analytics**: Insights into department-specific activities
 - **Content Analytics**: Track marketplace, tutoring, and borrowing trends
 - **User Growth Metrics**: Monitor platform adoption and usage patterns
 
-### 🛡️ Admin Panel
+###  Admin Panel
 - **Command Center**: Comprehensive dashboard with real-time analytics
 - **User Management**: Advanced user administration with role-based access
 - **User Suspension & Content Purge**: Nuclear options for platform moderation
@@ -28,7 +28,7 @@ A comprehensive campus management platform that connects students, faculty, and 
 - **Audit Logging**: Complete activity tracking for compliance
 - **Advanced Filtering**: Filter users, tickets, and activities by multiple criteria
 
-### 🔐 Security & Performance
+###  Security & Performance
 - **JWT Authentication**: Secure token-based authentication system
 - **Role-Based Access Control**: Granular permissions for users, moderators, and admins
 - **Rate Limiting**: Protection against abuse and DDoS attacks
@@ -37,7 +37,7 @@ A comprehensive campus management platform that connects students, faculty, and 
 - **SMTP-based Email Verification Flow**: Secure email verification with Nodemailer
 - **Real-time Updates**: WebSocket integration for live features
 
-## 🏗️ Architecture
+##  Architecture
 
 ### Frontend (Next.js 16)
 - **Framework**: Next.js 16 with App Router
@@ -66,7 +66,7 @@ A comprehensive campus management platform that connects students, faculty, and 
 - **Activity Events**: Comprehensive audit logging
 - **MongoDB Aggregation Pipelines**: Real-time admin insights with $facet, $group, and $lookup operations
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js 18+ 
@@ -142,7 +142,7 @@ npm run dev:frontend  # Frontend on http://localhost:3000
 npm run dev:backend   # Backend on http://localhost:5000
 ```
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 campusconnect/
@@ -259,7 +259,7 @@ npm --prefix frontend lint    # Lint frontend code
 | **Moderator** | All student permissions + moderate content, manage lost & found, assist with tutoring. |
 | **Admin** | All permissions + access to Command Center, suspend users, resolve tickets, view audit logs, manage platform analytics. |
 
-## 🧩 State Management Architecture
+##  State Management Architecture
 
 ### Hybrid State Management Approach
 CampusConnect uses a sophisticated dual-state management strategy:
@@ -282,7 +282,7 @@ CampusConnect uses a sophisticated dual-state management strategy:
 - **Separation of Concerns**: Data vs. UI logic clearly separated
 - **Performance**: Minimal re-renders while maintaining global access
 
-## 🎨 UI/UX Features
+##  UI/UX Features
 
 ### Responsive Design
 - Mobile-first approach with Bootstrap 5
@@ -301,7 +301,7 @@ CampusConnect uses a sophisticated dual-state management strategy:
 - Lazy loading for heavy components
 - Optimized bundle sizes
 
-## 🔒 Security Features
+##  Security Features
 
 ### Authentication & Authorization
 - JWT-based authentication with refresh tokens
@@ -321,7 +321,7 @@ CampusConnect uses a sophisticated dual-state management strategy:
 - File upload restrictions
 - Request size limitations
 
-## 📱 Real-time Features
+##  Real-time Features
 
 ### WebSocket Integration
 - Live chat messaging
@@ -335,7 +335,7 @@ CampusConnect uses a sophisticated dual-state management strategy:
 - Push notification ready architecture
 - Customizable notification preferences
 
-## 🚀 Deployment
+##  Deployment
 
 ### Production Setup
 
@@ -365,59 +365,6 @@ npm run start
 cd backend
 npm start
 ```
-
-### Docker Deployment
-
-```dockerfile
-# Dockerfile for backend
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 5000
-CMD ["npm", "start"]
-```
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-  backend:
-    build: ./backend
-    ports:
-      - "5000:5000"
-    environment:
-      - MONGODB_URI=mongodb://mongo:27017/campusconnect
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-```
-
-## 🧪 Testing
-
-### Running Tests
-```bash
-# Frontend tests
-npm --prefix frontend test
-
-# Backend tests
-npm --prefix backend test
-
-# End-to-end tests
-npm run test:e2e
-```
-
-### Test Coverage
-- Unit tests for API endpoints
-- Component tests for React components
-- Integration tests for user workflows
-- API contract testing
 
 ## 📈 Monitoring & Analytics
 

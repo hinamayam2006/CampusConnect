@@ -29,6 +29,7 @@ export default function SessionActivityGuard({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const sessionValidatedRef = useRef(false);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function SessionActivityGuard({ children }) {
 
     const validateSession = async () => {
       try {
+        setIsValidating(true);
         if (!sessionValidationPromise) {
           sessionValidationPromise = api.get('/auth/me', { timeout: 12000 });
         }
@@ -87,6 +89,7 @@ export default function SessionActivityGuard({ children }) {
           router.replace('/login');
         }
       } finally {
+        if (!cancelled) setIsValidating(false);
         sessionValidationPromise = null;
       }
     };
@@ -141,5 +144,17 @@ export default function SessionActivityGuard({ children }) {
   const hasSession = !!accessToken || !!refreshToken;
   if (!hasSession && isProtectedPath(pathname)) return null;
 
-  return <>{children}</>;
+  return (
+    <>
+      {hasSession && isValidating && (
+        <div className="session-validation">
+          <div className="session-validation__card">
+            <span className="session-validation__spinner" aria-hidden="true" />
+            <span>Logging you in…</span>
+          </div>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }

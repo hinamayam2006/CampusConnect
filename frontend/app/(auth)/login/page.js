@@ -26,13 +26,14 @@ const FEATURE_BADGES = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, setUser } = useStore();
+  const { user, setUser, setPendingVerificationEmail, showToast } = useStore();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState({ reason: '', email: '' });
+  const [verifyNotice, setVerifyNotice] = useState({ email: '', cooldown: 0 });
 
   useEffect(() => { if (user) router.push('/'); }, [user, router]);
 
@@ -42,12 +43,21 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [message]);
 
+  useEffect(() => {
+    if (!verifyNotice.cooldown) return;
+    const timer = setInterval(() => {
+      setVerifyNotice((prev) => ({ ...prev, cooldown: Math.max(prev.cooldown - 1, 0) }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [verifyNotice.cooldown]);
+
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
+    setVerifyNotice({ email: '', cooldown: 0 });
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', formData);
@@ -58,6 +68,8 @@ export default function LoginPage() {
       router.push('/');
     } catch (err) {
       const apiMessage = err.response?.data?.message;
+      const errorCode = err.response?.data?.code;
+      const status = err.response?.status;
       const suspended = err.response?.data?.suspended;
 
       if (suspended) {
@@ -67,6 +79,10 @@ export default function LoginPage() {
           email: formData.email
         });
         setShowSuspensionModal(true);
+      } else if (status === 403 && (errorCode === 'EMAIL_NOT_VERIFIED' || /verify your email/i.test(apiMessage || ''))) {
+        setPendingVerificationEmail(formData.email);
+        setVerifyNotice({ email: formData.email, cooldown: 0 });
+        setMessage({ type: '', text: '' });
       } else {
         // Show regular error message
         const text = apiMessage || 'Login failed. Please try again.';
@@ -152,6 +168,32 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {verifyNotice.email && (
+              <div className={`${styles['auth-alert']} ${styles['auth-alert--warning']}`} role="alert">
+                <div>Your account isn&apos;t verified yet.</div>
+                <button
+                  type="button"
+                  className={styles['auth-resend-btn']}
+                  onClick={async () => {
+                    if (verifyNotice.cooldown) return;
+                    try {
+                      await api.post('/auth/resend-verification', { email: verifyNotice.email });
+                      showToast('success', 'Verification email resent! Check your inbox.');
+                      setVerifyNotice((prev) => ({ ...prev, cooldown: 60 }));
+                    } catch (resendErr) {
+                      const resendMessage = resendErr.response?.data?.message || 'Could not resend verification email.';
+                      showToast('error', resendMessage);
+                    }
+                  }}
+                  disabled={verifyNotice.cooldown > 0}
+                >
+                  {verifyNotice.cooldown > 0
+                    ? `Resend available in ${verifyNotice.cooldown}s`
+                    : `Resend verification link to ${verifyNotice.email}`}
+                </button>
+              </div>
+            )}
 
             {message.text && (
               <div

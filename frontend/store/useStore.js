@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import toast from 'react-hot-toast';
 
 const safePersistStorage = typeof window !== 'undefined'
   ? {
@@ -30,6 +31,7 @@ const useStore = create(
       refreshToken: null,          // Long-lived token to refresh access token
       tokenExpiry: null,           // When access token expires (timestamp)
       unreadCount: 0,
+      pendingVerificationEmail: '',
 
       // ============================================
       // NOTES (Phase 1)
@@ -63,12 +65,23 @@ const useStore = create(
         tokenExpiry
       }),
 
+      setPendingVerificationEmail: (email) => set({ pendingVerificationEmail: email || '' }),
+      clearPendingVerificationEmail: () => set({ pendingVerificationEmail: '' }),
+
+      showToast: (type, message) => {
+        if (!message) return;
+        if (type === 'success') toast.success(message);
+        else if (type === 'error') toast.error(message);
+        else toast(message);
+      },
+
       logout: () => set({
         user: null,
         accessToken: null,
         refreshToken: null,
         tokenExpiry: null,
-        unreadCount: 0
+        unreadCount: 0,
+        pendingVerificationEmail: ''
       }),
 
       // Update access token when refreshed

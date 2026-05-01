@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import api from '../../../lib/api';
 import toast from 'react-hot-toast';
+import useStore from '../../../store/useStore';
 import styles from '../auth.module.css';
 
 const STRENGTH_RULES = [
@@ -27,6 +28,7 @@ const STEPS = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { setPendingVerificationEmail } = useStore();
   const [showPassword, setShowPassword] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,7 +59,8 @@ export default function RegisterPage() {
     try {
       const { data } = await api.post('/auth/register', payload);
       toast.success(data?.message || 'Account created! Please verify your email.');
-      router.push('/login');
+      setPendingVerificationEmail(formData.email);
+      router.push('/verify-email');
     } catch (err) {
       const response = err.response?.data;
       if (response?.errors && Array.isArray(response.errors)) {

@@ -6,14 +6,55 @@ import ActivityEvent from '../models/ActivityEvent.model.js';
 const ACTIVITY_LABELS = {
   marketplace_listing_create: 'You posted a marketplace listing',
   marketplace_listing_view: 'You viewed a marketplace listing',
+  marketplace_activity: 'Marketplace activity',
   marketplace_search: 'You searched the marketplace',
   marketplace_interest: 'You expressed interest in a listing',
+  marketplace_request_create: 'You sent a marketplace request',
+  marketplace_request_received: 'You received a marketplace request',
+  marketplace_listing_completed: 'You marked a marketplace listing completed',
+  lostnfound_request_create: 'You submitted a lost & found request',
+  lostnfound_request_received: 'You received a lost & found request',
+  borrow_request_create: 'You sent a borrow request',
+  borrow_request_received: 'You received a borrow request',
+  borrow_item_borrowed: 'You marked an item as borrowed',
+  borrow_item_returned: 'You marked an item as returned',
+  lostnfound_item_resolved: 'You resolved a lost & found item',
+  lostnfound_item_reopened: 'You reopened a lost & found item',
+  lostnfound_item_closed: 'You closed a lost & found item',
   ride_create: 'You posted a carpool ride',
   ride_view: 'You viewed a ride offer',
+  ride_posted: 'You posted a ride',
   ride_search: 'You searched carpool rides',
   ride_join: 'You joined a carpool ride',
+  ride_request_create: 'You sent a ride request',
+  ride_request_received: 'You received a ride request',
+  ride_confirmed: 'A ride was confirmed',
+  ride_completed: 'A ride was completed',
+  request_approved: 'A request was approved',
+  request_declined: 'A request was declined',
+  request_withdrawn: 'A request was withdrawn',
+  request_closed: 'A request was closed',
+  chat_initialized: 'You started a chat',
+  message_sent: 'You sent a message',
+  rating_received: 'You received a rating',
   note_uploaded: 'You uploaded a note',
   note_downloaded: 'You downloaded a note',
+  booking_created: 'You requested a tutoring session',
+  booking_confirmed: 'A tutoring session was confirmed',
+  booking_rejected: 'A tutoring session was rejected',
+  booking_cancelled: 'A tutoring session was cancelled',
+  booking_completed: 'A tutoring session was completed',
+  booking_no_show: 'A tutoring session was marked no-show',
+  admin_user_suspended: 'User suspended (admin)',
+  admin_user_unsuspended: 'User unsuspended (admin)',
+  admin_role_changed: 'User role changed (admin)',
+  admin_ticket_updated: 'Ticket updated (admin)',
+  admin_content_deleted: 'Content deleted (admin)',
+  admin_moderation_shadow_ban: 'User shadow banned (admin)',
+  admin_moderation_remove_content: 'Content removed (admin)',
+  admin_moderation_warn_user: 'User warned (admin)',
+  admin_moderation_dismiss: 'Moderation dismissed (admin)',
+  admin_moderation_no_action: 'No action taken (admin)',
 };
 
 function activityLink(e) {
@@ -73,14 +114,20 @@ export const getDashboardActivity = async (req, res) => {
       .limit(18)
       .lean();
 
-    const activityRows = events.map((e) => ({
-      _id: e._id,
-      kind: 'activity',
-      message: ACTIVITY_LABELS[e.type] || 'Campus activity',
-      link: activityLink(e),
-      createdAt: e.createdAt,
-      read: true,
-    }));
+    const activityRows = events
+      .map((e) => {
+        const label = ACTIVITY_LABELS[e.type];
+        if (!label) return null;
+        return {
+          _id: e._id,
+          kind: 'activity',
+          message: label,
+          link: activityLink(e),
+          createdAt: e.createdAt,
+          read: true,
+        };
+      })
+      .filter(Boolean);
 
     const notifRows = (user.notifications || [])
       .slice()

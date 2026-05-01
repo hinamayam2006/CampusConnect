@@ -399,6 +399,40 @@
 
 .auth-alert--success { background: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; }
 .auth-alert--error   { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+.auth-alert--warning { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+
+.auth-resend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.auth-resend-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  text-decoration: underline;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.auth-resend-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  text-decoration: none;
+}
+
+.auth-resend-note {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #9CA3AF;
+  font-family: var(--font-sans);
+}
 
 /* Password strength */
 .auth-strength {

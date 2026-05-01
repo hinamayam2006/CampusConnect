@@ -55,6 +55,7 @@ export const register = async (req, res, next) => {
       isVerified: false,
       verificationToken: hashedVerificationToken,
       verificationTokenExpiry,
+      verificationTokenSentAt: new Date(),
     });
 
     try {
@@ -122,6 +123,7 @@ export const login = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: 'Please verify your email before logging in.',
+        code: 'EMAIL_NOT_VERIFIED',
       });
     }
 
@@ -442,6 +444,75 @@ export const refresh = async (req, res, next) => {
       },
     });
 
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── RESEND VERIFICATION EMAIL ─────────────────────────
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required.',
+      });
+    }
+
+    const user = await User.findOne({ email }).select(
+      '+verificationToken +verificationTokenExpiry'
+    );
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists, a verification email has been sent.',
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Account already verified.',
+      });
+    }
+
+    const lastSent = user.verificationTokenSentAt?.getTime() || 0;
+    const now = Date.now();
+    const cooldownMs = 60 * 1000;
+    if (now - lastSent < cooldownMs) {
+      return res.status(429).json({
+        success: false,
+        message: 'Please wait before requesting another link.',
+        retryAfter: Math.ceil((cooldownMs - (now - lastSent)) / 1000),
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    user.verificationToken = hashedVerificationToken;
+    user.verificationTokenExpiry = verificationTokenExpiry;
+    user.verificationTokenSentAt = new Date();
+    await user.save();
+
+    try {
+      await sendVerificationEmail({
+        to: user.email,
+        name: user.name,
+        token: verificationToken,
+      });
+    } catch (emailErr) {
+      console.warn('Verification email failed:', emailErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Verification email resent. Please check your inbox.',
+    });
   } catch (err) {
     next(err);
   }
