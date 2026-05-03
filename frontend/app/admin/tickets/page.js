@@ -34,13 +34,26 @@ function resolveTargetLink(targetType, targetId) {
   return '';
 }
 
+function renderStars(rating = 0) {
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  return Array.from({ length: 5 }, (_, index) => (
+    <span
+      key={index}
+      aria-hidden="true"
+      style={{ color: index < value ? '#f59e0b' : '#d1d5db', fontSize: '1rem' }}
+    >
+      ★
+    </span>
+  ));
+}
+
 export default function AdminTicketCenterPage() {
   const router = useRouter();
   const { user } = useStore();
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState('open');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('reports');
   const [actionLoadingById, setActionLoadingById] = useState({});
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -59,9 +72,7 @@ export default function AdminTicketCenterPage() {
 
   const refreshTickets = async () => {
     const params = { status: statusFilter, limit: 100 };
-    if (typeFilter && typeFilter !== 'all') {
-      params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
-    }
+    params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
     const response = await fetchAdminTickets(params);
     setTickets(response?.data?.items || []);
   };
@@ -86,23 +97,29 @@ export default function AdminTicketCenterPage() {
     }
   };
 
-  const handleResolveWithNote = async (ticket) => {
-    const note = window.prompt('Please enter resolution note (will be visible to user):', ticket.adminNotes || '');
-    if (note === null) return; // User cancelled
-    
+  const handleResolveTicket = async (ticket, note = '') => {
     setTicketBusy(ticket._id, true);
     try {
-      await updateAdminTicket(ticket._id, { 
-        status: 'resolved', 
-        adminNotes: note.trim() || 'Resolved by admin' 
-      });
-      toast.success('Ticket resolved with note');
+      const payload = { status: 'resolved' };
+      if (note.trim()) {
+        payload.adminNotes = note.trim();
+      }
+
+      await updateAdminTicket(ticket._id, payload);
+      toast.success(note.trim() ? 'Ticket resolved with note' : 'Ticket resolved');
       await refreshTickets();
     } catch (err) {
       toast.error(err?.message || 'Could not resolve ticket');
     } finally {
       setTicketBusy(ticket._id, false);
     }
+  };
+
+  const handleResolveWithNote = async (ticket) => {
+    const note = window.prompt('Optional resolution note (press OK to save it, or Cancel to dismiss):', ticket.adminNotes || '');
+    if (note === null) return;
+
+    await handleResolveTicket(ticket, note);
   };
 
   const handleDeleteTarget = (ticket) => {
@@ -236,9 +253,7 @@ export default function AdminTicketCenterPage() {
       setLoading(true);
       try {
         const params = { status: statusFilter, limit: 100 };
-        if (typeFilter && typeFilter !== 'all') {
-          params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
-        }
+        params.type = typeFilter === 'reports' ? 'issue_report' : 'feedback';
 
         const response = await fetchAdminTickets(params);
         if (!cancelled) {
@@ -269,6 +284,12 @@ export default function AdminTicketCenterPage() {
     );
   }, [tickets]);
 
+  const filterButtonStyle = (active) => ({
+    borderColor: active ? '#111827' : '#d1d5db',
+    backgroundColor: active ? '#111827' : 'white',
+    color: active ? 'white' : '#111827',
+  });
+
   if (!user) return <div className="container py-5 text-secondary">Loading session...</div>;
   if (!isAdmin) return null;
 
@@ -276,8 +297,8 @@ export default function AdminTicketCenterPage() {
     <div className="container py-4 py-md-5">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
-          <h1 className="h3 mb-1">Reports Inbox</h1>
-          <p className="text-secondary mb-0">Reports and feedback submitted from the Report Issue page.</p>
+          <h1 className="h3 mb-1">Tickets Inbox</h1>
+          <p className="text-secondary mb-0">Switch between reports and feedback using the tabs below.</p>
         </div>
         <Link href="/admin" className="btn btn-outline-secondary">
           Back to Command Center
@@ -289,28 +310,38 @@ export default function AdminTicketCenterPage() {
         <span className="badge text-bg-danger">Reports: {stats.reports}</span>
         <span className="badge text-bg-info">Feedback: {stats.feedback}</span>
         <div className="ms-auto">
-            <div style={{ display: 'flex', gap: 8 }}>
-              <select
-                className="form-select form-select-sm"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-
-              <select
-                className="form-select form-select-sm"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <option value="all">All</option>
-                <option value="reports">Reports</option>
-                <option value="feedback">Feedback</option>
-              </select>
+          <div className="d-flex flex-wrap gap-2">
+            <div className="btn-group btn-group-sm" role="group" aria-label="Ticket status filter">
+              {['open', 'in_progress', 'resolved'].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className="btn btn-dark"
+                  style={filterButtonStyle(statusFilter === status)}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status.replace('_', ' ')}
+                </button>
+              ))}
             </div>
+
+            <div className="btn-group btn-group-sm" role="group" aria-label="Ticket type filter">
+              {[
+                { value: 'reports', label: 'Reports' },
+                { value: 'feedback', label: 'Feedback' },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className="btn btn-dark"
+                  style={filterButtonStyle(typeFilter === item.value)}
+                  onClick={() => setTypeFilter(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -323,9 +354,11 @@ export default function AdminTicketCenterPage() {
           {tickets.map((ticket) => {
             const targetLink = resolveTargetLink(ticket.targetType, ticket.targetId);
             const isBusy = Boolean(actionLoadingById[ticket._id]);
+            const isFeedback = ticket.type === 'feedback';
+            const isIssueReport = ticket.type === 'issue_report';
             const canDeleteTarget = Boolean(DELETE_TARGET_TYPE_MAP[String(ticket.targetType || '').toLowerCase()]) && Boolean(ticket.targetId);
             const canAdvanceStatus = ticket.status === 'open' || ticket.status === 'in_progress';
-            const isFinalized = ticket.status === 'resolved' || ticket.status === 'closed';
+            const isFinalized = ticket.status === 'resolved';
             return (
               <div key={ticket._id} className="border rounded-3 p-3 bg-white">
                 <div className="d-flex flex-wrap justify-content-between gap-2 mb-2">
@@ -341,6 +374,15 @@ export default function AdminTicketCenterPage() {
                     <span style={{ marginLeft: 8 }}>· Submitted {new Date(ticket.createdAt).toLocaleString()}</span>
                   )}
                 </div>
+                {isFeedback && (
+                  <div className="d-flex flex-wrap align-items-center gap-2 mb-2 small">
+                    <span className="fw-semibold">Feedback rating:</span>
+                    <span className="d-inline-flex align-items-center gap-1">
+                      {renderStars(ticket.rating)}
+                    </span>
+                    <span className="text-secondary">{ticket.rating || 0}/5</span>
+                  </div>
+                )}
                 <p className="mb-2 small">{ticket.description}</p>
                 <div className="d-flex flex-wrap gap-2">
                   {targetLink ? (
@@ -366,11 +408,13 @@ export default function AdminTicketCenterPage() {
                     </>
                   ) : (
                     <>
-                      <div className="small fw-semibold mb-2">Quick Actions</div>
+                      <div className="small fw-semibold mb-2">
+                        {isFeedback ? 'Feedback Actions' : 'Report Actions'}
+                      </div>
                       <div className="d-flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="btn btn-sm btn-outline-primary"
+                          className="btn btn-sm btn-primary"
                           onClick={() => handleAdvanceStatus(ticket)}
                           disabled={!canAdvanceStatus || isBusy}
                         >
@@ -380,26 +424,30 @@ export default function AdminTicketCenterPage() {
                           type="button"
                           className="btn btn-sm btn-success"
                           onClick={() => handleResolveWithNote(ticket)}
-                          disabled={ticket.status === 'resolved' || ticket.status === 'closed' || isBusy}
+                          disabled={ticket.status === 'resolved' || isBusy}
                         >
                           Resolve with Note
                         </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeleteTarget(ticket)}
-                          disabled={!canDeleteTarget || isBusy}
-                        >
-                          One-Click Delete Target
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-warning"
-                          onClick={() => handleSuspendUser(ticket)}
-                          disabled={isBusy}
-                        >
-                          Suspend User
-                        </button>
+                        {isIssueReport && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleDeleteTarget(ticket)}
+                              disabled={!canDeleteTarget || isBusy}
+                            >
+                              One-Click Delete Target
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => handleSuspendUser(ticket)}
+                              disabled={isBusy}
+                            >
+                              Suspend User
+                            </button>
+                          </>
+                        )}
                       </div>
                       {ticket.adminNotes && (
                         <div className="mt-2 small">

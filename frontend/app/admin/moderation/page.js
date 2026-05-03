@@ -220,7 +220,7 @@ export default function AdminModerationQueuePage() {
     // Defer the async load to the next microtask so any setState calls happen
     // outside the synchronous effect body (avoids lint rule about setState-in-effect).
     Promise.resolve().then(() => loadDetailsForGroup(selectedGroup));
-  }, [selectedGroup?.key]);
+  }, [selectedGroup]);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();

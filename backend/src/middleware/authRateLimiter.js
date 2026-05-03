@@ -21,7 +21,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Strict rate limiter for login attempts
- * Limits to 5 attempts per 15 minutes per IP
+ * Limits to 10 attempts per 15 minutes per IP
  * Returns 429 (Too Many Requests) when exceeded
  */
 export const loginLimiter = rateLimit({
