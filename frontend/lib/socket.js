@@ -26,7 +26,19 @@ export const initializeSocket = (token) => {
     return socket;
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const apiEnv = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+  let apiUrl = 'http://localhost:5000';
+  if (apiEnv) {
+    if (/^https?:\/\//i.test(apiEnv)) {
+      apiUrl = new URL(apiEnv).origin;
+    } else if (typeof window !== 'undefined' && window.location?.origin) {
+      apiUrl = window.location.origin;
+    } else {
+      apiUrl = apiEnv.replace(/\/api\/?$/, '');
+    }
+  } else if (typeof window !== 'undefined' && window.location?.origin) {
+    apiUrl = window.location.origin;
+  }
 
   socket = io(apiUrl, {
     auth: {
