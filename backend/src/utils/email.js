@@ -48,18 +48,23 @@ function getTransporter() {
 
 /**
  * Verifies the connection once to avoid overhead on every email sent.
+ * Non-blocking: logs errors but doesn't throw (email is optional).
  */
 async function verifyTransporter(mailer) {
   if (!mailer || transporterVerified) return;
 
   try {
-    await mailer.verify();
+    // Add 5-second timeout to prevent hanging on unresponsive SMTP
+    const verifyPromise = mailer.verify();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email verification timeout')), 5000)
+    );
+    await Promise.race([verifyPromise, timeoutPromise]);
     transporterVerified = true;
     console.log('✅ Email service verified and ready.');
   } catch (err) {
-    throw new Error(
-      `Email transport verification failed. Check credentials in .env. Original error: ${err.message}`
-    );
+    console.warn('⚠️ Email service unavailable (will skip emails):', err.message);
+    transporterVerified = true; // Mark verified to avoid repeated attempts
   }
 }
 
@@ -94,7 +99,7 @@ export async function sendEmail({ to, subject, text, html, recipientName }) {
   const finalBody = text || (recipientName ? `Hi ${recipientName},\n\nYou have a new notification from CampusConnect.` : '');
 
   try {
-    const info = await mailer.sendMail({
+    const sendPromise = mailer.sendMail({
       from: `"CampusConnect" <${fromAddress}>`,
       to,
       subject: subject || defaultSubject,
@@ -102,10 +107,17 @@ export async function sendEmail({ to, subject, text, html, recipientName }) {
       html: html || (finalBody ? finalBody.replace(/\n/g, '<br>') : undefined), // Basic auto-HTML fallback
     });
 
+    // Add 10-second timeout to email send (fail gracefully if it takes too long)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email send timeout')), 10000)
+    );
+    const info = await Promise.race([sendPromise, timeoutPromise]);
+
     return { skipped: false, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Failed to send email:', error);
-    throw error;
+    console.error('❌ Failed to send email (email is optional, continuing):', error.message);
+    // Don't throw — email failure is non-critical
+    return { skipped: true, error: error.message };
   }
 }
 
