@@ -35,6 +35,50 @@ async function notifyEmail(toUserId, subject, text) {
   }
 }
 
+async function ensureBookingChatRequest(booking, acceptedByUserId) {
+  if (!booking?._id) return null;
+
+  if (booking.chatRequestId) {
+    const existing = await Request.findById(booking.chatRequestId);
+    if (existing) {
+      let changed = false;
+      if (existing.status !== 'approved') {
+        existing.status = 'approved';
+        changed = true;
+      }
+      if (!existing.chatInitialized) {
+        existing.chatInitialized = true;
+        changed = true;
+      }
+      if (!existing.chatAcceptedBy && acceptedByUserId) {
+        existing.chatAcceptedBy = acceptedByUserId;
+        existing.chatAcceptedAt = new Date();
+        changed = true;
+      }
+      if (changed) await existing.save();
+      return existing;
+    }
+  }
+
+  const chatRequest = await Request.create({
+    requester: booking.student,
+    owner: booking.tutor,
+    refModel: 'Booking',
+    refId: booking._id,
+    context: 'tutoring',
+    status: 'approved',
+    chatInitialized: true,
+    chatAcceptedBy: acceptedByUserId || null,
+    chatAcceptedAt: acceptedByUserId ? new Date() : null,
+    message: `Chat for tutoring session: ${booking.course || 'Tutoring session'}`,
+  });
+
+  booking.chatRequestId = chatRequest._id;
+  await booking.save();
+
+  return chatRequest;
+}
+
 export const createBooking = async (req, res) => {
   try {
     const { tutorProfileId, course, scheduledAt, durationMinutes, studentMessage = '' } = req.body;
@@ -149,6 +193,13 @@ export const acceptBooking = async (req, res) => {
 
     booking.status = 'confirmed';
     await booking.save();
+
+    // Ensure chat is enabled after tutor approves the booking
+    try {
+      await ensureBookingChatRequest(booking, req.user._id);
+    } catch (chatErr) {
+      console.warn('[Booking Chat] Could not enable chat (non-critical):', chatErr.message);
+    }
 
     // HTML approval email to the student
     const studentUser = await User.findById(booking.student).select('email name');
@@ -509,6 +560,13 @@ export const approvePayment = async (req, res) => {
     booking.status = 'confirmed';
     await booking.save();
 
+    // Ensure chat is enabled after tutor approves payment (booking becomes confirmed)
+    try {
+      await ensureBookingChatRequest(booking, req.user._id);
+    } catch (chatErr) {
+      console.warn('[Booking Chat] Could not enable chat (non-critical):', chatErr.message);
+    }
+
     await notifyEmail(
       booking.student,
       'CampusConnect: Payment approved – Booking confirmed',
@@ -735,31 +793,24 @@ export const startBookingChat = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    if (!['confirmed', 'completed', 'pending'].includes(booking.status)) {
-      return res.status(400).json({ success: false, message: 'Chat is only available for active or confirmed bookings' });
+    if (!['confirmed', 'completed', 'approved'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'Chat is only available after the tutor has confirmed the booking' });
     }
 
     // Return existing chat request if already created
     if (booking.chatRequestId) {
+      try {
+        await ensureBookingChatRequest(booking, req.user._id);
+      } catch (chatErr) {
+        console.warn('[Booking Chat] Could not repair existing chat request (non-critical):', chatErr.message);
+      }
       return res.status(200).json({ success: true, data: { requestId: booking.chatRequestId } });
     }
 
     // Create an auto-approved Request so both parties can chat immediately
-    const chatRequest = await Request.create({
-      requester: booking.student,
-      owner: booking.tutor,
-      refModel: 'Booking',
-      refId: booking._id,
-      context: 'tutoring',
-      status: 'approved',
-      chatInitialized: true,
-      message: `Chat for tutoring session: ${booking.course}`,
-    });
+    const chatRequest = await ensureBookingChatRequest(booking, req.user._id);
 
-    booking.chatRequestId = chatRequest._id;
-    await booking.save();
-
-    res.status(201).json({ success: true, data: { requestId: chatRequest._id } });
+    res.status(201).json({ success: true, data: { requestId: chatRequest?._id } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

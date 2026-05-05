@@ -99,7 +99,7 @@ function SessionCard({ booking }) {
         </div>
         <StatusBadge status={booking.status} />
       </div>
-      {['pending', 'confirmed'].includes(booking.status) && (
+      {['confirmed', 'approved', 'completed'].includes(booking.status) && (
         <button
           type="button"
           onClick={handleMessageTutor}
@@ -180,7 +180,7 @@ function TutorBookingCard({ booking, actionId, onAccept, onReject, onComplete, o
         <span style={{ background: sc.bg, color: sc.color, borderRadius: 99, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{sc.label}</span>
       </div>
 
-      {['pending', 'confirmed', 'approved', 'completed'].includes(booking.status) && (
+      {['confirmed', 'approved', 'completed'].includes(booking.status) && (
         <button
           type="button"
           onClick={handleMessageStudent}
