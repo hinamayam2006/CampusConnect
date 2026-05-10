@@ -96,6 +96,24 @@ export const createBooking = async (req, res) => {
     const requestedStart = new Date(scheduledAt);
     const requestedEnd = new Date(requestedStart.getTime() + durationMinutes * 60 * 1000);
 
+    // Idempotency: if the same booking was already created (double-click / retry),
+    // return the existing record instead of treating it as a conflict.
+    const existingSameRequest = await Booking.findOne({
+      student: req.user._id,
+      tutor: profile.user,
+      status: { $in: ['pending', 'confirmed'] },
+      scheduledAt: requestedStart,
+      durationMinutes,
+    });
+
+    if (existingSameRequest) {
+      return res.status(200).json({
+        success: true,
+        message: 'Booking request already exists',
+        data: existingSameRequest,
+      });
+    }
+
     const conflicting = await Booking.findOne({
       tutor: profile.user,
       status: { $in: ['pending', 'confirmed'] },

@@ -1,5 +1,6 @@
 plan.md
 STATE_MANAGEMENT_ANALYSIS.md
+tools/analyze-har.mjs
 # Logs
 logs
 *.log

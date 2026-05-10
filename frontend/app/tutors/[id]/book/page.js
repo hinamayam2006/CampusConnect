@@ -70,6 +70,7 @@ export default function BookTutorPage() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     if (!scheduledAt) return toast.error('Please select a date and time.');
     if (!course.trim()) return toast.error('Please enter the course / subject.');
     const isFreeCheck = tutor?.isFree || tutor?.hourlyRate === 0;
@@ -108,7 +109,7 @@ export default function BookTutorPage() {
       toast.success('Booking request sent! The tutor will review your payment and confirm.');
       router.push('/tutoring');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Booking failed. Please try again.');
+      toast.error(err?.message || err?.response?.data?.message || 'Booking failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
