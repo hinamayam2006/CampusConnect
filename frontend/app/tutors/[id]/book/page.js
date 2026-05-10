@@ -11,6 +11,68 @@ import useRequireAuth from '../../../../lib/useRequireAuth';
 
 const DURATIONS = [30, 45, 60, 90, 120];
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function timeToMinutes(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return NaN;
+  const [h, m] = hhmm.split(':').map((n) => Number(n));
+  if (Number.isNaN(h) || Number.isNaN(m)) return NaN;
+  return h * 60 + m;
+}
+
+function normalizeDayLabel(day) {
+  return String(day || '').trim().toLowerCase();
+}
+
+function isIsoDateString(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+}
+
+function getScheduledParts(datetimeLocalValue) {
+  const value = String(datetimeLocalValue || '');
+  const [datePart = '', timePartRaw = ''] = value.split('T');
+  const timePart = timePartRaw.slice(0, 5);
+  const dateObj = new Date(value);
+  const dayName = Number.isNaN(dateObj.getTime()) ? '' : DAY_NAMES[dateObj.getDay()];
+  return { datePart, timePart, dayName };
+}
+
+function slotMatchesSchedule(slot, { datePart, dayName, startMinutes, endMinutes }) {
+  if (!slot) return false;
+
+  const slotDay = normalizeDayLabel(slot.day);
+  const schedDay = normalizeDayLabel(dayName);
+
+  const dayOk = isIsoDateString(slot.day)
+    ? normalizeDayLabel(datePart) === slotDay
+    : schedDay && (slotDay === schedDay || slotDay.startsWith(schedDay.slice(0, 3)));
+
+  if (!dayOk) return false;
+
+  const slotStart = timeToMinutes(slot.startTime);
+  const slotEnd = timeToMinutes(slot.endTime);
+  if (Number.isNaN(slotStart) || Number.isNaN(slotEnd)) return false;
+
+  return startMinutes >= slotStart && endMinutes <= slotEnd;
+}
+
+function findMatchingSlotIndex(slots, scheduledAt, durationMinutes) {
+  if (!Array.isArray(slots) || !slots.length) return null;
+  if (!scheduledAt) return null;
+
+  const { datePart, timePart, dayName } = getScheduledParts(scheduledAt);
+  const startMinutes = timeToMinutes(timePart);
+  if (!datePart || Number.isNaN(startMinutes)) return null;
+  const endMinutes = startMinutes + Number(durationMinutes || 0);
+
+  for (let i = 0; i < slots.length; i++) {
+    if (slotMatchesSchedule(slots[i], { datePart, dayName, startMinutes, endMinutes })) {
+      return i;
+    }
+  }
+  return null;
+}
+
 function initials(name) {
   if (!name) return '?';
   return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -74,6 +136,32 @@ export default function BookTutorPage() {
     if (!isReady) return toast.error('Please wait a moment… signing you in.');
     if (!scheduledAt) return toast.error('Please select a date and time.');
     if (!course.trim()) return toast.error('Please enter the course / subject.');
+
+    // If tutor has availability slots, ensure selected time fits within one.
+    const slots = tutor?.availabilitySlots || [];
+    if (slots.length > 0) {
+      const resolvedIndex =
+        typeof selectedSlot === 'number'
+          ? selectedSlot
+          : findMatchingSlotIndex(slots, scheduledAt, duration);
+
+      if (typeof resolvedIndex !== 'number') {
+        return toast.error('Please select an available slot and choose a time within it.');
+      }
+
+      const { datePart, timePart, dayName } = getScheduledParts(scheduledAt);
+      const startMinutes = timeToMinutes(timePart);
+      const endMinutes = startMinutes + Number(duration || 0);
+      const ok = slotMatchesSchedule(slots[resolvedIndex], { datePart, dayName, startMinutes, endMinutes });
+
+      if (!ok) {
+        const s = slots[resolvedIndex];
+        return toast.error(`Please choose a time within this slot: ${s.day} ${s.startTime}–${s.endTime}.`);
+      }
+
+      if (selectedSlot !== resolvedIndex) setSelectedSlot(resolvedIndex);
+    }
+
     const isFreeCheck = tutor?.isFree || tutor?.hourlyRate === 0;
     if (!isFreeCheck && !paymentFile) return toast.error('Please upload your payment screenshot before submitting.');
     setSubmitting(true);
@@ -183,7 +271,7 @@ export default function BookTutorPage() {
                   ))}
                 </div>
                 <p style={{ fontSize: '0.78rem', color: '#9E9E9E', marginTop: '0.5rem' }}>
-                  Pick a slot then confirm your exact date below.
+                  Select a slot, then choose a time within that slot below.
                 </p>
               </div>
             )}
@@ -201,6 +289,11 @@ export default function BookTutorPage() {
                     min={new Date().toISOString().slice(0, 16)}
                     onChange={(e) => setScheduledAt(e.target.value)}
                   />
+                  {slots.length > 0 && (
+                    <p className={styles.charCount} style={{ marginTop: '0.35rem' }}>
+                      Must be within an available slot.
+                    </p>
+                  )}
                 </div>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Duration *</label>

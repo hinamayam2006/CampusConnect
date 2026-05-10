@@ -579,6 +579,15 @@ export const createBooking = async (payload) => {
     const response = await api.post('/bookings', payload, { timeout: 120000 });
     return response.data;
   } catch (error) {
+    const code = error?.code;
+    const msg = String(error?.message || '');
+    if (code === 'ECONNABORTED' || code === 'ERR_CANCELED' || /timeout|canceled|cancelled/i.test(msg)) {
+      throw {
+        success: false,
+        message:
+          'Booking request took too long and was canceled. It may still be created — please check your Tutoring/Dashboard before retrying.',
+      };
+    }
     throw error.response?.data || { success: false, message: error.message };
   }
 };
