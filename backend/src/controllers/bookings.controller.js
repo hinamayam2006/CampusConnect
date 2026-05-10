@@ -149,46 +149,60 @@ export const createBooking = async (req, res) => {
       paymentStatus: profile.isFree ? 'not_required' : 'pending',
     });
 
-    // HTML email to the tutor
-    const tutorUser = await User.findById(profile.user).select('email name');
-    const schedDate = new Date(scheduledAt);
-    if (tutorUser?.email) {
-      await sendTutoringRequestEmail({
-        to: tutorUser.email,
-        studentName: req.user.name || 'A student',
-        sessionTitle: course,
-        date: schedDate.toLocaleDateString(),
-        time: schedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      });
-    }
-
-    // Confirmation email to the student
-    await notifyEmail(
-      req.user._id,
-      'CampusConnect: Booking request sent',
-      `CampusConnect update: Your booking request for ${course} on ${formatSchedule(scheduledAt)} has been sent to the tutor. You will be notified once the tutor responds.${profile.isFree ? '' : ' Please upload your payment proof from the dashboard.'}`
-    );
-
-    try {
-      await logActivity({
-        userId: req.user._id,
-        type: 'booking_created',
-        refModel: 'Booking',
-        refId: booking._id,
-        meta: { tutorProfile: profile._id, course },
-      });
-
-      await pushNotification(profile.user, {
-        type: 'booking_created',
-        message: `New booking request for ${course}.`,
-        link: '/tutoring',
-        meta: { refModel: 'Booking', refId: booking._id },
-      });
-    } catch (logErr) {
-      console.warn('Activity log failed:', logErr.message);
-    }
-
+    // Respond immediately — do not block booking creation on email/notification side-effects.
     res.status(201).json({ success: true, data: booking });
+
+    const studentId = req.user._id;
+    const studentName = req.user.name;
+    const tutorUserId = profile.user;
+    const tutorProfileIdValue = profile._id;
+    const isFreeProfile = Boolean(profile.isFree);
+    void (async () => {
+      // HTML email to the tutor
+      try {
+        const tutorUser = await User.findById(tutorUserId).select('email name');
+        const schedDate = new Date(scheduledAt);
+        if (tutorUser?.email) {
+          await sendTutoringRequestEmail({
+            to: tutorUser.email,
+            studentName: studentName || 'A student',
+            sessionTitle: course,
+            date: schedDate.toLocaleDateString(),
+            time: schedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          });
+        }
+      } catch (err) {
+        console.warn('[Booking Email] Tutor email failed (non-critical):', err.message);
+      }
+
+      // Confirmation email to the student
+      await notifyEmail(
+        studentId,
+        'CampusConnect: Booking request sent',
+        `CampusConnect update: Your booking request for ${course} on ${formatSchedule(scheduledAt)} has been sent to the tutor. You will be notified once the tutor responds.${isFreeProfile ? '' : ' Please upload your payment proof from the dashboard.'}`
+      );
+
+      try {
+        await logActivity({
+          userId: studentId,
+          type: 'booking_created',
+          refModel: 'Booking',
+          refId: booking._id,
+          meta: { tutorProfile: tutorProfileIdValue, course },
+        });
+
+        await pushNotification(tutorUserId, {
+          type: 'booking_created',
+          message: `New booking request for ${course}.`,
+          link: '/tutoring',
+          meta: { refModel: 'Booking', refId: booking._id },
+        });
+      } catch (logErr) {
+        console.warn('Activity log failed:', logErr.message);
+      }
+    })();
+
+    return;
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -535,25 +549,34 @@ export const uploadPaymentProof = async (req, res) => {
     booking.paymentStatus = 'uploaded';
     await booking.save();
 
-    // Email tutor about uploaded payment proof
-    await notifyEmail(
-      booking.tutor,
-      'CampusConnect: Payment proof uploaded – review needed',
-      `CampusConnect update: A student has uploaded payment proof for ${booking.course} on ${formatSchedule(booking.scheduledAt)}. Please review and approve or reject from your dashboard.`
-    );
-
-    try {
-      await pushNotification(booking.tutor, {
-        type: 'payment_uploaded',
-        message: `Payment proof uploaded for ${booking.course} booking. Please review and approve.`,
-        link: '/tutoring',
-        meta: { refModel: 'Booking', refId: booking._id },
-      });
-    } catch (logErr) {
-      console.warn('Notification failed:', logErr.message);
-    }
-
+    // Respond immediately — do not block payment upload on email/notification side-effects.
     res.status(200).json({ success: true, data: booking });
+
+    const tutorUserId = booking.tutor;
+    const course = booking.course;
+    const scheduledAt = booking.scheduledAt;
+    const bookingId = booking._id;
+    void (async () => {
+      // Email tutor about uploaded payment proof
+      await notifyEmail(
+        tutorUserId,
+        'CampusConnect: Payment proof uploaded – review needed',
+        `CampusConnect update: A student has uploaded payment proof for ${course} on ${formatSchedule(scheduledAt)}. Please review and approve or reject from your dashboard.`
+      );
+
+      try {
+        await pushNotification(tutorUserId, {
+          type: 'payment_uploaded',
+          message: `Payment proof uploaded for ${course} booking. Please review and approve.`,
+          link: '/tutoring',
+          meta: { refModel: 'Booking', refId: bookingId },
+        });
+      } catch (logErr) {
+        console.warn('Notification failed:', logErr.message);
+      }
+    })();
+
+    return;
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

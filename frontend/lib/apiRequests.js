@@ -576,7 +576,7 @@ export const fetchTutorEarnings = async (tutorId) => {
 
 export const createBooking = async (payload) => {
   try {
-    const response = await api.post('/bookings', payload);
+    const response = await api.post('/bookings', payload, { timeout: 120000 });
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: error.message };
@@ -648,7 +648,7 @@ export const submitBookingReview = async (bookingId, payload) => {
 
 export const uploadPaymentProof = async (bookingId, payload) => {
   try {
-    const response = await api.post(`/bookings/${bookingId}/payment-proof`, payload);
+    const response = await api.post(`/bookings/${bookingId}/payment-proof`, payload, { timeout: 120000 });
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: error.message };
