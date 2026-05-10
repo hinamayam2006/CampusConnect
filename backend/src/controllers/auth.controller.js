@@ -319,7 +319,7 @@ export const updateProfile = async (req, res, next) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       updates,
-      { new: true, runValidators: true } // return updated doc, run schema validators
+      { returnDocument: 'after', runValidators: true } // return updated doc, run schema validators
     ).select('-password -notifications');
 
     res.status(200).json({

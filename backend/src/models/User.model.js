@@ -158,8 +158,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Index on email for fast login lookups
-userSchema.index({ email: 1 });
+// Email already has `unique: true` which creates an index; avoid duplicate index warnings.
 userSchema.index({ role: 1 });
 
 // Remove password from any JSON response automatically

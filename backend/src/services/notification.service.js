@@ -49,7 +49,7 @@ export async function pushNotification(userId, { type, message, link, requestId,
     },
   };
   const updatedUser = await User.findByIdAndUpdate(userId, update, {
-    new: true,
+    returnDocument: 'after',
     ...(options.session ? { session: options.session } : {}),
   });
 

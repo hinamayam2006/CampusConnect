@@ -17,7 +17,7 @@ function initials(name) {
 }
 
 export default function BookTutorPage() {
-  useRequireAuth();
+  const { isReady } = useRequireAuth();
   const { id }  = useParams();
   const router  = useRouter();
 
@@ -71,6 +71,7 @@ export default function BookTutorPage() {
 
   const handleSubmit = async () => {
     if (submitting) return;
+    if (!isReady) return toast.error('Please wait a moment… signing you in.');
     if (!scheduledAt) return toast.error('Please select a date and time.');
     if (!course.trim()) return toast.error('Please enter the course / subject.');
     const isFreeCheck = tutor?.isFree || tutor?.hourlyRate === 0;
@@ -95,18 +96,25 @@ export default function BookTutorPage() {
 
       // Step 2: upload payment proof if paid and file selected
       if (!isFreeCheck && paymentFile) {
-        const upRes = await uploadImage(paymentFile, null, 'payment-proofs');
-        // uploadImage returns response.data directly; backend sends { success, url }
-        const proofUrl = upRes?.url || upRes?.data?.url || '';
-        if (proofUrl) {
+        try {
+          const upRes = await uploadImage(paymentFile, null, 'payment-proofs');
+          // uploadImage returns: { success: true, data: { url } }
+          const proofUrl = upRes?.data?.url || upRes?.url || '';
+          if (!proofUrl) throw new Error('Payment screenshot upload failed.');
+
           await uploadPaymentProof(bookingId, { paymentProofUrl: proofUrl });
-        } else {
-          // Booking exists but proof failed — warn user explicitly
-          toast.error('Booking created but payment proof upload failed. Please upload it from your dashboard.');
+
+          toast.success('Booking request sent! The tutor will review your payment and confirm.');
+          router.push('/tutoring');
+        } catch (paymentErr) {
+          toast.success('Booking request sent.');
+          toast.error(paymentErr?.message || 'Payment proof upload failed. Please upload it from your student dashboard.');
+          router.push('/dashboard/student');
         }
+        return;
       }
 
-      toast.success('Booking request sent! The tutor will review your payment and confirm.');
+      toast.success('Booking request sent!');
       router.push('/tutoring');
     } catch (err) {
       toast.error(err?.message || err?.response?.data?.message || 'Booking failed. Please try again.');
@@ -351,7 +359,7 @@ export default function BookTutorPage() {
                 type="button"
                 className={styles.btnPrimary}
                 style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
-                disabled={submitting}
+                disabled={submitting || !isReady}
                 onClick={handleSubmit}
               >
                 {submitting ? 'Sending…' : <>Confirm Booking <ArrowRight size={14} /></>}
